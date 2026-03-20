@@ -1,26 +1,27 @@
 # backend/simulation/persona_generator.py
 from __future__ import annotations
+import json
 import logging
 import os
-import anthropic
+import openai
 from backend.simulation.models import Persona
 from backend.simulation.graph_utils import sanitize_neighbor_titles
 from backend.simulation.rate_limiter import api_sem as _api_sem
 
 logger = logging.getLogger(__name__)
 
-_client: anthropic.AsyncAnthropic | None = None
+_client: openai.AsyncOpenAI | None = None
 
 
-def _get_client() -> anthropic.AsyncAnthropic:
+def _get_client() -> openai.AsyncOpenAI:
     global _client
     if _client is None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = os.environ.get("OPENAI_API_KEY", "")
         if not api_key:
             raise RuntimeError(
-                "ANTHROPIC_API_KEY environment variable is not set."
+                "OPENAI_API_KEY environment variable is not set."
             )
-        _client = anthropic.AsyncAnthropic(api_key=api_key, timeout=30.0)
+        _client = openai.AsyncOpenAI(api_key=api_key, timeout=30.0)
     return _client
 
 
@@ -59,74 +60,77 @@ _PLATFORM_AUDIENCE = {
 }
 
 _PERSONA_TOOL = {
-    "name": "create_persona",
-    "description": "Create a realistic, diverse persona for a knowledge node participant on a specific platform.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "name": {
-                "type": "string",
-                "description": "Full name (culturally appropriate for the platform's likely audience)",
+    "type": "function",
+    "function": {
+        "name": "create_persona",
+        "description": "Create a realistic, diverse persona for a knowledge node participant on a specific platform.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Full name (culturally appropriate for the platform's likely audience)",
+                },
+                "role": {
+                    "type": "string",
+                    "description": "Specific job title (e.g. 'Senior Backend Engineer', 'Seed-stage VC Partner', 'ML Research Scientist')",
+                },
+                "age": {
+                    "type": "integer",
+                    "description": "Age in years (22-65). Must be consistent with seniority and years of experience.",
+                    "minimum": 22,
+                    "maximum": 65,
+                },
+                "seniority": {
+                    "type": "string",
+                    "enum": ["intern", "junior", "mid", "senior", "lead", "principal", "director", "vp", "c_suite"],
+                    "description": "Career seniority level",
+                },
+                "affiliation": {
+                    "type": "string",
+                    "enum": ["individual", "startup", "mid_size", "enterprise", "bigtech", "academic"],
+                    "description": "Type of organization this person is affiliated with",
+                },
+                "company": {
+                    "type": "string",
+                    "description": "Specific company name or descriptive label (e.g. 'Google', 'seed-stage fintech startup', 'MIT CSAIL', 'independent consultant')",
+                },
+                "mbti": {
+                    "type": "string",
+                    "description": "4-letter MBTI type (e.g. 'INTJ', 'ENFP')",
+                    "pattern": "^[IE][NS][TF][JP]$",
+                },
+                "interests": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "3-8 professional and personal interests relevant to this persona",
+                    "minItems": 3,
+                    "maxItems": 8,
+                },
+                "skepticism": {
+                    "type": "integer",
+                    "description": "Skepticism level: 1=enthusiastic evangelist, 10=extreme skeptic. Reflect how this type of person typically reacts to new ideas.",
+                    "minimum": 1,
+                    "maximum": 10,
+                },
+                "commercial_focus": {
+                    "type": "integer",
+                    "description": "Commercial orientation: 1=pure academic/idealistic (cares about truth/craft), 10=purely commercial/ROI-driven (cares about revenue/growth).",
+                    "minimum": 1,
+                    "maximum": 10,
+                },
+                "innovation_openness": {
+                    "type": "integer",
+                    "description": "Innovation openness: 1=very conservative/risk-averse (prefers proven solutions), 10=extreme early adopter (loves bleeding-edge, tolerates risk).",
+                    "minimum": 1,
+                    "maximum": 10,
+                },
             },
-            "role": {
-                "type": "string",
-                "description": "Specific job title (e.g. 'Senior Backend Engineer', 'Seed-stage VC Partner', 'ML Research Scientist')",
-            },
-            "age": {
-                "type": "integer",
-                "description": "Age in years (22-65). Must be consistent with seniority and years of experience.",
-                "minimum": 22,
-                "maximum": 65,
-            },
-            "seniority": {
-                "type": "string",
-                "enum": ["intern", "junior", "mid", "senior", "lead", "principal", "director", "vp", "c_suite"],
-                "description": "Career seniority level",
-            },
-            "affiliation": {
-                "type": "string",
-                "enum": ["individual", "startup", "mid_size", "enterprise", "bigtech", "academic"],
-                "description": "Type of organization this person is affiliated with",
-            },
-            "company": {
-                "type": "string",
-                "description": "Specific company name or descriptive label (e.g. 'Google', 'seed-stage fintech startup', 'MIT CSAIL', 'independent consultant')",
-            },
-            "mbti": {
-                "type": "string",
-                "description": "4-letter MBTI type (e.g. 'INTJ', 'ENFP')",
-                "pattern": "^[IE][NS][TF][JP]$",
-            },
-            "interests": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "3-8 professional and personal interests relevant to this persona",
-                "minItems": 3,
-                "maxItems": 8,
-            },
-            "skepticism": {
-                "type": "integer",
-                "description": "Skepticism level: 1=enthusiastic evangelist, 10=extreme skeptic. Reflect how this type of person typically reacts to new ideas.",
-                "minimum": 1,
-                "maximum": 10,
-            },
-            "commercial_focus": {
-                "type": "integer",
-                "description": "Commercial orientation: 1=pure academic/idealistic (cares about truth/craft), 10=purely commercial/ROI-driven (cares about revenue/growth).",
-                "minimum": 1,
-                "maximum": 10,
-            },
-            "innovation_openness": {
-                "type": "integer",
-                "description": "Innovation openness: 1=very conservative/risk-averse (prefers proven solutions), 10=extreme early adopter (loves bleeding-edge, tolerates risk).",
-                "minimum": 1,
-                "maximum": 10,
-            },
+            "required": [
+                "name", "role", "age", "seniority", "affiliation", "company",
+                "mbti", "interests", "skepticism", "commercial_focus", "innovation_openness",
+            ],
         },
-        "required": [
-            "name", "role", "age", "seniority", "affiliation", "company",
-            "mbti", "interests", "skepticism", "commercial_focus", "innovation_openness",
-        ],
     },
 }
 
@@ -179,37 +183,31 @@ async def generate_persona(
     for attempt in range(4):
         try:
             async with _api_sem:
-                message = await _get_client().messages.create(
-                    model="claude-haiku-4-5-20251001",
-                    max_tokens=8192,
-                    system=system,
+                response = await _get_client().chat.completions.create(
+                    model="gpt-5.4-mini",
+                    max_tokens=1024,
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": prompt},
+                    ],
                     tools=[_PERSONA_TOOL],
-                    tool_choice={"type": "tool", "name": "create_persona"},
-                    messages=[{"role": "user", "content": prompt}],
+                    tool_choice={"type": "function", "function": {"name": "create_persona"}},
                 )
             break
-        except anthropic.RateLimitError as exc:
+        except openai.RateLimitError as exc:
             if attempt == 3:
                 raise
             import asyncio as _asyncio
             wait = 5 * (2 ** attempt)
             logger.warning("Persona rate limit (attempt %d/4), retrying in %ds: %s", attempt + 1, wait, exc)
             await _asyncio.sleep(wait)
-        except Exception as exc:
-            if attempt == 1:
-                raise
-            logger.warning("Persona API call failed (attempt %d): %s — retrying", attempt + 1, exc)
-            await __import__("asyncio").sleep(1.0)
 
-    # Extract structured output from tool_use block
-    tool_block = next(
-        (b for b in message.content if b.type == "tool_use"),
-        None,
-    )
-    if tool_block is None:
+    # Extract structured output from tool_calls
+    tool_calls = response.choices[0].message.tool_calls
+    if not tool_calls:
         raise ValueError(f"No tool_use block in persona response for node {node_id}")
 
-    data: dict = tool_block.input
+    data: dict = json.loads(tool_calls[0].function.arguments)
 
     # Apply forced attributes for academic sources
     forced = _FORCED_ATTRS_BY_SOURCE.get(source, {})

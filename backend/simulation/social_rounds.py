@@ -1,13 +1,14 @@
 from __future__ import annotations
 import asyncio
 import dataclasses
+import json
 import logging
 import os
 import random
 import uuid
 from collections.abc import AsyncGenerator
 
-import anthropic
+import openai
 
 from backend.simulation.models import Persona, SocialPost, PlatformState
 from backend.simulation.persona_generator import generate_persona
@@ -16,29 +17,40 @@ from backend.simulation.platforms.base import AbstractPlatform, AgentAction
 
 logger = logging.getLogger(__name__)
 
-_client: anthropic.AsyncAnthropic | None = None
+_client: openai.AsyncOpenAI | None = None
 
 from backend.simulation.rate_limiter import api_sem as _api_sem  # noqa: E402
 
 
-def _get_client() -> anthropic.AsyncAnthropic:
+def _get_client() -> openai.AsyncOpenAI:
     global _client
     if _client is None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = os.environ.get("OPENAI_API_KEY", "")
         if not api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY environment variable is not set.")
-        _client = anthropic.AsyncAnthropic(api_key=api_key, timeout=60.0)
+            raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
+        _client = openai.AsyncOpenAI(api_key=api_key, timeout=60.0)
     return _client
 
 
-async def _create_message(**kwargs) -> anthropic.types.Message:
-    """Wrapper around client.messages.create with semaphore + 429 retry."""
+def _to_openai_tool(tool: dict) -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": tool["name"],
+            "description": tool.get("description", ""),
+            "parameters": tool["input_schema"],
+        }
+    }
+
+
+async def _create_message(**kwargs):
+    """Wrapper around client.chat.completions.create with semaphore + 429 retry."""
     client = _get_client()
     for attempt in range(4):
         async with _api_sem:
             try:
-                return await client.messages.create(**kwargs)
-            except anthropic.RateLimitError:
+                return await client.chat.completions.create(**kwargs)
+            except openai.RateLimitError:
                 if attempt == 3:
                     raise
                 wait = 5 * (2 ** attempt)  # 5s, 10s, 20s
@@ -82,7 +94,7 @@ async def generate_seed_post(
     language: str = "English",
 ) -> SocialPost:
     """Generate the initial post for a platform that kicks off discussion."""
-    tool = platform.seed_tool()
+    tool = _to_openai_tool(platform.seed_tool())
     prompt = (
         f"Introduce the following idea on {platform.name}. "
         f"Match the platform's tone and style exactly. Write in {language}.\n\n"
@@ -92,16 +104,18 @@ async def generate_seed_post(
     content = f"[{platform.name}] Introducing: {idea_text[:200]}"
     try:
         msg = await _create_message(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=8192,
-            system=platform.system_prompt,
+            model="gpt-5.4-mini",
+            max_tokens=512,
+            messages=[
+                {"role": "system", "content": platform.system_prompt},
+                {"role": "user", "content": prompt},
+            ],
             tools=[tool],
-            tool_choice={"type": "tool", "name": tool["name"]},
-            messages=[{"role": "user", "content": prompt}],
+            tool_choice={"type": "function", "function": {"name": tool["function"]["name"]}},
         )
-        tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
-        if tool_block:
-            structured_data = dict(tool_block.input)
+        tool_calls = msg.choices[0].message.tool_calls
+        if tool_calls:
+            structured_data = json.loads(tool_calls[0].function.arguments)
             content = platform.extract_seed_content(structured_data)
     except Exception as exc:
         logger.warning("Seed post generation failed for %s: %s", platform.name, exc)
@@ -122,21 +136,24 @@ async def generate_seed_post(
 _ACTION_SYSTEM = "You are deciding what action to take on a social platform. Stay in character as the given persona."
 
 _DECIDE_ACTION_TOOL = {
-    "name": "decide_action",
-    "description": "Choose one action to take on the platform feed.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "action_type": {
-                "type": "string",
-                "description": "The action to take. Must be one of the allowed actions listed.",
+    "type": "function",
+    "function": {
+        "name": "decide_action",
+        "description": "Choose one action to take on the platform feed.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action_type": {
+                    "type": "string",
+                    "description": "The action to take. Must be one of the allowed actions listed.",
+                },
+                "target_post_id": {
+                    "type": ["string", "null"],
+                    "description": "Post ID to target (for replies/votes), or null for a new top-level post.",
+                },
             },
-            "target_post_id": {
-                "type": ["string", "null"],
-                "description": "Post ID to target (for replies/votes), or null for a new top-level post.",
-            },
+            "required": ["action_type", "target_post_id"],
         },
-        "required": ["action_type", "target_post_id"],
     },
 }
 
@@ -162,17 +179,19 @@ async def decide_action(
     )
     try:
         msg = await _create_message(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=8192,
-            system=_ACTION_SYSTEM,
+            model="gpt-5.4-nano",
+            max_tokens=128,
+            messages=[
+                {"role": "system", "content": _ACTION_SYSTEM},
+                {"role": "user", "content": prompt},
+            ],
             tools=[_DECIDE_ACTION_TOOL],
-            tool_choice={"type": "tool", "name": "decide_action"},
-            messages=[{"role": "user", "content": prompt}],
+            tool_choice={"type": "function", "function": {"name": "decide_action"}},
         )
-        tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
-        if tool_block is None:
-            raise ValueError("No tool_use block in decide_action response")
-        data: dict = tool_block.input
+        tool_calls = msg.choices[0].message.tool_calls
+        if not tool_calls:
+            raise ValueError("No tool_calls in decide_action response")
+        data: dict = json.loads(tool_calls[0].function.arguments)
         action_type = data.get("action_type", allowed[0])
         if action_type not in allowed:
             action_type = allowed[0]
@@ -194,7 +213,7 @@ async def generate_content(
     language: str = "English",
 ) -> tuple[str, dict]:
     """LLM call 2: generate post/comment text. Returns (content_str, structured_data)."""
-    tool = platform.content_tool(action.action_type)
+    tool = _to_openai_tool(platform.content_tool(action.action_type))
     prompt = (
         f"Platform: {platform.name}\n"
         f"You are {persona.name}, {persona.role} at {persona.company} "
@@ -209,17 +228,19 @@ async def generate_content(
     )
     try:
         msg = await _create_message(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=8192,
-            system=platform.system_prompt,
+            model="gpt-5.4-nano",
+            max_tokens=512,
+            messages=[
+                {"role": "system", "content": platform.system_prompt},
+                {"role": "user", "content": prompt},
+            ],
             tools=[tool],
-            tool_choice={"type": "tool", "name": tool["name"]},
-            messages=[{"role": "user", "content": prompt}],
+            tool_choice={"type": "function", "function": {"name": tool["function"]["name"]}},
         )
-        tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
-        if tool_block is None:
-            raise ValueError("No tool_use block in generate_content response")
-        structured_data = dict(tool_block.input)
+        tool_calls = msg.choices[0].message.tool_calls
+        if not tool_calls:
+            raise ValueError("No tool_calls in generate_content response")
+        structured_data = json.loads(tool_calls[0].function.arguments)
         content = platform.extract_content(action.action_type, structured_data)
         return content, structured_data
     except Exception as exc:
@@ -364,81 +385,84 @@ async def platform_round(
 _REPORT_SYSTEM = "You are an expert product analyst synthesizing a multi-platform social simulation."
 
 _REPORT_TOOL = {
-    "name": "create_report",
-    "description": "Create a structured product validation report from simulation data.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "verdict": {
-                "type": "string",
-                "enum": ["positive", "mixed", "skeptical", "negative"],
-                "description": "Overall market reception verdict",
-            },
-            "evidence_count": {
-                "type": "integer",
-                "description": "Total posts and comments across all platforms",
-            },
-            "segments": {
-                "type": "array",
-                "description": "Include all 5 segment types",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "enum": ["developer", "investor", "early_adopter", "skeptic", "pm"],
-                        },
-                        "sentiment": {
-                            "type": "string",
-                            "enum": ["positive", "neutral", "negative"],
-                        },
-                        "summary": {"type": "string", "description": "2-3 sentence summary of this segment's reaction"},
-                        "key_quotes": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "1-2 representative quotes from this segment",
-                        },
-                    },
-                    "required": ["name", "sentiment", "summary", "key_quotes"],
+    "type": "function",
+    "function": {
+        "name": "create_report",
+        "description": "Create a structured product validation report from simulation data.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "verdict": {
+                    "type": "string",
+                    "enum": ["positive", "mixed", "skeptical", "negative"],
+                    "description": "Overall market reception verdict",
                 },
-                "minItems": 5,
-                "maxItems": 5,
-            },
-            "criticism_clusters": {
-                "type": "array",
-                "description": "Top 3-5 recurring objections or concerns",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "theme": {"type": "string", "description": "Short theme label (e.g. 'pricing concerns')"},
-                        "count": {"type": "integer", "description": "How many personas raised this"},
-                        "examples": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "1-2 example quotes",
+                "evidence_count": {
+                    "type": "integer",
+                    "description": "Total posts and comments across all platforms",
+                },
+                "segments": {
+                    "type": "array",
+                    "description": "Include all 5 segment types",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "enum": ["developer", "investor", "early_adopter", "skeptic", "pm"],
+                            },
+                            "sentiment": {
+                                "type": "string",
+                                "enum": ["positive", "neutral", "negative"],
+                            },
+                            "summary": {"type": "string", "description": "2-3 sentence summary of this segment's reaction"},
+                            "key_quotes": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "1-2 representative quotes from this segment",
+                            },
                         },
+                        "required": ["name", "sentiment", "summary", "key_quotes"],
                     },
-                    "required": ["theme", "count", "examples"],
+                    "minItems": 5,
+                    "maxItems": 5,
                 },
-                "minItems": 3,
-                "maxItems": 5,
-            },
-            "improvements": {
-                "type": "array",
-                "description": "Top 3-5 actionable improvement suggestions",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "suggestion": {"type": "string", "description": "Concrete improvement suggestion"},
-                        "frequency": {"type": "integer", "description": "How many personas implied this"},
+                "criticism_clusters": {
+                    "type": "array",
+                    "description": "Top 3-5 recurring objections or concerns",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "theme": {"type": "string", "description": "Short theme label (e.g. 'pricing concerns')"},
+                            "count": {"type": "integer", "description": "How many personas raised this"},
+                            "examples": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "1-2 example quotes",
+                            },
+                        },
+                        "required": ["theme", "count", "examples"],
                     },
-                    "required": ["suggestion", "frequency"],
+                    "minItems": 3,
+                    "maxItems": 5,
                 },
-                "minItems": 3,
-                "maxItems": 5,
+                "improvements": {
+                    "type": "array",
+                    "description": "Top 3-5 actionable improvement suggestions",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "suggestion": {"type": "string", "description": "Concrete improvement suggestion"},
+                            "frequency": {"type": "integer", "description": "How many personas implied this"},
+                        },
+                        "required": ["suggestion", "frequency"],
+                    },
+                    "minItems": 3,
+                    "maxItems": 5,
+                },
             },
+            "required": ["verdict", "evidence_count", "segments", "criticism_clusters", "improvements"],
         },
-        "required": ["verdict", "evidence_count", "segments", "criticism_clusters", "improvements"],
     },
 }
 
@@ -483,26 +507,28 @@ async def generate_report(
         f"- All text fields must be in {language}"
     )
 
-    client = _get_client()
     report_json: dict = {}
-    for model in ("claude-sonnet-4-6", "claude-opus-4-6"):
-        try:
-            msg = await client.messages.create(
-                model=model,
-                max_tokens=8192,
-                system=_REPORT_SYSTEM,
-                tools=[_REPORT_TOOL],
-                tool_choice={"type": "tool", "name": "create_report"},
-                messages=[{"role": "user", "content": prompt}],
-                timeout=300.0,
-            )
-            tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
-            if tool_block is None:
-                raise ValueError("No tool_use block in report response")
-            report_json = dict(tool_block.input)
-            break
-        except Exception as exc:
-            logger.warning("Report model %s failed: %s", model, exc)
+    try:
+        client = openai.AsyncOpenAI(
+            api_key=os.environ.get("OPENAI_API_KEY", ""),
+            timeout=300.0,
+        )
+        msg = await client.chat.completions.create(
+            model="gpt-5.4",
+            max_tokens=4096,
+            messages=[
+                {"role": "system", "content": _REPORT_SYSTEM},
+                {"role": "user", "content": prompt},
+            ],
+            tools=[_REPORT_TOOL],
+            tool_choice={"type": "function", "function": {"name": "create_report"}},
+        )
+        tool_calls = msg.choices[0].message.tool_calls
+        if not tool_calls:
+            raise ValueError("No tool_calls in report response")
+        report_json = json.loads(tool_calls[0].function.arguments)
+    except Exception as exc:
+        logger.warning("Report generation failed: %s", exc)
 
     if not report_json:
         report_json = {

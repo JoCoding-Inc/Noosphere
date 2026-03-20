@@ -2,7 +2,7 @@ from __future__ import annotations
 import logging
 import os
 
-import anthropic
+import openai
 
 logger = logging.getLogger(__name__)
 
@@ -11,18 +11,18 @@ You are an expert at analysing competitive landscapes for technology ideas.
 Given a list of real-world items gathered from GitHub, academic papers, HN, Reddit, Product Hunt, and other sources,
 write a concise structured landscape report in markdown."""
 
-_MODELS = ("claude-sonnet-4-6", "claude-opus-4-6")
+_MODELS = ("gpt-5.4", "gpt-5.4-mini")
 
-_client: anthropic.AsyncAnthropic | None = None
+_client: openai.AsyncOpenAI | None = None
 
 
-def _get_client() -> anthropic.AsyncAnthropic:
+def _get_client() -> openai.AsyncOpenAI:
     global _client
     if _client is None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = os.environ.get("OPENAI_API_KEY", "")
         if not api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY not set")
-        _client = anthropic.AsyncAnthropic(api_key=api_key, timeout=90.0)
+            raise RuntimeError("OPENAI_API_KEY not set")
+        _client = openai.AsyncOpenAI(api_key=api_key, timeout=90.0)
     return _client
 
 
@@ -87,14 +87,17 @@ Respond entirely in {language}."""
     client = _get_client()
     for model in _MODELS:
         try:
-            msg = await client.messages.create(
+            response = await client.chat.completions.create(
                 model=model,
                 max_tokens=8192,
-                system=_SYSTEM,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": _SYSTEM},
+                    {"role": "user", "content": prompt},
+                ],
             )
-            if msg.content and hasattr(msg.content[0], "text"):
-                return msg.content[0].text
+            content = response.choices[0].message.content
+            if content:
+                return content
         except Exception as exc:
             logger.warning("Reporter model %s failed: %s", model, exc)
 

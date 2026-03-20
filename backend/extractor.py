@@ -5,11 +5,11 @@ import os
 import re
 from typing import Any
 
-import anthropic
+import openai
 
 logger = logging.getLogger(__name__)
 
-_client: anthropic.AsyncAnthropic | None = None
+_client: openai.AsyncOpenAI | None = None
 
 DOMAIN_QUERY_COUNTS = {
     "tech":       {"code": 5, "academic": 5, "discussion": 3, "product": 2, "news": 1},
@@ -33,13 +33,13 @@ Category query styles:
 Respond with ONLY valid JSON. No markdown, no explanation."""
 
 
-def _get_client() -> anthropic.AsyncAnthropic:
+def _get_client() -> openai.AsyncOpenAI:
     global _client
     if _client is None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = os.environ.get("OPENAI_API_KEY", "")
         if not api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY not set")
-        _client = anthropic.AsyncAnthropic(api_key=api_key, timeout=60.0)
+            raise RuntimeError("OPENAI_API_KEY not set")
+        _client = openai.AsyncOpenAI(api_key=api_key, timeout=60.0)
     return _client
 
 
@@ -76,13 +76,15 @@ Return ONLY the JSON object."""
 
     client = _get_client()
     try:
-        msg = await client.messages.create(
-            model="claude-sonnet-4-6",
+        response = await client.chat.completions.create(
+            model="gpt-5.4-mini",
             max_tokens=2048,
-            system=_SYSTEM,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": _SYSTEM},
+                {"role": "user", "content": prompt},
+            ],
         )
-        raw = msg.content[0].text.strip()
+        raw = response.choices[0].message.content.strip()
         raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
         result = json.loads(raw)
     except Exception as exc:
