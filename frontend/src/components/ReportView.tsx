@@ -88,16 +88,6 @@ export function ReportView({ report, simId }: { report: ReportJSON; simId: strin
         ))}
       </div>
 
-      <a
-        href={`${API_BASE}/export/${simId}`}
-        download
-        style={{
-          display: 'inline-block', padding: '12px 24px', background: '#1e293b',
-          color: '#fff', borderRadius: 8, textDecoration: 'none', fontSize: 14,
-          fontWeight: 600,
-        }}>
-        ↓ Download PDF Report
-      </a>
     </div>
   )
 }

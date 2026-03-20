@@ -9,7 +9,147 @@ body {
   color: #1e293b;
 }
 
+/* ── 기본 애니메이션 ─────────────────────────────────── */
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInPage {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInTop {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes progressFill {
+  from { width: 0%; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── 페이지 진입 ─────────────────────────────────────── */
+
+.page-enter {
+  animation: fadeInPage 0.35s ease both;
+}
+
+/* ── 소스 타임라인 아이템 ────────────────────────────── */
+
+.source-item {
+  animation: slideInTop 0.28s ease both;
+}
+
+/* ── 포스트 피드 아이템 ─────────────────────────────── */
+
+.post-item {
+  animation: fadeInUp 0.3s ease both;
+}
+
+/* ── 결과 탭 콘텐츠 ──────────────────────────────────── */
+
+.tab-content {
+  animation: fadeInUp 0.25s ease both;
+}
+
+/* ── 버튼 공통 ───────────────────────────────────────── */
+
+button {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ── Run Simulation 버튼 shimmer ─────────────────────── */
+
+.run-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.run-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255,255,255,0.15) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.4s infinite;
+}
+
+/* ── 플랫폼 버튼 ─────────────────────────────────────── */
+
+.platform-btn {
+  transition: all 0.15s ease !important;
+}
+
+.platform-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+/* ── 스피너 ──────────────────────────────────────────── */
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+/* ── 커서 깜빡임 (터미널 느낌) ───────────────────────── */
+
+.cursor-blink::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  margin-left: 1px;
+  color: #8b5cf6;
 }

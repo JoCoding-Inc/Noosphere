@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import logging
+from collections.abc import Callable
 from types import ModuleType
 from typing import Any, Coroutine
 
@@ -63,6 +64,7 @@ async def _search_source(
 async def analyze(
     input_text: str,
     limits: dict[str, int] | None = None,
+    on_source_done: Callable[[str, list[dict]], None] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Full pipeline: cache check → concept extraction → parallel source search → cache write.
@@ -114,7 +116,28 @@ async def analyze(
     # Run non-GDELT sources in parallel
     results_raw: list[Any] = []
     if source_coroutines:
-        gathered = await asyncio.gather(*source_coroutines)
+        # Wrap each coroutine to fire the progress callback when it completes
+        source_names_ordered: list[str] = []
+        wrapped: list[Coroutine[Any, Any, list[Any]]] = []
+
+        for category, source_names in CATEGORY_SOURCES.items():
+            queries = query_bundles.get(category, [])
+            if not queries:
+                continue
+            for source_name in source_names:
+                if source_name == "gdelt":
+                    continue
+                source_names_ordered.append(source_name)
+
+        async def _wrap(coro: Coroutine, name: str) -> list[Any]:
+            result = await coro
+            if on_source_done is not None:
+                dicts = [r.to_dict() if isinstance(r, RawItem) else r for r in result]
+                on_source_done(name, dicts)
+            return result
+
+        wrapped = [_wrap(c, n) for c, n in zip(source_coroutines, source_names_ordered)]
+        gathered = await asyncio.gather(*wrapped)
         for result in gathered:
             results_raw.extend(result)
 

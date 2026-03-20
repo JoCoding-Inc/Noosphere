@@ -7,10 +7,56 @@ class Persona:
     node_id: str
     name: str
     role: str
+    age: int
+    seniority: str          # "intern" | "junior" | "mid" | "senior" | "lead" | "principal" | "director" | "vp" | "c_suite"
+    affiliation: str        # "individual" | "startup" | "mid_size" | "enterprise" | "bigtech" | "academic"
+    company: str            # e.g. "Google", "seed-stage fintech startup", "MIT research lab"
     mbti: str
     interests: list[str]
-    bias: str        # "academic" | "commercial" | "skeptic" | "evangelist"
+    skepticism: int         # 1-10: 1=enthusiastic evangelist, 10=extreme skeptic
+    commercial_focus: int   # 1-10: 1=idealistic/academic, 10=purely commercial
+    innovation_openness: int  # 1-10: 1=very conservative, 10=early adopter
     source_title: str
+
+    @property
+    def generation(self) -> str:
+        if self.age <= 28:
+            return "Gen Z"
+        elif self.age <= 44:
+            return "Millennial"
+        elif self.age <= 60:
+            return "Gen X"
+        else:
+            return "Boomer"
+
+    def bias_description(self) -> str:
+        """Human-readable summary of bias dimensions for use in prompts."""
+        skeptic_label = (
+            "enthusiastic evangelist" if self.skepticism <= 2 else
+            "optimistic supporter" if self.skepticism <= 4 else
+            "balanced evaluator" if self.skepticism <= 6 else
+            "critical skeptic" if self.skepticism <= 8 else
+            "extreme skeptic"
+        )
+        commercial_label = (
+            "academic/idealistic" if self.commercial_focus <= 2 else
+            "mostly idealistic" if self.commercial_focus <= 4 else
+            "balanced" if self.commercial_focus <= 6 else
+            "commercially driven" if self.commercial_focus <= 8 else
+            "purely ROI-focused"
+        )
+        innovation_label = (
+            "very conservative" if self.innovation_openness <= 2 else
+            "cautious" if self.innovation_openness <= 4 else
+            "pragmatic" if self.innovation_openness <= 6 else
+            "early adopter" if self.innovation_openness <= 8 else
+            "extreme risk-taker"
+        )
+        return (
+            f"skepticism {self.skepticism}/10 ({skeptic_label}), "
+            f"commercial focus {self.commercial_focus}/10 ({commercial_label}), "
+            f"innovation openness {self.innovation_openness}/10 ({innovation_label})"
+        )
 
 
 @dataclasses.dataclass
@@ -25,6 +71,7 @@ class SocialPost:
     upvotes: int = 0
     downvotes: int = 0
     parent_id: str | None = None   # None = 최상위; 댓글/답글은 부모 post id
+    structured_data: dict = dataclasses.field(default_factory=dict)  # platform-specific structured fields
 
 
 @dataclasses.dataclass

@@ -189,8 +189,16 @@ async def run_simulation(
             },
             "personas": {
                 name: [
-                    {"node_id": p.node_id, "name": p.name, "role": p.role,
-                     "mbti": p.mbti, "bias": p.bias, "interests": p.interests}
+                    {
+                        "node_id": p.node_id, "name": p.name, "role": p.role,
+                        "age": p.age, "generation": p.generation,
+                        "seniority": p.seniority, "affiliation": p.affiliation,
+                        "company": p.company, "mbti": p.mbti,
+                        "interests": p.interests,
+                        "skepticism": p.skepticism,
+                        "commercial_focus": p.commercial_focus,
+                        "innovation_openness": p.innovation_openness,
+                    }
                     for p in personas_list
                 ]
                 for name, personas_list in platform_personas.items()

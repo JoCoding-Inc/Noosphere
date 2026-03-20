@@ -1,11 +1,9 @@
 from __future__ import annotations
 import asyncio
 import dataclasses
-import json
 import logging
 import os
 import random
-import re
 import uuid
 from collections.abc import AsyncGenerator
 
@@ -84,23 +82,29 @@ async def generate_seed_post(
     language: str = "English",
 ) -> SocialPost:
     """Generate the initial post for a platform that kicks off discussion."""
+    tool = platform.seed_tool()
     prompt = (
-        f"Write an opening post for {platform.name} introducing the following idea. "
-        f"Match the platform's tone and style exactly.\n\n"
-        f"Idea: {idea_text[:500]}\n\n"
-        f"Write a single post in {language}. Be concise and authentic to the platform."
+        f"Introduce the following idea on {platform.name}. "
+        f"Match the platform's tone and style exactly. Write in {language}.\n\n"
+        f"Idea: {idea_text[:500]}"
     )
+    structured_data: dict = {}
+    content = f"[{platform.name}] Introducing: {idea_text[:200]}"
     try:
         msg = await _create_message(
             model="claude-haiku-4-5-20251001",
             max_tokens=8192,
             system=platform.system_prompt,
+            tools=[tool],
+            tool_choice={"type": "tool", "name": tool["name"]},
             messages=[{"role": "user", "content": prompt}],
         )
-        content = msg.content[0].text.strip()
+        tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
+        if tool_block:
+            structured_data = dict(tool_block.input)
+            content = platform.extract_seed_content(structured_data)
     except Exception as exc:
         logger.warning("Seed post generation failed for %s: %s", platform.name, exc)
-        content = f"[{platform.name}] Introducing: {idea_text[:200]}"
     return SocialPost(
         id=f"__seed__{platform.name}",
         platform=platform.name,
@@ -109,15 +113,32 @@ async def generate_seed_post(
         content=content,
         action_type="post",
         round_num=0,
+        structured_data=structured_data,
     )
 
 
 # ── 액션 결정 ─────────────────────────────────────────────────────────────────
 
-_ACTION_SYSTEM = """\
-You are deciding what action to take on a social platform.
-Respond ONLY with valid JSON: {"action_type": "<type>", "target_post_id": "<id or null>"}
-target_post_id must be one of the available post IDs shown in the feed, or null for a new top-level post."""
+_ACTION_SYSTEM = "You are deciding what action to take on a social platform. Stay in character as the given persona."
+
+_DECIDE_ACTION_TOOL = {
+    "name": "decide_action",
+    "description": "Choose one action to take on the platform feed.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "action_type": {
+                "type": "string",
+                "description": "The action to take. Must be one of the allowed actions listed.",
+            },
+            "target_post_id": {
+                "type": ["string", "null"],
+                "description": "Post ID to target (for replies/votes), or null for a new top-level post.",
+            },
+        },
+        "required": ["action_type", "target_post_id"],
+    },
+}
 
 
 async def decide_action(
@@ -127,10 +148,12 @@ async def decide_action(
     language: str = "English",
 ) -> AgentAction:
     """LLM call 1: decide action_type and target_post_id."""
-    allowed = platform.get_allowed_actions(persona.bias)
+    allowed = platform.get_allowed_actions(persona)
     prompt = (
         f"Platform: {platform.name}\n"
-        f"Your persona: {persona.name}, {persona.role} ({persona.bias})\n"
+        f"Your persona: {persona.name}, {persona.role} at {persona.company} "
+        f"({persona.seniority}, {persona.affiliation}, age {persona.age})\n"
+        f"Bias: {persona.bias_description()}\n"
         f"Allowed actions: {', '.join(allowed)}\n\n"
         f"{feed_text}\n\n"
         f"Choose one action from {allowed}. "
@@ -142,11 +165,14 @@ async def decide_action(
             model="claude-haiku-4-5-20251001",
             max_tokens=8192,
             system=_ACTION_SYSTEM,
+            tools=[_DECIDE_ACTION_TOOL],
+            tool_choice={"type": "tool", "name": "decide_action"},
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = msg.content[0].text.strip()
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
-        data = json.loads(raw)
+        tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
+        if tool_block is None:
+            raise ValueError("No tool_use block in decide_action response")
+        data: dict = tool_block.input
         action_type = data.get("action_type", allowed[0])
         if action_type not in allowed:
             action_type = allowed[0]
@@ -166,29 +192,39 @@ async def generate_content(
     feed_text: str,
     idea_text: str,
     language: str = "English",
-) -> str:
-    """LLM call 2: generate post/comment text."""
+) -> tuple[str, dict]:
+    """LLM call 2: generate post/comment text. Returns (content_str, structured_data)."""
+    tool = platform.content_tool(action.action_type)
     prompt = (
         f"Platform: {platform.name}\n"
-        f"You are {persona.name}, {persona.role} ({persona.bias} perspective).\n"
+        f"You are {persona.name}, {persona.role} at {persona.company} "
+        f"({persona.seniority}, {persona.affiliation}, age {persona.age}, {persona.generation}).\n"
+        f"Interests: {', '.join(persona.interests[:5])}\n"
+        f"Bias: {persona.bias_description()}\n"
         f"Action: {action.action_type}"
         + (f" (replying to post {action.target_post_id})" if action.target_post_id else "") + "\n\n"
         f"Idea being discussed: {idea_text[:300]}\n\n"
         f"{feed_text}\n\n"
-        f"Write your {action.action_type} in {language}. "
-        f"Be authentic to your persona and the platform style. 2-4 sentences max."
+        f"Write your {action.action_type} in {language}. Be authentic to your persona and the platform style."
     )
     try:
         msg = await _create_message(
             model="claude-haiku-4-5-20251001",
             max_tokens=8192,
             system=platform.system_prompt,
+            tools=[tool],
+            tool_choice={"type": "tool", "name": tool["name"]},
             messages=[{"role": "user", "content": prompt}],
         )
-        return msg.content[0].text.strip()
+        tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
+        if tool_block is None:
+            raise ValueError("No tool_use block in generate_content response")
+        structured_data = dict(tool_block.input)
+        content = platform.extract_content(action.action_type, structured_data)
+        return content, structured_data
     except Exception as exc:
         logger.warning("generate_content failed for %s: %s", persona.node_id, exc)
-        return f"[{persona.name}] Interesting idea."
+        return f"[{persona.name}] Interesting idea.", {}
 
 
 # ── 페르소나 생성 라운드 ──────────────────────────────────────────────────────
@@ -196,7 +232,7 @@ async def generate_content(
 async def round_personas(
     nodes: list[dict],
     idea_text: str,
-    concurrency: int = 20,
+    concurrency: int = 4,
     adjacency: dict | None = None,
     id_to_node: dict | None = None,
     platform_name: str = "",
@@ -226,9 +262,16 @@ async def round_personas(
                     "persona": {
                         "name": persona.name,
                         "role": persona.role,
+                        "age": persona.age,
+                        "generation": persona.generation,
+                        "seniority": persona.seniority,
+                        "affiliation": persona.affiliation,
+                        "company": persona.company,
                         "mbti": persona.mbti,
-                        "bias": persona.bias,
                         "interests": persona.interests,
+                        "skepticism": persona.skepticism,
+                        "commercial_focus": persona.commercial_focus,
+                        "innovation_openness": persona.innovation_openness,
                         "source_title": persona.source_title,
                     },
                     "_persona": persona,
@@ -274,7 +317,7 @@ async def platform_round(
         action = await decide_action(persona, platform, feed_text, language)
 
         if platform.requires_content(action.action_type):
-            content = await generate_content(persona, action, platform, feed_text, idea_text, language)
+            content, structured_data = await generate_content(persona, action, platform, feed_text, idea_text, language)
             post = SocialPost(
                 id=str(uuid.uuid4()),
                 platform=platform.name,
@@ -284,6 +327,7 @@ async def platform_round(
                 action_type=action.action_type,
                 round_num=round_num,
                 parent_id=action.target_post_id,
+                structured_data=structured_data,
             )
             state.posts.append(post)
             if action.target_post_id:
@@ -317,36 +361,86 @@ async def platform_round(
 
 # ── 리포트 생성 ───────────────────────────────────────────────────────────────
 
-_REPORT_SYSTEM = """\
-You are an expert product analyst synthesizing a multi-platform social simulation.
-You must respond with ONLY valid JSON matching the schema exactly."""
+_REPORT_SYSTEM = "You are an expert product analyst synthesizing a multi-platform social simulation."
 
-_REPORT_SCHEMA = """\
-{
-  "verdict": "positive" | "mixed" | "skeptical" | "negative",
-  "evidence_count": <integer: total posts + comments across all platforms>,
-  "segments": [
-    {
-      "name": "developer" | "investor" | "early_adopter" | "skeptic" | "pm",
-      "sentiment": "positive" | "neutral" | "negative",
-      "summary": "<2-3 sentence summary of this segment's reaction>",
-      "key_quotes": ["<quote 1>", "<quote 2>"]
-    }
-  ],
-  "criticism_clusters": [
-    {
-      "theme": "<short theme label, e.g. 'pricing concerns'>",
-      "count": <integer: how many personas raised this>,
-      "examples": ["<example quote 1>", "<example quote 2>"]
-    }
-  ],
-  "improvements": [
-    {
-      "suggestion": "<concrete improvement suggestion>",
-      "frequency": <integer: how many personas implied this>
-    }
-  ]
-}"""
+_REPORT_TOOL = {
+    "name": "create_report",
+    "description": "Create a structured product validation report from simulation data.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "verdict": {
+                "type": "string",
+                "enum": ["positive", "mixed", "skeptical", "negative"],
+                "description": "Overall market reception verdict",
+            },
+            "evidence_count": {
+                "type": "integer",
+                "description": "Total posts and comments across all platforms",
+            },
+            "segments": {
+                "type": "array",
+                "description": "Include all 5 segment types",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "enum": ["developer", "investor", "early_adopter", "skeptic", "pm"],
+                        },
+                        "sentiment": {
+                            "type": "string",
+                            "enum": ["positive", "neutral", "negative"],
+                        },
+                        "summary": {"type": "string", "description": "2-3 sentence summary of this segment's reaction"},
+                        "key_quotes": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "1-2 representative quotes from this segment",
+                        },
+                    },
+                    "required": ["name", "sentiment", "summary", "key_quotes"],
+                },
+                "minItems": 5,
+                "maxItems": 5,
+            },
+            "criticism_clusters": {
+                "type": "array",
+                "description": "Top 3-5 recurring objections or concerns",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "theme": {"type": "string", "description": "Short theme label (e.g. 'pricing concerns')"},
+                        "count": {"type": "integer", "description": "How many personas raised this"},
+                        "examples": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "1-2 example quotes",
+                        },
+                    },
+                    "required": ["theme", "count", "examples"],
+                },
+                "minItems": 3,
+                "maxItems": 5,
+            },
+            "improvements": {
+                "type": "array",
+                "description": "Top 3-5 actionable improvement suggestions",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "suggestion": {"type": "string", "description": "Concrete improvement suggestion"},
+                        "frequency": {"type": "integer", "description": "How many personas implied this"},
+                    },
+                    "required": ["suggestion", "frequency"],
+                },
+                "minItems": 3,
+                "maxItems": 5,
+            },
+        },
+        "required": ["verdict", "evidence_count", "segments", "criticism_clusters", "improvements"],
+    },
+}
 
 
 async def generate_report(
@@ -381,14 +475,12 @@ async def generate_report(
         f"Product: {idea_text[:400]}\n\n"
         f"Simulation results across platforms:\n\n"
         + "\n\n".join(platform_summaries)
-        + f"\n\nAnalyze this simulation and return a JSON report matching this schema:\n{_REPORT_SCHEMA}\n\n"
-        f"Instructions:\n"
+        + f"\n\nInstructions:\n"
         f"- verdict: overall market reception\n"
         f"- segments: include all 5 segment types even if some have neutral sentiment\n"
         f"- criticism_clusters: top 3-5 recurring objections\n"
         f"- improvements: top 3-5 actionable suggestions\n"
-        f"- All text fields must be in {language}\n"
-        f"Return ONLY the JSON, no markdown wrapper."
+        f"- All text fields must be in {language}"
     )
 
     client = _get_client()
@@ -399,12 +491,15 @@ async def generate_report(
                 model=model,
                 max_tokens=8192,
                 system=_REPORT_SYSTEM,
+                tools=[_REPORT_TOOL],
+                tool_choice={"type": "tool", "name": "create_report"},
                 messages=[{"role": "user", "content": prompt}],
                 timeout=300.0,
             )
-            raw = msg.content[0].text.strip()
-            raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
-            report_json = json.loads(raw)
+            tool_block = next((b for b in msg.content if b.type == "tool_use"), None)
+            if tool_block is None:
+                raise ValueError("No tool_use block in report response")
+            report_json = dict(tool_block.input)
             break
         except Exception as exc:
             logger.warning("Report model %s failed: %s", model, exc)

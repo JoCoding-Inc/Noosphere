@@ -1,9 +1,6 @@
-import { useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
 import { Header } from '../components/Header'
-import { useSimulation } from '../hooks/useSimulation'
+import { useMockSimulation } from '../hooks/useMockSimulation'
 import { PlatformSimFeed } from '../components/PlatformSimFeed'
-import type { Platform } from '../types'
 
 const SOURCE_COLORS: Record<string, string> = {
   github: '#24292e',
@@ -18,24 +15,8 @@ const SOURCE_COLORS: Record<string, string> = {
   serper: '#0891b2',
 }
 
-const PLATFORM_COLORS: Record<Platform, string> = {
-  hackernews: '#f97316',
-  producthunt: '#ef4444',
-  indiehackers: '#8b5cf6',
-  reddit_startups: '#b45309',
-  linkedin: '#2563eb',
-}
-
-export function SimulatePage() {
-  const { simId } = useParams<{ simId: string }>()
-  const navigate = useNavigate()
-  const sim = useSimulation(simId!)
-
-  useEffect(() => {
-    if (sim.status === 'done' && simId) {
-      navigate(`/result/${simId}`)
-    }
-  }, [sim.status, simId, navigate])
+export function DemoSimulatePage() {
+  const sim = useMockSimulation()
 
   const lastProgress = sim.events
     .filter(e => e.type === 'sim_progress')
@@ -68,6 +49,16 @@ export function SimulatePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
       <Header />
+
+      {/* 데모 배너 */}
+      <div style={{
+        background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
+        color: '#fff', textAlign: 'center', fontSize: 12,
+        padding: '6px 0', fontWeight: 500, letterSpacing: '0.02em',
+      }}>
+        ✦ DEMO MODE — preview of live simulation UI
+      </div>
+
       <main className="page-enter" style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px' }}>
 
         {/* 상태 헤더 */}
@@ -97,10 +88,6 @@ export function SimulatePage() {
           </p>
         )}
 
-        {sim.status === 'error' && (
-          <p style={{ color: '#ef4444', fontSize: 14, margin: '8px 0 20px' }}>{sim.errorMsg}</p>
-        )}
-
         {/* 페르소나 생성 진행 바 */}
         {phase === 'personas' && sim.agentCount > 0 && (
           <div style={{ margin: '0 0 24px 0', animation: 'fadeInUp 0.3s ease' }}>
@@ -120,25 +107,6 @@ export function SimulatePage() {
           </div>
         )}
 
-        {/* 플랫폼별 포스트 카운터 */}
-        {totalPosts > 0 && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-            {(Object.entries(sim.postsByPlatform) as [Platform, SocialPost[]][]).map(([platform, posts]) => (
-              <span key={platform} style={{
-                fontSize: 12, padding: '4px 10px', borderRadius: 20,
-                background: '#f1f5f9', color: '#475569',
-                display: 'flex', alignItems: 'center', gap: 5,
-                animation: 'scaleIn 0.2s ease',
-              }}>
-                <span style={{
-                  width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                  background: PLATFORM_COLORS[platform] || '#94a3b8',
-                }} />
-                {platform} · {posts?.length ?? 0}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* 소스 수집 타임라인 */}
         {sim.sourceTimeline.length > 0 && phase === 'sourcing' && (
@@ -155,7 +123,6 @@ export function SimulatePage() {
                     padding: '8px 12px', borderRadius: 8,
                     background: '#fff', border: '1px solid #e2e8f0',
                     borderLeft: `3px solid ${SOURCE_COLORS[item.source] || '#94a3b8'}`,
-                    animationDelay: i === 0 ? '0ms' : undefined,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
@@ -185,22 +152,18 @@ export function SimulatePage() {
         {/* 플랫폼별 시뮬레이션 피드 */}
         {totalPosts > 0 && (
           <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 20 }}>
-            <PlatformSimFeed postsByPlatform={sim.postsByPlatform} />
+            <PlatformSimFeed postsByPlatform={sim.postsByPlatform} ideaText="Noosphere – AI market simulator" />
           </div>
         )}
 
-        {/* 초기 대기 상태 */}
+        {/* 초기 대기 */}
         {totalPosts === 0 && sim.sourceTimeline.length === 0 && phase !== 'error' && (
           <div style={{
             marginTop: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14,
             animation: 'fadeIn 0.5s ease',
           }}>
             <div style={{ fontSize: 28, marginBottom: 12 }}>⚙️</div>
-            {phase === 'personas'
-              ? `Building ${sim.agentCount} agent personas across platforms...`
-              : phase === 'seeding'
-              ? 'Generating seed posts for each platform...'
-              : 'Waiting for simulation to start...'}
+            Waiting for simulation to start...
           </div>
         )}
       </main>

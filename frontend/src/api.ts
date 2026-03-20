@@ -29,3 +29,8 @@ export async function getHistory(): Promise<import('./types').HistoryItem[]> {
 export function exportPdfUrl(sim_id: string): string {
   return `${API_BASE}/export/${sim_id}`
 }
+
+export async function cancelSimulation(sim_id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/simulate/${sim_id}/cancel`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to cancel: ${res.status}`)
+}

@@ -1,4 +1,12 @@
 services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   backend:
     build: .
     ports:
@@ -9,6 +17,24 @@ services:
     environment:
       - DB_PATH=/app/data/noosphere.db
       - SOURCES_DB_PATH=/app/data/noosphere_sources.db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: celery -A backend.celery_app worker --loglevel=info --concurrency=2
+    env_file: .env
+    volumes:
+      - db-data:/app/data
+    environment:
+      - DB_PATH=/app/data/noosphere.db
+      - SOURCES_DB_PATH=/app/data/noosphere_sources.db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
 
   frontend:
     image: node:20-alpine

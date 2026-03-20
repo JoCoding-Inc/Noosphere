@@ -1,37 +1,41 @@
 from __future__ import annotations
-import asyncio
 import json
 import logging
 import os
-import time
 import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
 
+import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
 
+from backend.celery_app import REDIS_URL
 from backend.db import (
     init_db, create_simulation, update_simulation_status,
-    save_sim_results, get_sim_results, list_history, get_simulation, DB_PATH
+    save_sim_results, get_sim_results, list_history, get_simulation, DB_PATH,
 )
+from backend.tasks import run_simulation_task, STREAM_KEY
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 MAX_JOBS = int(os.getenv("MAX_JOBS", "5"))
-_sim_jobs: dict[str, dict] = {}  # sim_id → {"queue": asyncio.Queue, "created_at": float}
-_sim_jobs_lock = asyncio.Lock()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db(DB_PATH)
+    # 서버 재시작 시 미완료 작업을 failed로 정리
+    import sqlite3 as _sqlite3
+    with _sqlite3.connect(str(DB_PATH)) as _conn:
+        cur = _conn.execute("UPDATE simulations SET status='failed' WHERE status='running'")
+        if cur.rowcount:
+            logger.info("Marked %d stale 'running' simulations as 'failed'", cur.rowcount)
     yield
 
 
@@ -85,136 +89,52 @@ async def health():
 
 @app.post("/simulate")
 async def simulate(config: SimConfig):
-    """Start a simulation. Returns sim_id for streaming."""
-    async with _sim_jobs_lock:
-        running = sum(1 for j in _sim_jobs.values()
-                      if time.time() - j["created_at"] < 1800)
-        if running >= MAX_JOBS:
-            raise HTTPException(429, "Too many concurrent simulations")
+    """Start a simulation via Celery worker. Returns sim_id for streaming."""
+    # 현재 running 중인 시뮬레이션 수 체크
+    import sqlite3 as _sqlite3
+    with _sqlite3.connect(str(DB_PATH)) as _conn:
+        (running_count,) = _conn.execute(
+            "SELECT COUNT(*) FROM simulations WHERE status='running'"
+        ).fetchone()
+    if running_count >= MAX_JOBS:
+        raise HTTPException(429, "Too many concurrent simulations")
 
     sim_id = str(uuid.uuid4())
-    domain = ""  # will be detected during run
     create_simulation(DB_PATH, sim_id, config.input_text, config.language,
-                      config.model_dump(), domain)
+                      config.model_dump(), "")
 
-    queue: asyncio.Queue[dict | None] = asyncio.Queue()
-    async with _sim_jobs_lock:
-        _sim_jobs[sim_id] = {"queue": queue, "created_at": time.time()}
-
-    async def run():
-        from backend.analyzer import analyze
-        from backend.context_builder import detect_domain
-        from backend.reporter import generate_analysis_report
-        from backend.simulation.social_runner import run_simulation
-
-        try:
-            # Phase 1: 소스 검색 + 분석 보고서
-            queue.put_nowait({"type": "sim_progress", "message": "Searching external sources..."})
-            raw_items = await analyze(config.input_text, limits=config.source_limits or None)
-            domain_str = await detect_domain(config.input_text)
-
-            queue.put_nowait({"type": "sim_progress",
-                              "message": f"Domain: {domain_str}. Generating analysis report..."})
-            analysis_md = await generate_analysis_report(
-                raw_items=raw_items,
-                domain=domain_str,
-                input_text=config.input_text,
-                language=config.language,
-            )
-            queue.put_nowait({"type": "sim_analysis", "data": {"markdown": analysis_md}})
-
-            # Phase 2: RawItems → context nodes for simulation
-            context_nodes = [
-                {
-                    "id": item["id"],
-                    "title": item["title"],
-                    "source": item["source"],
-                    "abstract": item.get("text") or item.get("title", ""),
-                }
-                for item in raw_items[:30]
-            ] or [{"id": "input", "title": config.input_text[:80],
-                   "source": "input_text", "abstract": config.input_text[:300]}]
-
-            queue.put_nowait({"type": "sim_progress",
-                              "message": f"Starting simulation with {len(context_nodes)} context nodes..."})
-
-            posts_by_platform: dict = {}
-            personas_by_platform: dict = {}
-            report_json: dict = {}
-            report_md: str = ""
-
-            async for event in run_simulation(
-                input_text=config.input_text,
-                context_nodes=context_nodes,
-                domain=domain_str,
-                max_agents=config.max_agents,
-                num_rounds=config.num_rounds,
-                platforms=config.platforms,
-                language=config.language,
-                activation_rate=config.activation_rate,
-            ):
-                if event["type"] == "sim_report":
-                    data = event["data"]
-                    posts_by_platform = data.get("platform_states", {})
-                    personas_by_platform = data.get("personas", {})
-                    report_json = data.get("report_json", {})
-                    report_md = data.get("markdown", "")
-                queue.put_nowait(event)
-
-            save_sim_results(DB_PATH, sim_id, posts_by_platform,
-                             personas_by_platform, report_json, report_md,
-                             analysis_md=analysis_md)
-            update_simulation_status(DB_PATH, sim_id, "completed")
-
-        except Exception as exc:
-            logger.error("Simulation %s failed: %s", sim_id, exc)
-            queue.put_nowait({"type": "sim_error", "message": str(exc)})
-            update_simulation_status(DB_PATH, sim_id, "failed")
-        finally:
-            queue.put_nowait({"type": "sim_done"})
-            queue.put_nowait(None)  # sentinel
-
-    asyncio.create_task(run())
+    run_simulation_task.delay(sim_id, config.model_dump())
     return {"sim_id": sim_id}
 
 
 @app.get("/simulate-stream/{sim_id}")
 async def simulate_stream(sim_id: str):
-    """SSE stream for a simulation job."""
-    async with _sim_jobs_lock:
-        job = _sim_jobs.get(sim_id)
+    """SSE stream backed by Redis Streams."""
+    sim = get_simulation(DB_PATH, sim_id)
+    if not sim:
+        raise HTTPException(404, "Simulation not found")
 
-    if not job:
-        # Check DB — maybe already completed
-        sim = get_simulation(DB_PATH, sim_id)
-        if not sim:
-            raise HTTPException(404, "Simulation not found")
-
-    queue = job["queue"] if job else None
+    stream_key = STREAM_KEY.format(sim_id)
 
     async def event_generator():
-        if queue is None:
-            # Completed, stream results from DB
-            results = get_sim_results(DB_PATH, sim_id)
-            if results:
-                yield f"data: {json.dumps({'type': 'sim_report', 'data': results})}\n\n"
-            yield f"data: {json.dumps({'type': 'sim_done'})}\n\n"
-            return
-
-        while True:
-            try:
-                event = await asyncio.wait_for(queue.get(), timeout=60.0)
-            except asyncio.TimeoutError:
-                yield "data: {\"type\": \"heartbeat\"}\n\n"
-                continue
-            if event is None:
-                break
-            yield f"data: {json.dumps(event)}\n\n"
-            if event.get("type") == "sim_done":
-                break
-
-        async with _sim_jobs_lock:
-            _sim_jobs.pop(sim_id, None)
+        r = aioredis.from_url(REDIS_URL, decode_responses=True)
+        last_id = "0"  # 처음부터 읽기 (재연결 시에도 전체 이벤트 재생)
+        try:
+            while True:
+                # 30초 블로킹 대기
+                results = await r.xread({stream_key: last_id}, count=100, block=30_000)
+                if not results:
+                    yield 'data: {"type":"heartbeat"}\n\n'
+                    continue
+                for _stream_name, messages in results:
+                    for msg_id, fields in messages:
+                        last_id = msg_id
+                        raw = fields["data"]
+                        yield f"data: {raw}\n\n"
+                        if json.loads(raw).get("type") == "sim_done":
+                            return
+        finally:
+            await r.aclose()
 
     return StreamingResponse(
         event_generator(),
@@ -234,6 +154,35 @@ async def get_results(sim_id: str):
 @app.get("/history")
 async def history():
     return list_history(DB_PATH)
+
+
+@app.post("/simulate/{sim_id}/cancel")
+async def cancel_simulation(sim_id: str):
+    """Cancel a running simulation: revoke Celery task + mark DB as failed."""
+    sim = get_simulation(DB_PATH, sim_id)
+    if not sim:
+        raise HTTPException(404, "Simulation not found")
+    if sim["status"] != "running":
+        raise HTTPException(400, f"Simulation is not running (status: {sim['status']})")
+
+    # Celery task revoke (terminate=True sends SIGTERM to worker process)
+    from backend.celery_app import celery_app as _celery
+    _celery.control.revoke(sim_id, terminate=True, signal="SIGTERM")
+
+    # DB 상태 업데이트
+    update_simulation_status(DB_PATH, sim_id, "failed")
+
+    # Redis stream에 종료 이벤트 발행 (SSE 클라이언트가 연결 끊도록)
+    r = aioredis.from_url(REDIS_URL, decode_responses=True)
+    stream_key = STREAM_KEY.format(sim_id)
+    try:
+        await r.xadd(stream_key, {"data": json.dumps({"type": "sim_error", "message": "Cancelled by user"})})
+        await r.xadd(stream_key, {"data": json.dumps({"type": "sim_done"})})
+    finally:
+        await r.aclose()
+
+    return {"status": "cancelled"}
+
 
 
 @app.get("/export/{sim_id}")

@@ -1,9 +1,7 @@
 # backend/simulation/persona_generator.py
 from __future__ import annotations
-import json
 import logging
 import os
-import re
 import anthropic
 from backend.simulation.models import Persona
 from backend.simulation.graph_utils import sanitize_neighbor_titles
@@ -25,13 +23,11 @@ def _get_client() -> anthropic.AsyncAnthropic:
         _client = anthropic.AsyncAnthropic(api_key=api_key, timeout=30.0)
     return _client
 
-_BIAS_BY_SOURCE = {
-    "arxiv": "academic", "s2": "academic",
-    "github": None,   # determined by LLM
-    "hackernews": None,
-    "hn": None,       # alias used by some ingestion paths
-    "reddit": None,
-    "index": None,
+
+# For academic sources, force low commercial_focus; others are LLM-decided
+_FORCED_ATTRS_BY_SOURCE: dict[str, dict] = {
+    "arxiv": {"commercial_focus": 1},
+    "s2":    {"commercial_focus": 1},
 }
 
 _PLATFORM_AUDIENCE = {
@@ -62,24 +58,91 @@ _PLATFORM_AUDIENCE = {
     ),
 }
 
+_PERSONA_TOOL = {
+    "name": "create_persona",
+    "description": "Create a realistic, diverse persona for a knowledge node participant on a specific platform.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "Full name (culturally appropriate for the platform's likely audience)",
+            },
+            "role": {
+                "type": "string",
+                "description": "Specific job title (e.g. 'Senior Backend Engineer', 'Seed-stage VC Partner', 'ML Research Scientist')",
+            },
+            "age": {
+                "type": "integer",
+                "description": "Age in years (22-65). Must be consistent with seniority and years of experience.",
+                "minimum": 22,
+                "maximum": 65,
+            },
+            "seniority": {
+                "type": "string",
+                "enum": ["intern", "junior", "mid", "senior", "lead", "principal", "director", "vp", "c_suite"],
+                "description": "Career seniority level",
+            },
+            "affiliation": {
+                "type": "string",
+                "enum": ["individual", "startup", "mid_size", "enterprise", "bigtech", "academic"],
+                "description": "Type of organization this person is affiliated with",
+            },
+            "company": {
+                "type": "string",
+                "description": "Specific company name or descriptive label (e.g. 'Google', 'seed-stage fintech startup', 'MIT CSAIL', 'independent consultant')",
+            },
+            "mbti": {
+                "type": "string",
+                "description": "4-letter MBTI type (e.g. 'INTJ', 'ENFP')",
+                "pattern": "^[IE][NS][TF][JP]$",
+            },
+            "interests": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "3-8 professional and personal interests relevant to this persona",
+                "minItems": 3,
+                "maxItems": 8,
+            },
+            "skepticism": {
+                "type": "integer",
+                "description": "Skepticism level: 1=enthusiastic evangelist, 10=extreme skeptic. Reflect how this type of person typically reacts to new ideas.",
+                "minimum": 1,
+                "maximum": 10,
+            },
+            "commercial_focus": {
+                "type": "integer",
+                "description": "Commercial orientation: 1=pure academic/idealistic (cares about truth/craft), 10=purely commercial/ROI-driven (cares about revenue/growth).",
+                "minimum": 1,
+                "maximum": 10,
+            },
+            "innovation_openness": {
+                "type": "integer",
+                "description": "Innovation openness: 1=very conservative/risk-averse (prefers proven solutions), 10=extreme early adopter (loves bleeding-edge, tolerates risk).",
+                "minimum": 1,
+                "maximum": 10,
+            },
+        },
+        "required": [
+            "name", "role", "age", "seniority", "affiliation", "company",
+            "mbti", "interests", "skepticism", "commercial_focus", "innovation_openness",
+        ],
+    },
+}
+
 _SYSTEM_TMPL = """\
-You are generating a realistic persona for a knowledge node in the context of a specific idea being evaluated.
+You are generating a realistic, diverse persona for a knowledge node in the context of a specific idea being evaluated.
 Given a node (title, source, abstract), the idea being analyzed, and the target platform, create a realistic person who would have a meaningful perspective on that idea ON THAT PLATFORM.
 
 Platform context: {platform_context}
 
-The persona does NOT have to be someone who created or published the node. They should be the kind of person who would encounter this topic on the specified platform.
+Guidelines:
+- The persona does NOT have to be someone who created or published the node. They should be the kind of person who would encounter this topic on the specified platform.
+- Use the platform context to determine appropriate role, seniority, and affiliation. Personas across platforms should differ significantly.
+- Age must be consistent with seniority (e.g. a c_suite persona should be 38+ years old, a junior persona 22-30).
+- Make the persona feel like a real individual: specific company, realistic age, coherent interests.
+- Vary skepticism, commercial_focus, and innovation_openness to reflect the diversity of real users on this platform."""
 
-Use the platform context above to determine the appropriate role and background. Personas across platforms should differ significantly in job title, background, and priorities.
-
-Respond ONLY with valid JSON:
-{{
-  "name": "Full Name",
-  "role": "Job Title or Role",
-  "mbti": "4-letter type",
-  "interests": ["topic1", "topic2", "topic3"],
-  "bias": "academic|commercial|skeptic|evangelist"
-}}"""
 
 async def generate_persona(
     node: dict,
@@ -87,12 +150,10 @@ async def generate_persona(
     neighbor_titles: list[str] | None = None,
     platform_name: str = "",
 ) -> Persona:
-    # Validate required fields before making any API call
     node_id = node.get("id")
     if not node_id:
         raise ValueError(f"Node missing required 'id' field: {node!r}")
 
-    # Sanitize and truncate fields to prevent prompt injection via external node data
     source = node.get("source", "")[:50].replace("\n", " ").replace("\r", " ")
     title = node.get("title", "")[:200].replace("\n", " ").replace("\r", " ")
     abstract = node.get("abstract", "")[:300].replace("\n", " ").replace("\r", " ")
@@ -122,6 +183,8 @@ async def generate_persona(
                     model="claude-haiku-4-5-20251001",
                     max_tokens=8192,
                     system=system,
+                    tools=[_PERSONA_TOOL],
+                    tool_choice={"type": "tool", "name": "create_persona"},
                     messages=[{"role": "user", "content": prompt}],
                 )
             break
@@ -137,44 +200,42 @@ async def generate_persona(
                 raise
             logger.warning("Persona API call failed (attempt %d): %s — retrying", attempt + 1, exc)
             await __import__("asyncio").sleep(1.0)
-    try:
 
-        if not message.content:
-            raise ValueError("Empty response from API")
-        raw = message.content[0].text.strip()
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
-        if not raw:
-            raise ValueError("Persona generation returned empty response")
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Persona generation returned invalid JSON: {e}. Raw: {raw[:100]}")
+    # Extract structured output from tool_use block
+    tool_block = next(
+        (b for b in message.content if b.type == "tool_use"),
+        None,
+    )
+    if tool_block is None:
+        raise ValueError(f"No tool_use block in persona response for node {node_id}")
 
-        # Override bias for academic sources; None in dict means LLM decides
-        if source not in _BIAS_BY_SOURCE:
-            logger.warning("Unknown source %r; bias will be LLM-determined", source)
-        forced_bias = _BIAS_BY_SOURCE.get(source)
-        bias = forced_bias if forced_bias is not None else data.get("bias", "skeptic")
+    data: dict = tool_block.input
 
-        # Validate interests is a list (LLMs sometimes return a string)
-        interests_raw = data.get("interests", [])
-        if isinstance(interests_raw, str):
-            interests = [t.strip() for t in interests_raw.split(",") if t.strip()]
-        elif isinstance(interests_raw, list):
-            interests = [str(i) for i in interests_raw]
-        else:
-            interests = []
-        interests = (interests[:10] or ["general"])  # cap length; ensure non-empty for prompt
+    # Apply forced attributes for academic sources
+    forced = _FORCED_ATTRS_BY_SOURCE.get(source, {})
 
-        return Persona(
-            node_id=node_id,
-            name=data.get("name", "Unknown"),
-            role=data.get("role", "Professional"),
-            mbti=data.get("mbti", "INTJ"),
-            interests=interests,
-            bias=bias,
-            source_title=node.get("title", ""),
-        )
-    except Exception as exc:
-        logger.warning("generate_persona() failed for node %s: %s", node.get("id", "?"), exc)
-        raise
+    # Normalize interests
+    interests_raw = data.get("interests", [])
+    if isinstance(interests_raw, str):
+        interests = [t.strip() for t in interests_raw.split(",") if t.strip()]
+    elif isinstance(interests_raw, list):
+        interests = [str(i) for i in interests_raw]
+    else:
+        interests = []
+    interests = interests[:8] or ["general"]
+
+    return Persona(
+        node_id=node_id,
+        name=data.get("name", "Unknown"),
+        role=data.get("role", "Professional"),
+        age=int(data.get("age", 30)),
+        seniority=data.get("seniority", "mid"),
+        affiliation=data.get("affiliation", "individual"),
+        company=data.get("company", ""),
+        mbti=data.get("mbti", "INTJ"),
+        interests=interests,
+        skepticism=forced.get("skepticism", int(data.get("skepticism", 5))),
+        commercial_focus=forced.get("commercial_focus", int(data.get("commercial_focus", 5))),
+        innovation_openness=forced.get("innovation_openness", int(data.get("innovation_openness", 5))),
+        source_title=node.get("title", ""),
+    )

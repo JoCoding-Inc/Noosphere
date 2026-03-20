@@ -168,10 +168,10 @@ export function HomePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
       <Header />
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '52px 24px 80px' }}>
+      <main className="page-enter" style={{ maxWidth: 760, margin: '0 auto', padding: '52px 24px 80px' }}>
 
         {/* Hero */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 32, animation: 'fadeInUp 0.4s ease both' }}>
           <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', margin: '0 0 10px' }}>
             How will the market react?
           </h1>
@@ -192,26 +192,36 @@ export function HomePage() {
             resize: 'vertical', fontFamily: 'inherit',
             boxSizing: 'border-box', background: '#fff',
             lineHeight: 1.6, outline: 'none',
-            transition: 'border-color 0.15s',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+            animation: 'fadeInUp 0.45s ease both',
           }}
-          onFocus={e => (e.target.style.borderColor = '#94a3b8')}
-          onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
+          onFocus={e => {
+            e.target.style.borderColor = '#8b5cf6'
+            e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.12)'
+          }}
+          onBlur={e => {
+            e.target.style.borderColor = '#e2e8f0'
+            e.target.style.boxShadow = 'none'
+          }}
         />
 
         {/* Platforms */}
-        <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {PLATFORM_OPTIONS.map(p => {
+        <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap', animation: 'fadeInUp 0.5s ease both' }}>
+          {PLATFORM_OPTIONS.map((p, i) => {
             const active = config.platforms.includes(p.id)
             return (
               <button key={p.id} onClick={() => togglePlatform(p.id)}
+                className="platform-btn"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '7px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
-                  border: '1.5px solid', transition: 'all 0.15s',
+                  border: '1.5px solid',
                   background: active ? '#1e293b' : '#fff',
                   color: active ? '#fff' : '#475569',
                   borderColor: active ? '#1e293b' : '#e2e8f0',
                   fontWeight: active ? 600 : 400,
+                  boxShadow: active ? '0 2px 8px rgba(30,41,59,0.25)' : 'none',
+                  animation: `fadeInUp 0.${50 + i * 5}s ease both`,
                 }}>
                 <span>{p.icon}</span> {p.label}
               </button>
@@ -374,13 +384,16 @@ export function HomePage() {
         <button
           onClick={handleRun}
           disabled={loading}
+          className={loading ? '' : 'run-btn'}
           style={{
             marginTop: 24, padding: '14px 36px', fontSize: 15, fontWeight: 700,
             background: loading ? '#94a3b8' : '#1e293b', color: '#fff',
             border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer',
-            letterSpacing: '-0.01em',
+            letterSpacing: '-0.01em', display: 'inline-flex', alignItems: 'center',
+            animation: 'fadeInUp 0.6s ease both',
           }}>
-          {loading ? 'Starting simulation...' : 'Run Simulation →'}
+          {loading && <span className="spinner" />}
+          {loading ? 'Starting...' : 'Run Simulation →'}
         </button>
       </main>
     </div>

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { Platform, SocialPost } from '../types'
 
+export type SourceItem = { source: string; title: string; snippet: string }
+
 export type SimEvent =
   | { type: 'sim_start'; agent_count: number }
   | { type: 'sim_progress'; message: string }
+  | { type: 'sim_source_item'; source: string; title: string; snippet: string }
   | { type: 'sim_analysis'; data: { markdown: string } }
   | { type: 'sim_persona'; name: string; role: string; platform: Platform }
   | { type: 'sim_platform_post'; post: SocialPost }
@@ -23,6 +26,8 @@ interface SimState {
   errorMsg: string
   roundNum: number
   agentCount: number
+  personaCount: number
+  sourceTimeline: SourceItem[]
 }
 
 export function useSimulation(simId: string): SimState {
@@ -36,6 +41,8 @@ export function useSimulation(simId: string): SimState {
     errorMsg: '',
     roundNum: 0,
     agentCount: 0,
+    personaCount: 0,
+    sourceTimeline: [],
   })
 
   useEffect(() => {
@@ -50,6 +57,11 @@ export function useSimulation(simId: string): SimState {
         if (event.type === 'sim_start') {
           next.status = 'running'
           next.agentCount = event.agent_count
+        } else if (event.type === 'sim_source_item') {
+          next.sourceTimeline = [
+            { source: event.source, title: event.title, snippet: event.snippet },
+            ...prev.sourceTimeline,
+          ]
         } else if (event.type === 'sim_platform_post') {
           const platform = event.post.platform
           const posts = { ...prev.postsByPlatform }
@@ -57,6 +69,8 @@ export function useSimulation(simId: string): SimState {
           next.postsByPlatform = posts
         } else if (event.type === 'sim_round_summary') {
           next.roundNum = event.round_num
+        } else if (event.type === 'sim_persona') {
+          next.personaCount = prev.personaCount + 1
         } else if (event.type === 'sim_analysis') {
           next.analysisMd = event.data.markdown
         } else if (event.type === 'sim_report') {
