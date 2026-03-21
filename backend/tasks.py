@@ -197,6 +197,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 report_json,
                 report_md,
                 analysis_md=analysis_md,
+                raw_items=raw_items,
             )
             if not await asyncio.to_thread(
                 update_simulation_status,
