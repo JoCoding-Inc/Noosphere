@@ -49,6 +49,18 @@ def init_db(path: str | Path = DB_PATH) -> None:
                 sources_json TEXT NOT NULL DEFAULT '[]',
                 final_report_md TEXT NOT NULL DEFAULT ''
             );
+            CREATE TABLE IF NOT EXISTS sim_checkpoints (
+                sim_id TEXT PRIMARY KEY,
+                last_round INTEGER NOT NULL,
+                platform_states_json TEXT NOT NULL,
+                personas_json TEXT NOT NULL,
+                context_nodes_json TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                analysis_md TEXT NOT NULL,
+                ontology_json TEXT,
+                raw_items_json TEXT NOT NULL,
+                saved_at TEXT NOT NULL
+            );
         """)
         # 기존 DB 마이그레이션 (analysis_md 컬럼 없으면 추가)
         try:
@@ -306,6 +318,64 @@ def get_sim_results(path: str | Path, sim_id: str) -> dict | None:
     d["report_json"] = json.loads(d["report_json"])
     d["sources_json"] = json.loads(d.get("sources_json") or "[]")
     return d
+
+
+def save_checkpoint(
+    path: str | Path,
+    sim_id: str,
+    last_round: int,
+    platform_states: dict,
+    personas: dict,
+    context_nodes: list,
+    domain: str,
+    analysis_md: str,
+    ontology: dict | None,
+    raw_items: list,
+) -> None:
+    now = _utc_now_iso()
+    with _conn(path) as conn:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO sim_checkpoints
+            (sim_id, last_round, platform_states_json, personas_json, context_nodes_json,
+             domain, analysis_md, ontology_json, raw_items_json, saved_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                sim_id,
+                last_round,
+                json.dumps(platform_states, ensure_ascii=False),
+                json.dumps(personas, ensure_ascii=False),
+                json.dumps(context_nodes, ensure_ascii=False),
+                domain,
+                analysis_md,
+                json.dumps(ontology, ensure_ascii=False) if ontology is not None else None,
+                json.dumps(raw_items, ensure_ascii=False),
+                now,
+            ),
+        )
+
+
+def get_checkpoint(path: str | Path, sim_id: str) -> dict | None:
+    with _conn(path) as conn:
+        row = conn.execute(
+            "SELECT * FROM sim_checkpoints WHERE sim_id=?", (sim_id,)
+        ).fetchone()
+    if not row:
+        return None
+    d = dict(row)
+    d["platform_states"] = json.loads(d.pop("platform_states_json"))
+    d["personas"] = json.loads(d.pop("personas_json"))
+    d["context_nodes"] = json.loads(d.pop("context_nodes_json"))
+    d["ontology"] = json.loads(d["ontology_json"]) if d.get("ontology_json") else None
+    d["raw_items"] = json.loads(d.pop("raw_items_json"))
+    d.pop("ontology_json", None)
+    return d
+
+
+def delete_checkpoint(path: str | Path, sim_id: str) -> None:
+    with _conn(path) as conn:
+        conn.execute("DELETE FROM sim_checkpoints WHERE sim_id=?", (sim_id,))
 
 
 def list_history(path: str | Path = DB_PATH, limit: int = 50) -> list[dict]:
