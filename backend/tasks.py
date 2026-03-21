@@ -39,6 +39,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
     async def _run() -> None:
         from backend.analyzer import analyze
         from backend.context_builder import detect_domain
+        from backend.ontology_builder import build_ontology
         from backend.reporter import generate_analysis_report
         from backend.simulation.social_runner import run_simulation
 
@@ -163,6 +164,15 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 "abstract": config["input_text"][:300],
             }]
 
+            publish({"type": "sim_progress", "message": "Building ecosystem ontology..."})
+            ontology = await build_ontology(
+                context_nodes=context_nodes,
+                input_text=config["input_text"],
+                provider=provider,
+            )
+            if ontology:
+                publish({"type": "sim_ontology", "data": ontology})
+
             publish({
                 "type": "sim_progress",
                 "message": f"Starting simulation with {len(context_nodes)} context nodes...",
@@ -178,6 +188,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 language=config["language"],
                 activation_rate=config["activation_rate"],
                 provider=provider,
+                ontology=ontology,
             ):
                 await checkpoint()
                 if event["type"] == "sim_report":
