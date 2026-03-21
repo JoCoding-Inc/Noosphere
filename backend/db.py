@@ -1,11 +1,11 @@
 from __future__ import annotations
 import json
+import os
 import sqlite3
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-import os
 DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "noosphere.db")))
 
 ACTIVE_SIMULATION_STATUS = "running"
