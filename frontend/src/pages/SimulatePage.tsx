@@ -34,17 +34,17 @@ export function SimulatePage() {
   const totalPosts = Object.values(sim.postsByPlatform).reduce((s, a) => s + (a?.length ?? 0), 0)
 
   const phase =
-    sim.status === 'connecting' ? 'connecting' :
     sim.status === 'error' ? 'error' :
+    sim.status === 'connecting' && sim.sourceTimeline.length === 0 && !sim.isSourcing ? 'connecting' :
     sim.agentCount === 0 ? 'sourcing' :
-    sim.roundNum === 0 && sim.personaCount < sim.agentCount ? 'personas' :
+    sim.roundNum === 0 && totalPosts === 0 ? 'personas' :
     sim.roundNum === 0 ? 'seeding' :
     'rounds'
 
   const phaseLabel: Record<string, string> = {
     connecting: 'Connecting...',
     sourcing: 'Searching sources...',
-    personas: `Generating personas — ${sim.personaCount} / ${sim.agentCount}`,
+    personas: 'Generating personas...',
     seeding: 'Initializing platforms...',
     rounds: `Round ${sim.roundNum} · ${totalPosts} posts`,
     error: 'Simulation failed',
@@ -93,7 +93,7 @@ export function SimulatePage() {
         <div style={{ margin: '0 0 24px 0', animation: 'fadeInUp 0.3s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>
             <span>Building agent personas</span>
-            <span>{sim.personaCount} / {sim.agentCount}</span>
+            <span>{sim.personaCount} created</span>
           </div>
           <div style={{ height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{

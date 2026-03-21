@@ -71,5 +71,5 @@ def set_cache(input_text: str, results: list[dict[str, Any]], path: Path = DB_PA
     with _conn(path) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO source_cache VALUES (?,?,?,?,?)",
-            (key, input_text.strip(), json.dumps(results), now, _SCHEMA_VERSION)
+            (key, input_text.strip(), json.dumps(results, ensure_ascii=False), now, _SCHEMA_VERSION)
         )
