@@ -226,6 +226,125 @@ async def test_complete_gemini_text():
     assert result.tool_args is None
 
 
+# ── tokens_used 추출 ──────────────────────────────────────────────────────────
+
+async def test_complete_openai_returns_tokens_used():
+    """OpenAI 응답에서 total_tokens를 tokens_used로 반환한다."""
+    from backend.llm import complete
+
+    mock_message = MagicMock()
+    mock_message.content = "Hello"
+    mock_message.tool_calls = None
+
+    mock_usage = MagicMock()
+    mock_usage.total_tokens = 42
+
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=mock_message)]
+    mock_response.usage = mock_usage
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    with patch("backend.llm._get_openai_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="openai",
+            max_tokens=50,
+        )
+    assert result.tokens_used == 42
+
+
+async def test_complete_openai_tokens_used_none_when_usage_missing():
+    """OpenAI 응답에 usage 필드가 없으면 tokens_used는 None이다."""
+    from backend.llm import complete
+
+    mock_message = MagicMock()
+    mock_message.content = "Hello"
+    mock_message.tool_calls = None
+
+    mock_response = MagicMock(spec=["choices"])  # usage 속성 없음
+    mock_response.choices = [MagicMock(message=mock_message)]
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    with patch("backend.llm._get_openai_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="openai",
+            max_tokens=50,
+        )
+    assert result.tokens_used is None
+
+
+async def test_complete_anthropic_returns_tokens_used():
+    """Anthropic 응답에서 input_tokens + output_tokens 합계를 tokens_used로 반환한다."""
+    from backend.llm import complete
+    import anthropic
+
+    mock_text_block = MagicMock(spec=anthropic.types.TextBlock)
+    mock_text_block.text = "response"
+
+    mock_usage = MagicMock()
+    mock_usage.input_tokens = 30
+    mock_usage.output_tokens = 20
+
+    mock_response = MagicMock()
+    mock_response.content = [mock_text_block]
+    mock_response.usage = mock_usage
+
+    mock_client = AsyncMock()
+    mock_client.messages.create = AsyncMock(return_value=mock_response)
+
+    with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="anthropic",
+            max_tokens=50,
+        )
+    assert result.tokens_used == 50  # input(30) + output(20)
+
+
+async def test_complete_gemini_returns_tokens_used():
+    """Gemini 응답에서 usage_metadata.total_token_count를 tokens_used로 반환한다."""
+    from backend.llm import complete
+
+    mock_usage_metadata = MagicMock()
+    mock_usage_metadata.total_token_count = 77
+
+    mock_response = MagicMock()
+    mock_response.text = "Gemini"
+    mock_response.usage_metadata = mock_usage_metadata
+    mock_part = MagicMock(spec=[])
+    mock_response.candidates = [MagicMock(content=MagicMock(parts=[mock_part]))]
+
+    mock_aio = AsyncMock()
+    mock_aio.models.generate_content = AsyncMock(return_value=mock_response)
+    mock_client = MagicMock()
+    mock_client.aio = mock_aio
+
+    with patch("backend.llm._get_gemini_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="gemini",
+            max_tokens=50,
+        )
+    assert result.tokens_used == 77
+
+
 def test_deep_strip_schema_keys():
     """_deep_strip_schema_keys removes additionalProperties/$schema and normalizes nullable unions."""
     from backend.llm import _deep_strip_schema_keys

@@ -47,6 +47,7 @@ class LLMResponse:
     content: str | None        # normalized text response
     tool_name: str | None      # name of tool called, if any
     tool_args: dict | None     # parsed tool arguments (plain dict)
+    tokens_used: int | None = None  # actual tokens consumed (input + output)
 
 
 class LLMToolRequired(Exception):
@@ -111,16 +112,22 @@ def _tool_choice_openai(tool_choice: str | None) -> str | dict:
 def _extract_openai_response(response, tool_choice: str | None) -> LLMResponse:
     message = response.choices[0].message
     tool_calls = getattr(message, "tool_calls", None) or []
+    tokens_used: int | None = None
+    try:
+        tokens_used = response.usage.total_tokens
+    except AttributeError:
+        pass
     if tool_calls:
         tc = tool_calls[0]
         return LLMResponse(
             content=message.content,
             tool_name=tc.function.name,
             tool_args=json.loads(tc.function.arguments),
+            tokens_used=tokens_used,
         )
     if tool_choice is not None:
         raise LLMToolRequired(f"Expected tool call '{tool_choice}' but got none")
-    return LLMResponse(content=message.content, tool_name=None, tool_args=None)
+    return LLMResponse(content=message.content, tool_name=None, tool_args=None, tokens_used=tokens_used)
 
 
 async def _complete_openai(
@@ -187,6 +194,11 @@ def _tool_choice_anthropic(tool_choice: str | None) -> dict:
 
 
 def _extract_anthropic_response(response, tool_choice: str | None) -> LLMResponse:
+    tokens_used: int | None = None
+    try:
+        tokens_used = response.usage.input_tokens + response.usage.output_tokens
+    except AttributeError:
+        pass
     tool_block = next(
         (b for b in response.content if isinstance(b, _anthropic.types.ToolUseBlock)),
         None
@@ -196,6 +208,7 @@ def _extract_anthropic_response(response, tool_choice: str | None) -> LLMRespons
             content=None,
             tool_name=tool_block.name,
             tool_args=dict(tool_block.input),
+            tokens_used=tokens_used,
         )
     if tool_choice is not None:
         raise LLMToolRequired(f"Expected tool call '{tool_choice}' but got none")
@@ -207,6 +220,7 @@ def _extract_anthropic_response(response, tool_choice: str | None) -> LLMRespons
         content=text_block.text if text_block else None,
         tool_name=None,
         tool_args=None,
+        tokens_used=tokens_used,
     )
 
 
@@ -336,6 +350,11 @@ def _to_gemini_contents(messages: list[dict]) -> list:
 
 
 def _extract_gemini_response(response, tool_choice: str | None) -> LLMResponse:
+    tokens_used: int | None = None
+    try:
+        tokens_used = response.usage_metadata.total_token_count
+    except AttributeError:
+        pass
     # Look for function_call in parts
     try:
         parts = response.candidates[0].content.parts
@@ -346,12 +365,13 @@ def _extract_gemini_response(response, tool_choice: str | None) -> LLMResponse:
                     content=None,
                     tool_name=fc.name,
                     tool_args=dict(fc.args),
+                    tokens_used=tokens_used,
                 )
     except (IndexError, AttributeError):
         pass
     if tool_choice is not None:
         raise LLMToolRequired(f"Expected tool call '{tool_choice}' but got none")
-    return LLMResponse(content=response.text, tool_name=None, tool_args=None)
+    return LLMResponse(content=response.text, tool_name=None, tool_args=None, tokens_used=tokens_used)
 
 
 async def _complete_gemini(
