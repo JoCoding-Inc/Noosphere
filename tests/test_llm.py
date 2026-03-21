@@ -62,6 +62,8 @@ async def test_complete_openai_text():
 
     with patch("backend.llm._get_openai_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -99,6 +101,8 @@ async def test_complete_openai_tool_call():
 
     with patch("backend.llm._get_openai_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "gen persona"}],
@@ -127,6 +131,9 @@ async def test_complete_anthropic_text():
     mock_client.messages.create = AsyncMock(return_value=mock_response)
 
     with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -156,6 +163,9 @@ async def test_complete_anthropic_tool_call():
     tool = {"type": "function", "function": {"name": "create_persona", "description": "", "parameters": {"type": "object", "properties": {}}}}
 
     with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "gen persona"}],
@@ -187,6 +197,8 @@ async def test_complete_openai_tool_required_raises():
 
     with patch("backend.llm._get_openai_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
         with pytest.raises(LLMToolRequired):
             await complete(
@@ -215,6 +227,9 @@ async def test_complete_gemini_text():
     mock_client.aio = mock_aio
 
     with patch("backend.llm._get_gemini_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -248,6 +263,8 @@ async def test_complete_openai_returns_tokens_used():
 
     with patch("backend.llm._get_openai_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -274,6 +291,8 @@ async def test_complete_openai_tokens_used_none_when_usage_missing():
 
     with patch("backend.llm._get_openai_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -305,6 +324,8 @@ async def test_complete_anthropic_returns_tokens_used():
 
     with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -335,6 +356,8 @@ async def test_complete_gemini_returns_tokens_used():
 
     with patch("backend.llm._get_gemini_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -361,6 +384,8 @@ async def test_complete_anthropic_tokens_used_none_when_usage_missing():
 
     with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -387,6 +412,8 @@ async def test_complete_gemini_tokens_used_none_when_usage_missing():
 
     with patch("backend.llm._get_gemini_client", return_value=mock_client), \
          patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-id"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
          patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}):
         result = await complete(
             messages=[{"role": "user", "content": "hi"}],
@@ -433,3 +460,102 @@ def test_deep_strip_schema_keys():
     nullable_result = result["properties"]["nullable_field"]
     assert nullable_result["type"] == "string"
     assert nullable_result["nullable"] is True
+
+
+# ── TPM 연동 ──────────────────────────────────────────────────────────────────
+
+async def test_acquire_tpm_slot_called_before_openai_request():
+    """_complete_openai는 API 호출 전에 acquire_tpm_slot을 호출한다."""
+    from backend.llm import complete
+
+    call_order = []
+
+    mock_message = MagicMock()
+    mock_message.content = "ok"
+    mock_message.tool_calls = None
+
+    mock_usage = MagicMock()
+    mock_usage.total_tokens = 30
+
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=mock_message)]
+    mock_response.usage = mock_usage
+
+    mock_client = AsyncMock()
+
+    async def fake_create(**kwargs):
+        call_order.append("api_call")
+        return mock_response
+
+    mock_client.chat.completions.create = fake_create
+
+    async def fake_acquire_tpm(provider, tokens):
+        call_order.append("tpm_acquire")
+        return "res-id"
+
+    with patch("backend.llm._get_openai_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", side_effect=fake_acquire_tpm), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock), \
+         patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="openai",
+            max_tokens=200,
+        )
+    assert call_order.index("tpm_acquire") < call_order.index("api_call")
+
+
+async def test_record_token_usage_called_with_actual_tokens_openai():
+    """성공적인 OpenAI 호출 후 record_token_usage가 실제 토큰으로 호출된다."""
+    from backend.llm import complete
+
+    mock_message = MagicMock()
+    mock_message.content = "ok"
+    mock_message.tool_calls = None
+
+    mock_usage = MagicMock()
+    mock_usage.total_tokens = 100
+
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=mock_message)]
+    mock_response.usage = mock_usage
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    with patch("backend.llm._get_openai_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="reservation-abc"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock) as mock_record, \
+         patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="openai",
+            max_tokens=200,
+        )
+    mock_record.assert_awaited_once_with("openai", actual_tokens=100, reservation_id="reservation-abc")
+
+
+async def test_record_token_usage_called_with_zero_on_exception():
+    """OpenAI API 예외 발생 시 record_token_usage가 actual_tokens=0으로 호출된다."""
+    from backend.llm import complete
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=RuntimeError("API error"))
+
+    with patch("backend.llm._get_openai_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch("backend.llm.acquire_tpm_slot", new_callable=AsyncMock, return_value="res-xyz"), \
+         patch("backend.llm.record_token_usage", new_callable=AsyncMock) as mock_record, \
+         patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        with pytest.raises(RuntimeError):
+            await complete(
+                messages=[{"role": "user", "content": "hi"}],
+                tier="low",
+                provider="openai",
+                max_tokens=200,
+            )
+    mock_record.assert_awaited_once_with("openai", actual_tokens=0, reservation_id="res-xyz")
