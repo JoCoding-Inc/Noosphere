@@ -45,12 +45,18 @@ def init_db(path: str | Path = DB_PATH) -> None:
                 personas_json TEXT NOT NULL DEFAULT '{}',
                 report_json TEXT NOT NULL DEFAULT '{}',
                 report_md TEXT NOT NULL DEFAULT '',
-                analysis_md TEXT NOT NULL DEFAULT ''
+                analysis_md TEXT NOT NULL DEFAULT '',
+                sources_json TEXT NOT NULL DEFAULT '[]'
             );
         """)
         # 기존 DB 마이그레이션 (analysis_md 컬럼 없으면 추가)
         try:
             conn.execute("ALTER TABLE sim_results ADD COLUMN analysis_md TEXT NOT NULL DEFAULT ''")
+            conn.commit()
+        except Exception:
+            pass  # 이미 있으면 무시
+        try:
+            conn.execute("ALTER TABLE sim_results ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[]'")
             conn.commit()
         except Exception:
             pass  # 이미 있으면 무시
@@ -267,12 +273,16 @@ def save_sim_results(
     report_json: dict,
     report_md: str,
     analysis_md: str = "",
+    raw_items: list[dict] | None = None,
 ) -> None:
     with _conn(path) as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO sim_results VALUES (?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO sim_results "
+            "(sim_id, posts_json, personas_json, report_json, report_md, analysis_md, sources_json) "
+            "VALUES (?,?,?,?,?,?,?)",
             (sim_id, json.dumps(posts), json.dumps(personas),
-             json.dumps(report_json), report_md, analysis_md),
+             json.dumps(report_json), report_md, analysis_md,
+             json.dumps(raw_items or [])),
         )
 
 
@@ -287,6 +297,7 @@ def get_sim_results(path: str | Path, sim_id: str) -> dict | None:
     d["posts_json"] = json.loads(d["posts_json"])
     d["personas_json"] = json.loads(d["personas_json"])
     d["report_json"] = json.loads(d["report_json"])
+    d["sources_json"] = json.loads(d.get("sources_json") or "[]")
     return d
 
 

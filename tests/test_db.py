@@ -95,3 +95,42 @@ def test_stale_running_jobs_are_excluded_and_reconciled(db_path):
         heartbeat_timeout_seconds=60,
     ) == 1
     assert get_simulation(db_path, stale_id)["status"] == "failed"
+
+
+def test_save_and_get_results_with_sources(db_path):
+    sim_id = "test-sources-001"
+    create_simulation(db_path, sim_id, "test", "English", {}, "tech")
+    raw_items = [
+        {"id": "item-1", "title": "Test Repo", "source": "github",
+         "url": "https://github.com/test/repo", "score": 0.9, "text": "A test repo"},
+        {"id": "item-2", "title": "Test Paper", "source": "arxiv",
+         "url": "https://arxiv.org/abs/1234", "score": 0.7, "text": "A test paper"},
+    ]
+    save_sim_results(
+        db_path, sim_id,
+        posts={"hackernews": []},
+        personas={"hackernews": []},
+        report_json={"verdict": "positive"},
+        report_md="## Report",
+        raw_items=raw_items,
+    )
+    result = get_sim_results(db_path, sim_id)
+    assert isinstance(result["sources_json"], list)
+    assert len(result["sources_json"]) == 2
+    assert result["sources_json"][0]["source"] == "github"
+    assert result["sources_json"][1]["title"] == "Test Paper"
+
+
+def test_get_results_sources_json_defaults_to_empty_list(db_path):
+    """Old records without sources_json should return [] not raise an error."""
+    sim_id = "test-sources-002"
+    create_simulation(db_path, sim_id, "test", "English", {}, "tech")
+    save_sim_results(
+        db_path, sim_id,
+        posts={},
+        personas={},
+        report_json={},
+        report_md="",
+    )
+    result = get_sim_results(db_path, sim_id)
+    assert result["sources_json"] == []
