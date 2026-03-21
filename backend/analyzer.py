@@ -65,6 +65,7 @@ async def analyze(
     input_text: str,
     limits: dict[str, int] | None = None,
     on_source_done: Callable[[str, list[dict]], None] | None = None,
+    provider: str = "openai",
 ) -> list[dict[str, Any]]:
     """
     Full pipeline: cache check → concept extraction → parallel source search → cache write.
@@ -75,7 +76,7 @@ async def analyze(
         logger.info("Cache hit for input_text (len=%d)", len(input_text))
         return cached
 
-    extraction = await extract_concepts(input_text)
+    extraction = await extract_concepts(input_text, provider=provider)
     query_bundles: dict[str, list[str]] = extraction.get("query_bundles", {})
     domain_type: str = extraction.get("domain_type", "general")
     lim = {**PROD_LIMITS, **(limits or {})}

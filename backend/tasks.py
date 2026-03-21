@@ -129,6 +129,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 config["input_text"],
                 limits=config.get("source_limits") or None,
                 on_source_done=on_source_done,
+                provider=provider,
             )
             await checkpoint()
             domain_str = await detect_domain(config["input_text"], provider=provider)
