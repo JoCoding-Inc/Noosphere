@@ -16,9 +16,43 @@ from backend.db import (
     mark_simulation_started,
     touch_simulation_heartbeat,
     simulation_cancel_requested,
+    save_checkpoint,
+    get_checkpoint,
+    delete_checkpoint,
 )
 
 logger = logging.getLogger(__name__)
+
+import re as _re
+
+_STOPWORDS = {
+    'the', 'a', 'an', 'of', 'in', 'for', 'and', 'or', 'to', 'is', 'are',
+    'with', 'on', 'at', 'by', 'as', 'from', 'that', 'this', 'it', 'be',
+    'was', 'were', 'has', 'have', 'had', 'not', 'but', 'its', 'can', 'may',
+    'will', 'we', 'our', 'their', 'they', 'which', 'who', 'how', 'what',
+    'using', 'used', 'use', 'based', 'paper', 'model', 'data', 'results',
+    'new', 'method', 'approach', 'show', 'propose', 'present', 'also',
+    'one', 'two', 'three', 'large', 'high', 'low', 'via', 'into', 'over',
+}
+
+
+def _build_keyword_edges(nodes: list[dict], min_overlap: int = 2) -> list[dict]:
+    """Build edges between nodes that share at least min_overlap keywords."""
+    def _keywords(node: dict) -> set[str]:
+        text = f"{node.get('title', '')} {node.get('abstract', '')}".lower()
+        words = _re.findall(r'\b[a-z][a-z0-9]{2,}\b', text)
+        return {w for w in words if w not in _STOPWORDS}
+
+    kw_map = {n['id']: _keywords(n) for n in nodes if n.get('id')}
+    ids = list(kw_map.keys())
+    edges: list[dict] = []
+    for i, src in enumerate(ids):
+        for tgt in ids[i + 1:]:
+            overlap = len(kw_map[src] & kw_map[tgt])
+            if overlap >= min_overlap:
+                edges.append({'source': src, 'target': tgt, 'weight': overlap})
+    return edges
+
 
 STREAM_KEY = "sim_stream:{}"
 STREAM_TTL = 7200   # 2시간 후 자동 만료
@@ -109,70 +143,87 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
             watcher_task = asyncio.create_task(cancellation_watcher())
             heartbeat_task = asyncio.create_task(heartbeat_loop())
             await checkpoint()
-            publish({"type": "sim_progress", "message": "Searching external sources..."})
 
-            def on_source_done(source_name: str, items: list[dict]) -> None:
-                for item in items:
-                    title = item.get("title") or item.get("name") or ""
-                    if not title:
-                        continue
-                    text = item.get("text") or item.get("abstract") or item.get("description") or ""
-                    snippet = text[:140].rstrip() if text else ""
-                    if snippet and len(text) > 140:
-                        snippet += "…"
-                    publish({
-                        "type": "sim_source_item",
-                        "source": source_name,
-                        "title": title,
-                        "snippet": snippet,
-                    })
+            # Check for existing checkpoint (resume scenario)
+            existing_checkpoint = await asyncio.to_thread(get_checkpoint, DB_PATH, sim_id)
 
-            raw_items = await analyze(
-                config["input_text"],
-                limits=config.get("source_limits") or None,
-                on_source_done=on_source_done,
-                provider=provider,
-            )
-            await checkpoint()
-            domain_str = await detect_domain(config["input_text"], provider=provider)
+            if existing_checkpoint:
+                # Resume: restore pre-simulation data from checkpoint
+                raw_items = existing_checkpoint["raw_items"]
+                domain_str = existing_checkpoint["domain"]
+                analysis_md = existing_checkpoint["analysis_md"]
+                ontology = existing_checkpoint["ontology"]
+                context_nodes = existing_checkpoint["context_nodes"]
+                # NOTE: do NOT publish sim_resume here — social_runner.py yields it
+                # and tasks.py will forward it to Redis via the normal event loop below
+            else:
+                # Fresh run: run analysis pipeline
+                publish({"type": "sim_progress", "message": "Searching external sources..."})
 
-            publish({
-                "type": "sim_progress",
-                "message": f"Domain: {domain_str}. Generating analysis report...",
-            })
-            analysis_md = await generate_analysis_report(
-                raw_items=raw_items,
-                domain=domain_str,
-                input_text=config["input_text"],
-                language=config["language"],
-                provider=provider,
-            )
-            await checkpoint()
-            publish({"type": "sim_analysis", "data": {"markdown": analysis_md}})
+                def on_source_done(source_name: str, items: list[dict]) -> None:
+                    for item in items:
+                        title = item.get("title") or item.get("name") or ""
+                        if not title:
+                            continue
+                        text = item.get("text") or item.get("abstract") or item.get("description") or ""
+                        snippet = text[:140].rstrip() if text else ""
+                        if snippet and len(text) > 140:
+                            snippet += "…"
+                        publish({
+                            "type": "sim_source_item",
+                            "source": source_name,
+                            "title": title,
+                            "snippet": snippet,
+                        })
 
-            context_nodes = [
-                {
-                    "id": item["id"],
-                    "title": item["title"],
-                    "source": item["source"],
-                    "abstract": item.get("text") or item.get("title", ""),
-                }
-                for item in raw_items[:30]
-            ] or [{
-                "id": "input",
-                "title": config["input_text"][:80],
-                "source": "input_text",
-                "abstract": config["input_text"][:300],
-            }]
+                raw_items = await analyze(
+                    config["input_text"],
+                    limits=config.get("source_limits") or None,
+                    on_source_done=on_source_done,
+                    provider=provider,
+                )
+                await checkpoint()
+                domain_str = await detect_domain(config["input_text"], provider=provider)
 
-            publish({"type": "sim_progress", "message": "Building ecosystem ontology..."})
-            ontology = await build_ontology(
-                context_nodes=context_nodes,
-                input_text=config["input_text"],
-                provider=provider,
-            )
-            if ontology:
-                publish({"type": "sim_ontology", "data": ontology})
+                publish({
+                    "type": "sim_progress",
+                    "message": f"Domain: {domain_str}. Generating analysis report...",
+                })
+                analysis_md = await generate_analysis_report(
+                    raw_items=raw_items,
+                    domain=domain_str,
+                    input_text=config["input_text"],
+                    language=config["language"],
+                    provider=provider,
+                )
+                await checkpoint()
+                publish({"type": "sim_analysis", "data": {"markdown": analysis_md}})
+
+                context_nodes = [
+                    {
+                        "id": item["id"],
+                        "title": item["title"],
+                        "source": item["source"],
+                        "abstract": item.get("text") or item.get("title", ""),
+                    }
+                    for item in raw_items
+                ] or [{
+                    "id": "input",
+                    "title": config["input_text"][:80],
+                    "source": "input_text",
+                    "abstract": config["input_text"][:300],
+                }]
+
+                publish({"type": "sim_progress", "message": "Building ecosystem ontology..."})
+                ontology = await build_ontology(
+                    context_nodes=context_nodes,
+                    input_text=config["input_text"],
+                    provider=provider,
+                )
+                if ontology:
+                    publish({"type": "sim_ontology", "data": ontology})
+
+            edges = _build_keyword_edges(context_nodes)
 
             publish({
                 "type": "sim_progress",
@@ -188,10 +239,28 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 platforms=config["platforms"],
                 language=config["language"],
                 activation_rate=config["activation_rate"],
+                edges=edges,
                 provider=provider,
                 ontology=ontology,
+                checkpoint=existing_checkpoint,
             ):
                 await checkpoint()
+                if event["type"] == "sim_checkpoint_data":
+                    # Enrich with analysis_md and raw_items (not available in social_runner)
+                    await asyncio.to_thread(
+                        save_checkpoint,
+                        DB_PATH,
+                        sim_id,
+                        event["round_num"],
+                        event["platform_states"],
+                        event["personas"],
+                        event["context_nodes"],
+                        event["domain"] or domain_str,
+                        analysis_md,
+                        event["ontology"],
+                        raw_items,
+                    )
+                    continue  # do NOT publish to Redis
                 if event["type"] == "sim_report":
                     data = event["data"]
                     posts_by_platform = data.get("platform_states", {})
@@ -225,6 +294,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 raw_items=raw_items,
                 final_report_md=final_report_md,
             )
+            await asyncio.to_thread(delete_checkpoint, DB_PATH, sim_id)
             if not await asyncio.to_thread(
                 update_simulation_status,
                 DB_PATH,
