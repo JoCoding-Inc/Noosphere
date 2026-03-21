@@ -48,6 +48,11 @@ frontend/build/
 *.log
 logs/
 
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
 # Misc
 *.bak
 *.tmp
