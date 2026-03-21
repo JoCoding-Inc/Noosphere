@@ -5,6 +5,7 @@ import { PlatformSimFeed } from '../components/PlatformSimFeed'
 import { ReportView } from '../components/ReportView'
 import { PersonaCardView } from '../components/PersonaCardView'
 import { MarkdownView } from '../components/MarkdownView'
+import { SOURCE_COLORS } from '../constants'
 import type { Platform, SimResults } from '../types'
 
 // ─── 데모 입력 텍스트 ───────────────────────────────────────────────────────
@@ -204,13 +205,6 @@ Across all five simulated platforms, the overall reception was **cautiously opti
 
   report_md: '',
   sources_json: [],
-}
-
-// ─── 소스 색상 ───────────────────────────────────────────────────────────────
-const SOURCE_COLORS: Record<string, string> = {
-  github: '#24292e', arxiv: '#b91c1c', semantic_scholar: '#1d4ed8',
-  hackernews: '#f97316', reddit: '#ef4444', product_hunt: '#da552f',
-  itunes: '#fc3158', google_play: '#01875f', gdelt: '#7c3aed', serper: '#0891b2',
 }
 
 // ─── 데모 배너 ───────────────────────────────────────────────────────────────
