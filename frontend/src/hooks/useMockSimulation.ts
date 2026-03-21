@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SimState } from './useSimulation'
 import type { Platform, SocialPost } from '../types'
 
-const MOCK_SOURCES = [
+export const MOCK_SOURCES = [
   { source: 'github', title: 'vercel/next.js — The React Framework', snippet: 'Next.js gives you the best developer experience with all the features you need for production.' },
   { source: 'arxiv', title: 'Attention Is All You Need', snippet: 'We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.' },
   { source: 'hackernews', title: 'Show HN: I built a tool to simulate social media reactions to your product', snippet: '600 points · 142 comments · submitted 3 hours ago by tkpark' },
@@ -17,7 +17,7 @@ const MOCK_SOURCES = [
   { source: 'google_play', title: 'AI Chat Assistant — 4.2★ · 10M+ downloads', snippet: 'Smart AI assistant powered by the latest language models. Instant answers, creative writing, code help.' },
 ]
 
-const MOCK_PERSONAS = [
+export const MOCK_PERSONAS = [
   { name: 'Marcus Chen', role: 'Senior Software Engineer', platform: 'hackernews' as Platform },
   { name: 'Sarah K.', role: 'Product Manager', platform: 'linkedin' as Platform },
   { name: 'devdave42', role: 'Indie Hacker', platform: 'indiehackers' as Platform },
@@ -30,7 +30,7 @@ const MOCK_PERSONAS = [
   { name: 'bootstrapped_bo', role: 'Bootstrapped founder', platform: 'reddit_startups' as Platform },
 ]
 
-const MOCK_POSTS: Array<{ author_name: string; platform: Platform; action_type: string; content: string }> = [
+export const MOCK_POSTS: Array<{ author_name: string; platform: Platform; action_type: string; content: string }> = [
   { author_name: 'Marcus Chen', platform: 'hackernews', action_type: 'comment', content: 'Interesting concept. The biggest risk I see is that simulated reactions might not capture the nuance of actual HN culture — we\'re famously unpredictable. That said, for early validation this could be genuinely useful.' },
   { author_name: 'priya_builds', platform: 'producthunt', action_type: 'review', content: '🚀 This is exactly what I needed before my last launch. Would have saved me weeks of misaligned positioning. Upvoted!' },
   { author_name: 'TechSkeptic99', platform: 'hackernews', action_type: 'comment', content: 'Another AI wrapper? The real question is how accurately it models different community subcultures. Reddit r/startups vs HN have very different signal-to-noise ratios. Show me the methodology.' },
