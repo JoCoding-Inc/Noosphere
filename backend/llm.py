@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 from typing import Literal
 
+import anthropic as _anthropic
 import openai
 from backend.simulation.rate_limiter import acquire_api_slot
 
@@ -134,8 +135,98 @@ async def _complete_openai(
     raise RuntimeError("Unreachable")
 
 
-async def _complete_anthropic(messages, model, max_tokens, timeout, tools, tool_choice):
-    raise NotImplementedError("Anthropic provider not yet implemented")
+_anthropic_client: _anthropic.AsyncAnthropic | None = None
+
+
+def _get_anthropic_client() -> _anthropic.AsyncAnthropic:
+    global _anthropic_client
+    if _anthropic_client is None:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        _anthropic_client = _anthropic.AsyncAnthropic(api_key=api_key, timeout=60.0)
+    return _anthropic_client
+
+
+def _to_anthropic_tools(tools: list[dict]) -> list[dict]:
+    """Convert OpenAI-format tools to Anthropic format."""
+    result = []
+    for t in tools:
+        fn = t["function"]
+        result.append({
+            "name": fn["name"],
+            "description": fn.get("description", ""),
+            "input_schema": fn["parameters"],
+        })
+    return result
+
+
+def _tool_choice_anthropic(tool_choice: str | None) -> dict:
+    if tool_choice is None:
+        return {"type": "auto"}
+    return {"type": "tool", "name": tool_choice}
+
+
+def _extract_anthropic_response(response, tool_choice: str | None) -> LLMResponse:
+    tool_block = next(
+        (b for b in response.content if isinstance(b, _anthropic.types.ToolUseBlock)),
+        None
+    )
+    if tool_block is not None:
+        return LLMResponse(
+            content=None,
+            tool_name=tool_block.name,
+            tool_args=dict(tool_block.input),
+        )
+    if tool_choice is not None:
+        raise LLMToolRequired(f"Expected tool call '{tool_choice}' but got none")
+    text_block = next(
+        (b for b in response.content if isinstance(b, _anthropic.types.TextBlock)),
+        None
+    )
+    return LLMResponse(
+        content=text_block.text if text_block else None,
+        tool_name=None,
+        tool_args=None,
+    )
+
+
+async def _complete_anthropic(
+    messages: list[dict],
+    model: str,
+    max_tokens: int,
+    timeout: float,
+    tools: list[dict] | None,
+    tool_choice: str | None,
+) -> LLMResponse:
+    client = _get_anthropic_client()
+
+    # Extract system messages; Anthropic uses a separate `system` param
+    system_parts = [m["content"] for m in messages if m.get("role") == "system"]
+    user_messages = [m for m in messages if m.get("role") != "system"]
+    system_str = "\n\n".join(system_parts) if system_parts else _anthropic.NOT_GIVEN
+
+    kwargs: dict = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "system": system_str,
+        "messages": user_messages,
+    }
+    if tools:
+        kwargs["tools"] = _to_anthropic_tools(tools)
+        kwargs["tool_choice"] = _tool_choice_anthropic(tool_choice)
+
+    for attempt in range(4):
+        try:
+            response = await client.messages.create(**kwargs)
+            return _extract_anthropic_response(response, tool_choice)
+        except LLMToolRequired:
+            raise
+        except _anthropic.RateLimitError:
+            if attempt == 3:
+                raise LLMRateLimitError("Anthropic rate limit exceeded")
+            wait = 5 * (2 ** attempt)
+            logger.warning("Anthropic rate limit, retrying in %ds", wait)
+            await asyncio.sleep(wait)
+    raise RuntimeError("Unreachable")
 
 
 async def _complete_gemini(messages, model, max_tokens, timeout, tools, tool_choice):

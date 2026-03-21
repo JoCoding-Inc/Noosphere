@@ -112,6 +112,63 @@ async def test_complete_openai_tool_call():
     assert result.tool_args == {"name": "Alice", "role": "engineer"}
 
 
+async def test_complete_anthropic_text():
+    """complete() returns content for Anthropic text response."""
+    from backend.llm import complete
+    import anthropic
+
+    mock_text_block = MagicMock(spec=anthropic.types.TextBlock)
+    mock_text_block.text = "Anthropic says hi"
+
+    mock_response = MagicMock()
+    mock_response.content = [mock_text_block]
+
+    mock_client = AsyncMock()
+    mock_client.messages.create = AsyncMock(return_value=mock_response)
+
+    with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
+         patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="anthropic",
+            max_tokens=50,
+        )
+    assert result.content == "Anthropic says hi"
+    assert result.tool_args is None
+
+
+async def test_complete_anthropic_tool_call():
+    """complete() extracts tool_args from Anthropic ToolUseBlock."""
+    from backend.llm import complete
+    import anthropic
+
+    mock_tool_block = MagicMock(spec=anthropic.types.ToolUseBlock)
+    mock_tool_block.name = "create_persona"
+    mock_tool_block.input = {"name": "Bob", "role": "designer"}
+
+    mock_response = MagicMock()
+    mock_response.content = [mock_tool_block]
+
+    mock_client = AsyncMock()
+    mock_client.messages.create = AsyncMock(return_value=mock_response)
+
+    tool = {"type": "function", "function": {"name": "create_persona", "description": "", "parameters": {"type": "object", "properties": {}}}}
+
+    with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
+         patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "gen persona"}],
+            tier="mid",
+            provider="anthropic",
+            max_tokens=256,
+            tools=[tool],
+            tool_choice="create_persona",
+        )
+    assert result.tool_name == "create_persona"
+    assert result.tool_args == {"name": "Bob", "role": "designer"}
+
+
 async def test_complete_openai_tool_required_raises():
     """complete() raises LLMToolRequired when forced tool is not returned."""
     from backend.llm import complete, LLMToolRequired
