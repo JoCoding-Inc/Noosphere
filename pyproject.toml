@@ -13,6 +13,7 @@ dependencies = [
     "anthropic>=0.28",
     "openai>=1.0",
     "python-dotenv>=1.0",
+    "google-genai>=1.0",
     "google-play-scraper>=1.2",
     "celery>=5.3",
     "redis>=5.0",
