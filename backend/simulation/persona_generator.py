@@ -1,6 +1,7 @@
 # backend/simulation/persona_generator.py
 from __future__ import annotations
 import logging
+import random
 from backend.simulation.models import Persona
 from backend.simulation.graph_utils import sanitize_neighbor_titles
 from backend import llm
@@ -18,29 +19,48 @@ _FORCED_ATTRS_BY_SOURCE: dict[str, dict] = {
 
 _PLATFORM_AUDIENCE = {
     "hackernews": (
-        "Hacker News — audience: software engineers, systems programmers, technical founders, "
-        "open-source contributors, security researchers. They value technical depth, contrarianism, "
-        "and dislike hype. Generate a persona typical of this community."
+        "Hacker News — community of curious, technically-literate people. "
+        "Pick ONE of these archetypes at random (do not default to engineer): "
+        "software engineer, indie hacker (solo product builder), "
+        "seed-stage VC analyst, non-technical founder, "
+        "marketer at a dev-tool company, hobbyist coder (teacher / cafe owner / designer who codes on the side), "
+        "product manager, academic researcher, security professional, open-source maintainer. "
+        "They all share intellectual curiosity and skepticism of hype. Generate a persona typical of this community."
     ),
     "producthunt": (
-        "Product Hunt — audience: early adopters, product managers, UX/UI designers, growth hackers, "
-        "startup enthusiasts who love discovering new tools. They care about polish, novelty, and "
-        "user experience. Generate a persona typical of this community."
+        "Product Hunt — audience discovering new products. "
+        "Pick ONE of these archetypes: "
+        "UX/UI designer, early adopter (non-technical), product manager, growth hacker, "
+        "startup founder (non-technical), indie maker, journalist covering tech, "
+        "community manager, developer advocate, small business owner. "
+        "They care about polish, novelty, and user experience. Generate a persona typical of this community."
     ),
     "indiehackers": (
-        "Indie Hackers — audience: bootstrapped solo founders, micro-SaaS builders, freelancers turning "
-        "products, people optimising for MRR and independence over VC funding. "
-        "Generate a persona typical of this community."
+        "Indie Hackers — bootstrapped builders. "
+        "Pick ONE of these archetypes: "
+        "solo founder running a micro-SaaS, freelancer productizing a service, "
+        "developer with a side project, consultant building passive income, "
+        "ex-corporate employee going independent, designer turned founder, "
+        "non-technical founder learning to code, creator monetizing an audience. "
+        "They optimize for MRR and independence over VC funding. Generate a persona typical of this community."
     ),
     "reddit_startups": (
-        "Reddit r/startups — audience: early-stage founders, first-time entrepreneurs, angel investors, "
-        "startup employees at seed/Series-A companies. Mix of optimism and hard-won scepticism. "
-        "Generate a persona typical of this community."
+        "Reddit r/startups — mix of early-stage builders and observers. "
+        "Pick ONE of these archetypes: "
+        "first-time founder, startup employee (sales / ops / marketing), angel investor, "
+        "MBA student interested in entrepreneurship, product manager at a Series A, "
+        "developer considering leaving their job, domain expert starting a company, "
+        "journalist or blogger covering startups. "
+        "Mix of optimism and hard-won scepticism. Generate a persona typical of this community."
     ),
     "linkedin": (
-        "LinkedIn — audience: enterprise executives, VPs, corporate managers, B2B sales professionals, "
-        "HR leaders, investors looking at market trends. They think in terms of ROI, risk, and "
-        "organisational impact. Generate a persona typical of this community."
+        "LinkedIn — professional network for enterprise and career. "
+        "Pick ONE of these archetypes: "
+        "VP at a mid-size company, enterprise sales director, HR leader, "
+        "corporate strategy consultant, B2B marketing manager, CTO at a 200-person company, "
+        "VC partner focused on Series B+, procurement officer, "
+        "industry analyst, chief digital officer. "
+        "They think in terms of ROI, risk, and organisational impact. Generate a persona typical of this community."
     ),
 }
 
@@ -130,19 +150,28 @@ Guidelines:
 - Use the platform context to determine appropriate role, seniority, and affiliation. Personas across platforms should differ significantly.
 - Age must be consistent with seniority (e.g. a c_suite persona should be 38+ years old, a junior persona 22-30).
 - Make the persona feel like a real individual: specific company, realistic age, coherent interests.
-- Vary skepticism, commercial_focus, and innovation_openness to reflect the diversity of real users on this platform."""
+- Vary skepticism, commercial_focus, and innovation_openness to reflect the diversity of real users on this platform.
+- Vary MBTI type across personas. Do NOT cluster on INTJ. Choose from the full 16 types; prefer less common types for variety."""
+
+
+_FALLBACK_NAMES = [
+    "Alex Morgan", "Sam Rivera", "Jordan Lee", "Casey Kim",
+    "Taylor Nguyen", "Morgan Chen", "Riley Patel", "Drew Santos",
+    "Quinn Yamamoto", "Avery Okafor",
+]
+_FALLBACK_MBTIS = ["INTJ", "INTP", "ENTP", "ENFP", "ISTJ", "ESTJ", "ISTP", "INFJ"]
 
 
 def _fallback_persona(node: dict, platform_name: str) -> Persona:
     return Persona(
         node_id=node.get("id", "unknown"),
-        name="Alex Morgan",
+        name=random.choice(_FALLBACK_NAMES),
         role="Software Engineer",
         age=30,
         seniority="mid",
         affiliation="individual",
         company="",
-        mbti="INTJ",
+        mbti=random.choice(_FALLBACK_MBTIS),
         interests=["technology"],
         skepticism=5,
         commercial_focus=5,

@@ -58,3 +58,22 @@ async def test_generate_persona_with_ontology_injects_context():
 
     all_text = " ".join(m["content"] for m in captured_messages)
     assert "RAG tooling ecosystem" in all_text
+
+
+@pytest.mark.asyncio
+async def test_generate_persona_prompt_includes_mbti_diversity_instruction():
+    """_SYSTEM_TMPL should instruct LLM not to default to INTJ."""
+    from backend.simulation.persona_generator import _SYSTEM_TMPL
+    formatted = _SYSTEM_TMPL.format(platform_context="test context")
+    assert "INTJ" in formatted, "MBTI diversity instruction should mention INTJ to avoid it"
+    assert "Do NOT" in formatted or "do not" in formatted or "Avoid" in formatted
+
+
+@pytest.mark.asyncio
+async def test_hackernews_audience_includes_non_engineer_archetypes():
+    """HN platform audience should list diverse archetypes beyond software engineers."""
+    from backend.simulation.persona_generator import _PLATFORM_AUDIENCE
+    hn = _PLATFORM_AUDIENCE["hackernews"]
+    assert "indie hacker" in hn.lower() or "indie" in hn.lower()
+    assert "founder" in hn.lower()
+    assert "marketer" in hn.lower() or "marketing" in hn.lower()
