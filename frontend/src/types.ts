@@ -96,3 +96,26 @@ export interface HistoryItem {
   status: 'running' | 'completed' | 'failed'
   domain: string
 }
+
+// ── Ontology types ────────────────────────────────────────────────────────────
+
+export interface OntologyEntity {
+  id: string            // "e0", "e1", ...
+  name: string
+  type: string          // framework | product | company | technology | concept | market_segment | pain_point | research | standard | regulation
+  source_node_ids: string[]
+}
+
+export interface OntologyRelationship {
+  from: string          // entity id
+  to: string            // entity id
+  type: string          // competes_with | integrates_with | built_on | targets | addresses | enables | regulated_by | part_of
+}
+
+export interface OntologyData {
+  domain_summary: string
+  entities: OntologyEntity[]
+  relationships: OntologyRelationship[]
+  market_tensions: string[]
+  key_trends: string[]
+}
