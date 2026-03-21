@@ -30,6 +30,7 @@ interface SimState {
   personaCount: number
   sourceTimeline: SourceItem[]
   ontology: OntologyData | null
+  isSourcing: boolean
 }
 
 export function useSimulation(simId: string): SimState {
@@ -46,6 +47,7 @@ export function useSimulation(simId: string): SimState {
     personaCount: 0,
     sourceTimeline: [],
     ontology: null,
+    isSourcing: false,
   })
 
   useEffect(() => {
@@ -81,11 +83,15 @@ export function useSimulation(simId: string): SimState {
         } else if (event.type === 'sim_report') {
           next.report = (event.data as Record<string, unknown>).report_json as Record<string, unknown>
           next.personas = (event.data as Record<string, unknown>).personas as Record<string, unknown>
+        } else if (event.type === 'sim_progress') {
+          if (event.message.toLowerCase().includes('searching') || event.message.toLowerCase().includes('sources')) {
+            next.isSourcing = true
+          }
         } else if (event.type === 'sim_error') {
           next.status = 'error'
           next.errorMsg = event.message
         } else if (event.type === 'sim_done') {
-          next.status = 'done'
+          if (prev.status !== 'error') next.status = 'done'
           es.close()
         }
         return next

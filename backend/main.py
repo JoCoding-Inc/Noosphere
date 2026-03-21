@@ -217,6 +217,8 @@ async def export_pdf(sim_id: str):
     sim = get_simulation(DB_PATH, sim_id)
 
     from backend.exporter import build_pdf
+    import json as _json
+    sim_params = _json.loads(sim["config_json"]) if sim else {}
     pdf_bytes = await build_pdf(
         report_md=results["report_md"],
         input_text=sim["input_text"] if sim else "",
@@ -224,6 +226,8 @@ async def export_pdf(sim_id: str):
         domain=sim["domain"] if sim else "",
         language=sim["language"] if sim else "English",
         analysis_md=results.get("analysis_md"),
+        sim_params=sim_params,
+        final_report_md=results.get("final_report_md"),
     )
     return StreamingResponse(
         iter([pdf_bytes]),

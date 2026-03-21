@@ -145,15 +145,168 @@ def _md_to_typst(text: str) -> str:
     return "\n".join(out)
 
 
-_LANG_SETTINGS: dict[str, tuple[str, str]] = {
-    "Korean":     ("ko", '"Noto Serif CJK KR", "Noto Sans CJK KR", "Noto Serif", "New Computer Modern"'),
-    "Japanese":   ("ja", '"Noto Serif CJK JP", "Noto Sans CJK JP", "Noto Serif", "New Computer Modern"'),
-    "Chinese":    ("zh", '"Noto Serif CJK SC", "Noto Sans CJK SC", "Noto Serif", "New Computer Modern"'),
-    "English":    ("en", '"New Computer Modern", "Noto Serif"'),
-    "Spanish":    ("es", '"New Computer Modern", "Noto Serif"'),
-    "French":     ("fr", '"New Computer Modern", "Noto Serif"'),
-    "German":     ("de", '"New Computer Modern", "Noto Serif"'),
-    "Portuguese": ("pt", '"New Computer Modern", "Noto Serif"'),
+# (언어코드, 폰트 목록) — Noto CJK 우선, macOS/Windows 시스템 폰트 fallback
+_LANG_SETTINGS: dict[str, tuple[str, str, dict[str, str]]] = {
+    "Korean": (
+        "ko",
+        '"Noto Serif CJK KR", "Noto Sans CJK KR", "Apple SD Gothic Neo", "AppleGothic", "Malgun Gothic", "Noto Serif", "New Computer Modern"',
+        {
+            "report_title": "제품 검증 보고서",
+            "section_analysis": "분석 보고서",
+            "section_simulation": "시뮬레이션 보고서",
+            "section_params": "시뮬레이션 설정",
+            "param_domain": "도메인",
+            "param_language": "언어",
+            "param_rounds": "라운드",
+            "param_agents": "에이전트",
+            "param_platforms": "플랫폼",
+            "param_date": "생성일",
+            "no_analysis": "_분석 보고서 없음_",
+            "no_simulation": "_시뮬레이션 보고서 없음_",
+            "section_final_report": "최종 보고서",
+            "no_final_report": "_최종 보고서 없음_",
+        },
+    ),
+    "Japanese": (
+        "ja",
+        '"Noto Serif CJK JP", "Noto Sans CJK JP", "Hiragino Mincho ProN", "Hiragino Kaku Gothic ProN", "Yu Mincho", "Noto Serif", "New Computer Modern"',
+        {
+            "report_title": "製品検証レポート",
+            "section_analysis": "分析レポート",
+            "section_simulation": "シミュレーションレポート",
+            "section_params": "シミュレーション設定",
+            "param_domain": "ドメイン",
+            "param_language": "言語",
+            "param_rounds": "ラウンド",
+            "param_agents": "エージェント",
+            "param_platforms": "プラットフォーム",
+            "param_date": "生成日",
+            "no_analysis": "_分析レポートなし_",
+            "no_simulation": "_シミュレーションレポートなし_",
+            "section_final_report": "最終レポート",
+            "no_final_report": "_最終レポートなし_",
+        },
+    ),
+    "Chinese": (
+        "zh",
+        '"Noto Serif CJK SC", "Noto Sans CJK SC", "STSong", "PingFang SC", "SimSun", "Noto Serif", "New Computer Modern"',
+        {
+            "report_title": "产品验证报告",
+            "section_analysis": "分析报告",
+            "section_simulation": "模拟报告",
+            "section_params": "模拟设置",
+            "param_domain": "领域",
+            "param_language": "语言",
+            "param_rounds": "轮次",
+            "param_agents": "智能体",
+            "param_platforms": "平台",
+            "param_date": "生成日期",
+            "no_analysis": "_无分析报告_",
+            "no_simulation": "_无模拟报告_",
+            "section_final_report": "最终报告",
+            "no_final_report": "_无最终报告_",
+        },
+    ),
+    "Spanish": (
+        "es",
+        '"New Computer Modern", "Noto Serif"',
+        {
+            "report_title": "Informe de Validación de Producto",
+            "section_analysis": "Informe de Análisis",
+            "section_simulation": "Informe de Simulación",
+            "section_params": "Configuración de Simulación",
+            "param_domain": "Dominio",
+            "param_language": "Idioma",
+            "param_rounds": "Rondas",
+            "param_agents": "Agentes",
+            "param_platforms": "Plataformas",
+            "param_date": "Fecha",
+            "no_analysis": "_Sin informe de análisis_",
+            "no_simulation": "_Sin informe de simulación_",
+            "section_final_report": "Informe Final",
+            "no_final_report": "_Sin informe final_",
+        },
+    ),
+    "French": (
+        "fr",
+        '"New Computer Modern", "Noto Serif"',
+        {
+            "report_title": "Rapport de Validation Produit",
+            "section_analysis": "Rapport d'Analyse",
+            "section_simulation": "Rapport de Simulation",
+            "section_params": "Paramètres de Simulation",
+            "param_domain": "Domaine",
+            "param_language": "Langue",
+            "param_rounds": "Tours",
+            "param_agents": "Agents",
+            "param_platforms": "Plateformes",
+            "param_date": "Date",
+            "no_analysis": "_Aucun rapport d'analyse_",
+            "no_simulation": "_Aucun rapport de simulation_",
+            "section_final_report": "Rapport Final",
+            "no_final_report": "_Aucun rapport final_",
+        },
+    ),
+    "German": (
+        "de",
+        '"New Computer Modern", "Noto Serif"',
+        {
+            "report_title": "Produktvalidierungsbericht",
+            "section_analysis": "Analysebericht",
+            "section_simulation": "Simulationsbericht",
+            "section_params": "Simulationsparameter",
+            "param_domain": "Domäne",
+            "param_language": "Sprache",
+            "param_rounds": "Runden",
+            "param_agents": "Agenten",
+            "param_platforms": "Plattformen",
+            "param_date": "Datum",
+            "no_analysis": "_Kein Analysebericht_",
+            "no_simulation": "_Kein Simulationsbericht_",
+            "section_final_report": "Abschlussbericht",
+            "no_final_report": "_Kein Abschlussbericht_",
+        },
+    ),
+    "Portuguese": (
+        "pt",
+        '"New Computer Modern", "Noto Serif"',
+        {
+            "report_title": "Relatório de Validação de Produto",
+            "section_analysis": "Relatório de Análise",
+            "section_simulation": "Relatório de Simulação",
+            "section_params": "Configurações de Simulação",
+            "param_domain": "Domínio",
+            "param_language": "Idioma",
+            "param_rounds": "Rodadas",
+            "param_agents": "Agentes",
+            "param_platforms": "Plataformas",
+            "param_date": "Data",
+            "no_analysis": "_Sem relatório de análise_",
+            "no_simulation": "_Sem relatório de simulação_",
+            "section_final_report": "Relatório Final",
+            "no_final_report": "_Sem relatório final_",
+        },
+    ),
+    "English": (
+        "en",
+        '"New Computer Modern", "Noto Serif"',
+        {
+            "report_title": "Product Validation Report",
+            "section_analysis": "Analysis Report",
+            "section_simulation": "Simulation Report",
+            "section_params": "Simulation Parameters",
+            "param_domain": "Domain",
+            "param_language": "Language",
+            "param_rounds": "Rounds",
+            "param_agents": "Agents",
+            "param_platforms": "Platforms",
+            "param_date": "Date",
+            "no_analysis": "_No analysis report_",
+            "no_simulation": "_No simulation report_",
+            "section_final_report": "Final Report",
+            "no_final_report": "_No final report_",
+        },
+    ),
 }
 
 
@@ -163,72 +316,164 @@ def _build_typst(
     analysis_md: str | None,
     report_md: str,
     language: str = "English",
+    sim_params: dict | None = None,
+    final_report_md: str | None = None,
 ) -> str:
-    lang_code, fonts = _LANG_SETTINGS.get(language, _LANG_SETTINGS["English"])
+    lang_code, fonts, labels = _LANG_SETTINGS.get(language, _LANG_SETTINGS["English"])
     date_str = datetime.now().strftime("%Y-%m-%d")
     idea_snippet = _escape_typst_markup(idea_text[:200])
-    analysis_body = _md_to_typst(analysis_md) if analysis_md else "_분석 보고서 없음_"
-    sim_body = _md_to_typst(report_md) if report_md else "_시뮬레이션 보고서 없음_"
+    domain_escaped = _escape_typst_markup(domain)
+    analysis_body = _md_to_typst(analysis_md) if analysis_md else labels["no_analysis"]
+    sim_body = _md_to_typst(report_md) if report_md else labels["no_simulation"]
+    final_body = _md_to_typst(final_report_md) if final_report_md else labels["no_final_report"]
 
-    return f"""#set document(title: "Noosphere Report — {domain}", date: auto)
-#set page(
-  margin: (x: 2.5cm, y: 3cm),
-  numbering: "1 / 1",
-  header: [
-    #set text(size: 9pt, fill: luma(120))
-    #grid(columns: (1fr, 1fr),
-      [Noosphere Report],
-      align(right)[{domain}]
-    )
-    #line(length: 100%, stroke: luma(200))
-  ],
-)
-#set text(font: ({fonts}), size: 11pt, lang: "{lang_code}")
-#set heading(numbering: "1.")
-#set par(justify: true, leading: 0.8em)
-#set table(inset: 6pt)
+    params = sim_params or {}
+    platforms_str = _escape_typst_markup(", ".join(params.get("platforms", [])) or "—")
+    params_section = f"""= {labels["section_params"]}
+
+#table(
+  columns: (auto, 1fr),
+  stroke: 0.5pt + luma(210),
+  fill: (_, y) => if calc.odd(y) {{ luma(247) }} else {{ white }},
+  [*{labels["param_domain"]}*],   [{domain_escaped}],
+  [*{labels["param_language"]}*], [{language}],
+  [*{labels["param_rounds"]}*],   [{params.get("num_rounds", "—")}],
+  [*{labels["param_agents"]}*],   [{params.get("max_agents", "—")}],
+  [*{labels["param_platforms"]}*],[{platforms_str}],
+  [*{labels["param_date"]}*],     [{date_str}],
+)"""
+
+    report_title_upper = labels["report_title"].upper()
+
+    return f"""#set document(title: "Noosphere — {domain_escaped}", date: auto)
+
+// ── jastylest-zh: CJK 폰트 + CJK-Latin 간격 자동 보정 ──
+#set text(font: ({fonts}), size: 11pt, lang: "{lang_code}", cjk-latin-spacing: auto)
+#set par(justify: true, leading: 0.88em, spacing: 1.35em)
+#set table(inset: 8pt, stroke: 0.5pt + luma(210))
+#set list(indent: 0.8em)
+#set enum(indent: 0.8em)
+
+// ── modern-technique-report: 헤딩 스타일 (블랙 테마) ─────
+#set heading(numbering: none)
 #show heading.where(level: 1): it => {{
-  v(1.2em)
-  text(size: 16pt, weight: "bold", it)
-  v(0.4em)
+  v(2em)
+  block(
+    width: 100%,
+    stroke: (left: 4pt + black),
+    inset: (left: 12pt, right: 8pt, y: 7pt),
+    fill: luma(245),
+  )[
+    #text(size: 14pt, weight: "bold")[#it.body]
+  ]
+  v(0.35em)
 }}
 #show heading.where(level: 2): it => {{
-  v(0.8em)
-  text(size: 13pt, weight: "bold", it)
-  v(0.3em)
+  v(1.1em)
+  text(size: 12pt, weight: "bold")[#it.body]
+  v(-0.15em)
+  line(length: 100%, stroke: 0.5pt + luma(215))
+  v(0.1em)
+}}
+#show heading.where(level: 3): it => {{
+  v(0.7em)
+  text(size: 11pt, weight: "bold")[#it.body]
+  v(0.05em)
 }}
 
-// ── 표지 ──────────────────────────────────────────────
-#align(center)[
-  #v(4cm)
-  #text(size: 28pt, weight: "bold")[Noosphere]
-  #v(0.4em)
-  #text(size: 16pt, fill: luma(80))[Product Validation Report]
-  #v(1.2em)
-  #rect(width: 60%, stroke: luma(200))[
-    #pad(0.6em)[
-      #text(size: 12pt, style: "italic")["{idea_snippet}..."]
-    ]
+// ── TOC 스타일 ────────────────────────────────────────────
+#show outline.entry.where(level: 1): it => {{
+  v(0.35em)
+  strong(it)
+}}
+
+// ── 페이지 레이아웃 ───────────────────────────────────────
+#set page(
+  margin: (x: 2.5cm, y: 3cm),
+  header: context {{
+    if counter(page).get().first() > 1 {{
+      set text(size: 8.5pt, fill: luma(150))
+      grid(
+        columns: (1fr, auto),
+        align: (left + horizon, right + horizon),
+        [Noosphere],
+        [{domain_escaped}],
+      )
+      v(-0.45em)
+      line(length: 100%, stroke: 0.4pt + luma(220))
+    }}
+  }},
+  footer: context {{
+    if counter(page).get().first() > 1 {{
+      set text(size: 8pt, fill: luma(160))
+      align(center)[#counter(page).display("1 / 1", both: true)]
+    }}
+  }},
+)
+
+// ── 표지 (modern-technique-report 블랙 밴드 스타일) ──────
+#page(margin: 0pt, header: none, footer: none)[
+  // 상단 블랙 밴드 ─ 브랜딩 + 도메인 제목
+  #block(width: 100%, fill: black, inset: (x: 2.8cm, top: 4cm, bottom: 3cm))[
+    #set text(fill: white)
+    #text(size: 9pt, tracking: 4pt, fill: luma(155))[NOOSPHERE]
+    #v(1em)
+    #text(size: 26pt, weight: "bold")[{domain_escaped}]
+    #v(0.6em)
+    #line(length: 3.5cm, stroke: 0.7pt + luma(95))
+    #v(0.6em)
+    #text(size: 11pt, tracking: 0.8pt, fill: luma(185))[{report_title_upper}]
   ]
-  #v(1em)
-  #text(size: 12pt, fill: luma(100))[Domain: *{domain}*]
-  #v(0.4em)
-  #text(size: 11pt, fill: luma(120))[{date_str}]
+  // 하단 흰 영역 ─ 아이디어 인용 + 메타
+  #block(width: 100%, fill: white, inset: (x: 2.8cm, top: 2.2cm, bottom: 2.5cm))[
+    #rect(
+      stroke: (left: 3pt + black, rest: none),
+      inset: (left: 14pt, y: 9pt),
+      width: 76%,
+    )[
+      #text(size: 10.5pt, style: "italic", fill: luma(65))["{idea_snippet}"]
+    ]
+    #v(2.8cm)
+    #grid(
+      columns: (auto, 1fr),
+      row-gutter: 10pt,
+      column-gutter: 20pt,
+      text(size: 9pt, fill: luma(130))[{labels["param_domain"]}],
+      text(size: 9pt, weight: "bold")[{domain_escaped}],
+      text(size: 9pt, fill: luma(130))[{labels["param_date"]}],
+      text(size: 9pt)[{date_str}],
+    )
+  ]
 ]
+
+// ── 목차 ──────────────────────────────────────────────────
+#outline(depth: 2, indent: 1.5em)
 
 #pagebreak()
 
-// ── 분석 보고서 ──────────────────────────────────────
-= Analysis Report
+// ── 시뮬레이션 파라미터 ──────────────────────────────────
+{params_section}
+
+#pagebreak()
+
+// ── 분석 보고서 ──────────────────────────────────────────
+= {labels["section_analysis"]}
 
 {analysis_body}
 
 #pagebreak()
 
-// ── 시뮬레이션 보고서 ────────────────────────────────
-= Simulation Report
+// ── 시뮬레이션 보고서 ────────────────────────────────────
+= {labels["section_simulation"]}
 
 {sim_body}
+
+#pagebreak()
+
+// ── 최종 보고서 ──────────────────────────────────────────
+= {labels["section_final_report"]}
+
+{final_body}
 """
 
 
@@ -239,6 +484,8 @@ async def build_pdf(
     domain: str = "",
     language: str = "English",
     analysis_md: str | None = None,
+    sim_params: dict | None = None,
+    final_report_md: str | None = None,
 ) -> bytes:
     typ_content = _build_typst(
         domain=domain or input_text[:60],
@@ -246,6 +493,8 @@ async def build_pdf(
         analysis_md=analysis_md,
         report_md=report_md,
         language=language,
+        sim_params=sim_params,
+        final_report_md=final_report_md,
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -260,6 +509,10 @@ async def build_pdf(
         )
         _, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
         if proc.returncode != 0:
-            raise RuntimeError(f"typst compile failed: {stderr.decode()}")
+            err = stderr.decode(errors="replace")
+            hint = ""
+            if "unknown font family" in err and ("cjk" in err.lower() or "noto" in err.lower()):
+                hint = " (hint: Noto CJK fonts not installed — Docker image needs fonts-noto-cjk)"
+            raise RuntimeError(f"typst compile failed{hint}: {err}")
 
         return out.read_bytes()

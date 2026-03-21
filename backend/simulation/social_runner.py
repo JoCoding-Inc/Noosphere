@@ -16,6 +16,26 @@ logger = logging.getLogger(__name__)
 PLATFORM_NAMES = ["hackernews", "producthunt", "indiehackers", "reddit_startups", "linkedin"]
 
 
+def _deduplicate_names(results: list[tuple[dict, "Persona | None"]]) -> None:
+    """Assign '(N)' suffix to duplicate persona names within a single platform's result list.
+
+    Mutates both the Persona object and the corresponding sim_persona event dict in-place
+    so that the frontend receives consistent names.
+    """
+    name_counter: dict[str, int] = {}
+    for event, persona in results:
+        if persona is None:
+            continue
+        base_name = persona.name
+        count = name_counter.get(base_name, 0)
+        if count > 0:
+            new_name = f"{base_name} ({count + 1})"
+            persona.name = new_name
+            if event and isinstance(event.get("persona"), dict):
+                event["persona"]["name"] = new_name
+        name_counter[base_name] = count + 1
+
+
 async def run_simulation(
     input_text: str,
     context_nodes: list[dict],
@@ -67,6 +87,7 @@ async def run_simulation(
                 results.append((event, persona))
             else:
                 results.append((event, None))
+        _deduplicate_names(results)
         return results
 
     persona_tasks = {

@@ -34,12 +34,34 @@ def select_active_agents(
     personas: list[Persona],
     degree: dict[str, int] | None,
     activation_rate: float = 0.25,
+    recent_speakers: dict[str, int] | None = None,
+    current_round: int = 0,
 ) -> list[Persona]:
-    """Degree-weighted random selection. Always returns at least 1 agent."""
+    """Degree-weighted random selection with cross-round cooldown.
+
+    recent_speakers: node_id → last round they produced content (comment/reply).
+    Agents who spoke in the previous round get weight * 0.1.
+    Agents who spoke two rounds ago get weight * 0.5.
+    Always returns at least 1 agent even if all are on cooldown.
+    """
     k = max(1, round(len(personas) * activation_rate))
-    if degree is None or all(degree.get(p.node_id, 0) == 0 for p in personas):
+
+    def _base_weight(p: Persona) -> float:
+        base = float(max(1, degree.get(p.node_id, 0)) if degree else 1.0)
+        if recent_speakers is None:
+            return base
+        last = recent_speakers.get(p.node_id, -99)
+        if last == current_round - 1:
+            return base * 0.1
+        if last == current_round - 2:
+            return base * 0.5
+        return base
+
+    # uniform fallback when degree is None and no cooldown
+    if degree is None and recent_speakers is None:
         return random.sample(personas, min(k, len(personas)))
-    weights = [max(1, degree.get(p.node_id, 0)) for p in personas]
+
+    weights = [_base_weight(p) for p in personas]
     selected: list[Persona] = []
     pool = list(zip(personas, weights))
     while len(selected) < k and pool:
@@ -316,7 +338,11 @@ async def platform_round(
     ontology: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Run one round for a single platform. Yields streaming events."""
-    active = select_active_agents(personas, degree, activation_rate)
+    active = select_active_agents(
+        personas, degree, activation_rate,
+        recent_speakers=state.recent_speakers,
+        current_round=round_num,
+    )
     state.round_num = round_num
     round_stats = {"active_agents": len(active), "new_posts": 0, "new_comments": 0, "new_votes": 0}
 
@@ -341,6 +367,7 @@ async def platform_round(
                 structured_data=structured_data,
             )
             state.posts.append(post)
+            state.recent_speakers[persona.node_id] = round_num
             if action.target_post_id:
                 round_stats["new_comments"] += 1
             else:

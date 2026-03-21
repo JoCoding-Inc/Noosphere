@@ -46,7 +46,8 @@ def init_db(path: str | Path = DB_PATH) -> None:
                 report_json TEXT NOT NULL DEFAULT '{}',
                 report_md TEXT NOT NULL DEFAULT '',
                 analysis_md TEXT NOT NULL DEFAULT '',
-                sources_json TEXT NOT NULL DEFAULT '[]'
+                sources_json TEXT NOT NULL DEFAULT '[]',
+                final_report_md TEXT NOT NULL DEFAULT ''
             );
         """)
         # 기존 DB 마이그레이션 (analysis_md 컬럼 없으면 추가)
@@ -57,6 +58,11 @@ def init_db(path: str | Path = DB_PATH) -> None:
             pass  # 이미 있으면 무시
         try:
             conn.execute("ALTER TABLE sim_results ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[]'")
+            conn.commit()
+        except Exception:
+            pass  # 이미 있으면 무시
+        try:
+            conn.execute("ALTER TABLE sim_results ADD COLUMN final_report_md TEXT NOT NULL DEFAULT ''")
             conn.commit()
         except Exception:
             pass  # 이미 있으면 무시
@@ -97,7 +103,7 @@ def create_simulation(
                 now,
                 input_text,
                 language,
-                json.dumps(config),
+                json.dumps(config, ensure_ascii=False),
                 ACTIVE_SIMULATION_STATUS,
                 domain,
                 0,
@@ -274,15 +280,16 @@ def save_sim_results(
     report_md: str,
     analysis_md: str = "",
     raw_items: list[dict] | None = None,
+    final_report_md: str = "",
 ) -> None:
     with _conn(path) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO sim_results "
-            "(sim_id, posts_json, personas_json, report_json, report_md, analysis_md, sources_json) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (sim_id, json.dumps(posts), json.dumps(personas),
-             json.dumps(report_json), report_md, analysis_md,
-             json.dumps(raw_items or [])),
+            "(sim_id, posts_json, personas_json, report_json, report_md, analysis_md, sources_json, final_report_md) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (sim_id, json.dumps(posts, ensure_ascii=False), json.dumps(personas, ensure_ascii=False),
+             json.dumps(report_json, ensure_ascii=False), report_md, analysis_md,
+             json.dumps(raw_items or [], ensure_ascii=False), final_report_md),
         )
 
 

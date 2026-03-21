@@ -245,6 +245,7 @@ Across all five simulated platforms, the overall reception was **cautiously opti
     { id: 's7', source: 'product_hunt',     title: 'Top AI-powered research tools of 2024',                              score: 0.74, url: 'https://producthunt.com',                    date: '2024-12' },
     { id: 's8', source: 'arxiv',            title: 'AgentSims: An Open-Source Sandbox for LLM Agent Evaluation',        score: 0.71, url: 'https://arxiv.org/abs/2308.04026',          date: '2023-08' },
   ],
+  final_report_md: '',
 }
 
 // ── Demo config constants ─────────────────────────────────────────────────────

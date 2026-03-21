@@ -1,6 +1,5 @@
 from __future__ import annotations
 import logging
-from typing import Any
 
 from backend import llm
 
@@ -78,3 +77,76 @@ Respond entirely in {language}."""
         max_tokens=32768,
     )
     return response.content or ""
+
+
+_FINAL_REPORT_SYSTEM = """\
+You are a senior product analyst. You are given two inputs:
+1. A competitive landscape analysis (from real-world sources)
+2. A simulation report (from AI agent reactions to the idea)
+
+Synthesize these into a final executive report with clear, actionable conclusions."""
+
+
+def _fmt_report_json(report: dict) -> str:
+    if not report:
+        return "_No simulation data_"
+    verdict = report.get("verdict", "unknown")
+    evidence = report.get("evidence_count", 0)
+    lines = [f"**Verdict:** {verdict} (based on {evidence} interactions)"]
+    for seg in report.get("segments", []):
+        lines.append(f"- Segment '{seg.get('name','')}': {seg.get('sentiment','')} — {seg.get('summary','')}")
+    lines.append("\n**Top Criticisms:**")
+    for c in report.get("criticism_clusters", [])[:3]:
+        lines.append(f"- {c.get('theme','')} ({c.get('count',0)} mentions)")
+    lines.append("\n**Top Improvements:**")
+    for imp in report.get("improvements", [])[:3]:
+        lines.append(f"- {imp.get('suggestion','')} (×{imp.get('frequency',1)})")
+    return "\n".join(lines)
+
+
+async def generate_final_report(
+    analysis_md: str,
+    report_json: dict,
+    input_text: str,
+    language: str = "English",
+    provider: str = "openai",
+) -> str:
+    """
+    analysis_md(소스 분석)와 report_json(시뮬레이션 결과)를 종합한
+    최종 경영진 보고서를 생성합니다.
+    """
+    if not analysis_md and not report_json:
+        return "## Final Report\n\n_No data available to generate final report._"
+
+    sim_summary = _fmt_report_json(report_json)
+
+    prompt = f"""Idea: {input_text[:400]}
+
+---
+## 1. Competitive Landscape Analysis
+{analysis_md[:3000]}
+
+---
+## 2. Simulation Results Summary
+{sim_summary}
+
+---
+Write the final report in this exact structure:
+## Executive Summary
+## Key Findings
+## Risk Assessment
+## Strategic Recommendations
+## Conclusion
+
+Be direct and actionable. Respond entirely in {language}."""
+
+    response = await llm.complete(
+        messages=[
+            {"role": "system", "content": _FINAL_REPORT_SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
+        tier="high",
+        provider=provider,
+        max_tokens=8192,
+    )
+    return response.content or "## Final Report\n\n_Generation failed._"

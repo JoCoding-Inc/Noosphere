@@ -79,3 +79,5 @@ class PlatformState:
     platform_name: str
     posts: list[SocialPost] = dataclasses.field(default_factory=list)
     round_num: int = 0
+    recent_speakers: dict[str, int] = dataclasses.field(default_factory=dict)
+    # node_id → 마지막 콘텐츠(comment/reply) 생성 round_num. vote/react는 기록 안 함.
