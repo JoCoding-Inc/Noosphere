@@ -201,6 +201,20 @@ async def resume_simulation(sim_id: str):
     if not checkpoint:
         raise HTTPException(409, "No checkpoint available; start a new simulation")
 
+    # Check concurrency limit (same as /simulate endpoint)
+    reconcile_stale_simulations(
+        DB_PATH,
+        queue_timeout_seconds=SIM_QUEUE_TIMEOUT_SECONDS,
+        heartbeat_timeout_seconds=SIM_HEARTBEAT_TIMEOUT_SECONDS,
+    )
+    running_count = count_active_simulations(
+        DB_PATH,
+        queue_timeout_seconds=SIM_QUEUE_TIMEOUT_SECONDS,
+        heartbeat_timeout_seconds=SIM_HEARTBEAT_TIMEOUT_SECONDS,
+    )
+    if running_count >= MAX_JOBS:
+        raise HTTPException(429, "Too many concurrent simulations")
+
     # Atomic guard: only succeeds if status is still 'failed'
     updated = update_simulation_status(
         DB_PATH, sim_id, "running",
@@ -210,8 +224,9 @@ async def resume_simulation(sim_id: str):
         raise HTTPException(409, "Simulation state changed; try again")
 
     config = json.loads(sim["config_json"])
+    resume_task_id = str(uuid.uuid4())
     try:
-        run_simulation_task.apply_async(args=[sim_id, config], task_id=sim_id)
+        run_simulation_task.apply_async(args=[sim_id, config], task_id=resume_task_id)
     except Exception:
         update_simulation_status(DB_PATH, sim_id, "failed", allowed_current_statuses={"running"})
         raise
