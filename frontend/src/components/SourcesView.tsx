@@ -41,9 +41,11 @@ export function SourcesView({ sources }: Props) {
             }}>
               {item.source}
             </span>
-            <span style={{ fontSize: 11, color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
-              {item.score.toFixed(1)}
-            </span>
+            {item.score > 0 && (
+              <span style={{ fontSize: 11, color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                {item.score.toFixed(1)}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.4 }}>
             {item.url ? (
