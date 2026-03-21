@@ -34,13 +34,13 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
     stream_key = STREAM_KEY.format(sim_id)
 
     def publish(event: dict) -> None:
-        r.xadd(stream_key, {"data": json.dumps(event)}, maxlen=STREAM_MAXLEN)
+        r.xadd(stream_key, {"data": json.dumps(event, ensure_ascii=False)}, maxlen=STREAM_MAXLEN)
 
     async def _run() -> None:
         from backend.analyzer import analyze
         from backend.context_builder import detect_domain
         from backend.ontology_builder import build_ontology
-        from backend.reporter import generate_analysis_report
+        from backend.reporter import generate_analysis_report, generate_final_report
         from backend.simulation.social_runner import run_simulation
 
         main_task = asyncio.current_task()
@@ -91,6 +91,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
         personas_by_platform: dict = {}
         report_json: dict = {}
         report_md: str = ""
+        final_report_md: str = ""
 
         try:
             if not await asyncio.to_thread(mark_simulation_started, DB_PATH, sim_id):
@@ -200,6 +201,19 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 publish(event)
 
             await checkpoint()
+            publish({"type": "sim_progress", "message": "Generating final report..."})
+            try:
+                final_report_md = await generate_final_report(
+                    analysis_md=analysis_md,
+                    report_json=report_json,
+                    input_text=config["input_text"],
+                    language=config["language"],
+                    provider=provider,
+                )
+                publish({"type": "sim_final_report", "data": {"markdown": final_report_md}})
+            except Exception as _e:
+                logger.warning("Final report generation failed: %s", _e)
+                final_report_md = "## Final Report\n\n_Generation failed._"
             save_sim_results(
                 DB_PATH,
                 sim_id,
@@ -209,6 +223,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 report_md,
                 analysis_md=analysis_md,
                 raw_items=raw_items,
+                final_report_md=final_report_md,
             )
             if not await asyncio.to_thread(
                 update_simulation_status,
