@@ -1,50 +1,29 @@
 from __future__ import annotations
 import json
 import logging
-import os
 import re
 import uuid
-from typing import Any
 
-import openai
 import httpx
+
+from backend import llm
 
 logger = logging.getLogger(__name__)
 
-_client: openai.AsyncOpenAI | None = None
 
-
-def _get_client() -> openai.AsyncOpenAI:
-    global _client
-    if _client is None:
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY not set")
-        _client = openai.AsyncOpenAI(api_key=api_key, timeout=30.0)
-    return _client
-
-
-def _message_text(response: Any) -> str:
-    try:
-        content = response.choices[0].message.content
-    except (AttributeError, IndexError, TypeError):
-        return ""
-    return content if isinstance(content, str) else ""
-
-
-async def extract_concepts_from_text(text: str) -> list[str]:
+async def extract_concepts_from_text(text: str, provider: str = "openai") -> list[str]:
     """Use OpenAI to extract key concepts/entities from product description."""
     prompt = (
         f"Extract 5-10 key concepts, technologies, or market categories from this "
         f"product description. Return ONLY a JSON array of strings.\n\n{text[:2000]}"
     )
-    client = _get_client()
-    response = await client.chat.completions.create(
-        model="gpt-5.4-nano",
-        max_tokens=512,
+    response = await llm.complete(
         messages=[{"role": "user", "content": prompt}],
+        tier="low",
+        provider=provider,
+        max_tokens=512,
     )
-    raw = _message_text(response).strip()
+    raw = (response.content or "").strip()
     if not raw:
         return []
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
@@ -98,6 +77,7 @@ async def build_context_nodes(
     input_text: str,
     enrich: bool = True,
     max_nodes: int = 30,
+    provider: str = "openai",
 ) -> list[dict]:
     """
     Main entry point. Returns list of context node dicts for the simulation engine.
@@ -106,8 +86,9 @@ async def build_context_nodes(
         input_text: Raw product/service description from user
         enrich: If True, fetch related HN posts to augment context
         max_nodes: Cap on total nodes returned
+        provider: LLM provider to use
     """
-    concepts = await extract_concepts_from_text(input_text)
+    concepts = await extract_concepts_from_text(input_text, provider=provider)
     nodes = _nodes_from_concepts(input_text, concepts)
 
     if enrich and concepts:
@@ -129,20 +110,20 @@ async def build_context_nodes(
     return deduped[:max_nodes]
 
 
-async def detect_domain(input_text: str) -> str:
+async def detect_domain(input_text: str, provider: str = "openai") -> str:
     """Detect the product domain (e.g. 'SaaS', 'fintech', 'developer tools')."""
     prompt = (
         f"In 2-4 words, what is the domain of this product? "
         f"Examples: 'developer tools', 'B2B SaaS', 'fintech', 'consumer app'.\n\n"
         f"Reply with only the domain string.\n\n{input_text[:500]}"
     )
-    client = _get_client()
     try:
-        response = await client.chat.completions.create(
-            model="gpt-5.4-nano",
-            max_tokens=32,
+        response = await llm.complete(
             messages=[{"role": "user", "content": prompt}],
+            tier="low",
+            provider=provider,
+            max_tokens=32,
         )
-        return _message_text(response).strip()[:50] or "technology"
+        return (response.content or "").strip()[:50] or "technology"
     except Exception:
         return "technology"
