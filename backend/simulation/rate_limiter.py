@@ -245,10 +245,10 @@ async def record_token_usage(
     if provider not in _TPM_REDIS_KEYS or not reservation_id:
         return
 
-    r = _get_redis()
     redis_key = _TPM_REDIS_KEYS[provider]
 
     try:
+        r = _get_redis()
         await r.eval(
             _RECORD_TPM_SCRIPT,
             1,

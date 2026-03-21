@@ -1,6 +1,16 @@
 import pytest
 import time
 from unittest.mock import AsyncMock, patch
+import backend.simulation.rate_limiter as _rl
+
+
+@pytest.fixture(autouse=True)
+def reset_redis_client():
+    """각 테스트 전후로 Redis 전역 클라이언트를 초기화해 테스트 격리를 보장한다."""
+    original = _rl._redis_client
+    _rl._redis_client = None
+    yield
+    _rl._redis_client = original
 
 
 # ── acquire_tpm_slot ──────────────────────────────────────────────────────────
