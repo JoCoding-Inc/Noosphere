@@ -34,3 +34,18 @@ export async function cancelSimulation(sim_id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/simulate/${sim_id}/cancel`, { method: 'POST' })
   if (!res.ok) throw new Error(`Failed to cancel: ${res.status}`)
 }
+
+export async function resumeSimulation(sim_id: string): Promise<{ sim_id: string; resuming_from_round: number }> {
+  const res = await fetch(`${API_BASE}/simulate/${sim_id}/resume`, { method: 'POST' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `Resume failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function getSimulationStatus(sim_id: string): Promise<{ status: string; last_round: number }> {
+  const res = await fetch(`${API_BASE}/simulate/${sim_id}/status`)
+  if (!res.ok) throw new Error(`Status check failed: ${res.status}`)
+  return res.json()
+}
