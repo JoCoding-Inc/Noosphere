@@ -124,7 +124,10 @@ async def _complete_openai(
     for attempt in range(4):
         await acquire_api_slot()
         try:
-            response = await client.chat.completions.create(**kwargs)
+            response = await asyncio.wait_for(
+                client.chat.completions.create(**kwargs),
+                timeout=timeout,
+            )
             return _extract_openai_response(response, tool_choice)
         except LLMToolRequired:
             raise
@@ -218,7 +221,10 @@ async def _complete_anthropic(
 
     for attempt in range(4):
         try:
-            response = await client.messages.create(**kwargs)
+            response = await asyncio.wait_for(
+                client.messages.create(**kwargs),
+                timeout=timeout,
+            )
             return _extract_anthropic_response(response, tool_choice)
         except LLMToolRequired:
             raise
@@ -243,13 +249,23 @@ def _get_gemini_client():
 
 
 def _deep_strip_schema_keys(schema: dict) -> dict:
-    """Recursively remove additionalProperties and $schema from a JSON schema at all nesting levels."""
+    """Recursively remove additionalProperties/$schema and normalize types for Gemini.
+
+    Gemini SDK only accepts a single string type enum value, so nullable union
+    types like `["string", "null"]` are converted to `type: "string", nullable: true`.
+    """
     _STRIP = {"additionalProperties", "$schema"}
     result = {}
     for k, v in schema.items():
         if k in _STRIP:
             continue
-        if isinstance(v, dict):
+        if k == "type" and isinstance(v, list):
+            # Convert JSON Schema union type e.g. ["string", "null"] → type + nullable
+            non_null = [t for t in v if t != "null"]
+            result["type"] = non_null[0] if non_null else "string"
+            if "null" in v:
+                result["nullable"] = True
+        elif isinstance(v, dict):
             result[k] = _deep_strip_schema_keys(v)
         elif isinstance(v, list):
             result[k] = [_deep_strip_schema_keys(i) if isinstance(i, dict) else i for i in v]

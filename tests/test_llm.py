@@ -227,7 +227,7 @@ async def test_complete_gemini_text():
 
 
 def test_deep_strip_schema_keys():
-    """_deep_strip_schema_keys removes additionalProperties and $schema at all nesting levels."""
+    """_deep_strip_schema_keys removes additionalProperties/$schema and normalizes nullable unions."""
     from backend.llm import _deep_strip_schema_keys
     schema = {
         "type": "object",
@@ -239,7 +239,10 @@ def test_deep_strip_schema_keys():
                 "additionalProperties": True,
                 "$schema": "ignored",
                 "properties": {}
-            }
+            },
+            "nullable_field": {
+                "type": ["string", "null"],
+            },
         },
         "anyOf": [
             {"type": "string", "additionalProperties": False, "$schema": "x"},
@@ -255,3 +258,7 @@ def test_deep_strip_schema_keys():
     # anyOf list items are also stripped
     assert "additionalProperties" not in result["anyOf"][0]
     assert "$schema" not in result["anyOf"][0]
+    # nullable union is flattened
+    nullable_result = result["properties"]["nullable_field"]
+    assert nullable_result["type"] == "string"
+    assert nullable_result["nullable"] is True
