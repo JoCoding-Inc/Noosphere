@@ -1,11 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Header } from '../components/Header'
 import { useSimulation } from '../hooks/useSimulation'
 import { PlatformSimFeed } from '../components/PlatformSimFeed'
 import { OntologyGraph } from '../components/OntologyGraph'
 import { SOURCE_COLORS } from '../constants'
-import type { Platform } from '../types'
+import { resumeSimulation } from '../api'
+import type { Platform, SocialPost } from '../types'
 
 const PLATFORM_COLORS: Record<Platform, string> = {
   hackernews: '#f97316',
@@ -19,6 +20,21 @@ export function SimulatePage() {
   const { simId } = useParams<{ simId: string }>()
   const navigate = useNavigate()
   const sim = useSimulation(simId!)
+  const [isResuming, setIsResuming] = useState(false)
+  const [resumeError, setResumeError] = useState<string | null>(null)
+
+  async function handleResume() {
+    if (!simId) return
+    setIsResuming(true)
+    setResumeError(null)
+    try {
+      await resumeSimulation(simId)
+    } catch (e) {
+      setResumeError(e instanceof Error ? e.message : 'Resume failed')
+    } finally {
+      setIsResuming(false)
+    }
+  }
 
   useEffect(() => {
     if (sim.status === 'done' && simId) {
@@ -85,7 +101,31 @@ export function SimulatePage() {
       )}
 
       {sim.status === 'error' && (
-        <p style={{ color: '#ef4444', fontSize: 14, margin: '8px 0 20px' }}>{sim.errorMsg}</p>
+        <div style={{ margin: '8px 0 20px' }}>
+          <p style={{ color: '#ef4444', fontSize: 14, margin: '0 0 12px' }}>{sim.errorMsg}</p>
+          {sim.lastRound > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+                {sim.lastRound}라운드까지 저장됨
+              </p>
+              <button
+                onClick={handleResume}
+                disabled={isResuming}
+                style={{
+                  padding: '8px 18px', borderRadius: 8, border: 'none',
+                  background: '#6366f1', color: '#fff', fontWeight: 600,
+                  fontSize: 14, cursor: isResuming ? 'not-allowed' : 'pointer',
+                  opacity: isResuming ? 0.7 : 1,
+                }}
+              >
+                {isResuming ? '재개 중...' : `${sim.lastRound + 1}라운드부터 재개하기`}
+              </button>
+            </div>
+          )}
+          {resumeError && (
+            <p style={{ color: '#ef4444', fontSize: 13, margin: '8px 0 0' }}>{resumeError}</p>
+          )}
+        </div>
       )}
 
       {/* 페르소나 생성 진행 바 */}
