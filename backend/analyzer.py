@@ -74,6 +74,12 @@ async def analyze(
     cached = get_cached(input_text)
     if cached is not None:
         logger.info("Cache hit for input_text (len=%d)", len(input_text))
+        if on_source_done is not None:
+            by_source: dict[str, list[dict]] = {}
+            for item in cached:
+                by_source.setdefault(item.get("source", "unknown"), []).append(item)
+            for source_name, items in by_source.items():
+                on_source_done(source_name, items)
         return cached
 
     extraction = await extract_concepts(input_text, provider=provider)
