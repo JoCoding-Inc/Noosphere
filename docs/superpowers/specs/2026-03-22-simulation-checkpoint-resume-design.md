@@ -57,13 +57,18 @@ All data required to reconstruct the simulation loop state without re-running ex
 | Field | Contents |
 |-------|----------|
 | `last_round` | Last successfully completed round number |
-| `platform_states_json` | `{platform_name: [{id, platform, author_node_id, author_name, content, action_type, round_num, upvotes, downvotes, parent_id}, ...]}` |
-| `personas_json` | `{platform_name: [{node_id, name, role, age, generation, seniority, affiliation, company, mbti, interests, skepticism, commercial_focus, innovation_openness}, ...]}` |
+| `platform_states_json` | `{platform_name: {platform_name, round_num, recent_speakers, posts: [{id, platform, author_node_id, author_name, content, action_type, round_num, upvotes, downvotes, parent_id, structured_data}, ...]}}` |
+| `personas_json` | `{platform_name: [{node_id, name, role, age, seniority, affiliation, company, mbti, interests, skepticism, commercial_focus, innovation_openness, source_title}, ...]}` |
 | `context_nodes_json` | Original context nodes list |
 | `domain` | Detected domain string |
 | `analysis_md` | Analysis report markdown |
 | `ontology_json` | Ontology dict (nullable) |
 | `raw_items_json` | Raw source items list |
+
+**Serialization notes:**
+- `Persona.generation` is a `@property` derived from `age` — NOT stored in checkpoint, reconstructed automatically on restore.
+- `SocialPost.structured_data` (platform-specific dict) IS stored.
+- `PlatformState.recent_speakers` (cross-round cooldown tracker) IS stored to preserve cooldown state across resume.
 
 ---
 
@@ -88,18 +93,28 @@ def delete_checkpoint(path, sim_id) -> None
 1. Read checkpoint via `get_checkpoint(DB_PATH, sim_id)`
 2. If checkpoint exists, extract `start_round = checkpoint["last_round"] + 1` and pass all checkpoint data into `run_simulation()`
 
-**After each `sim_round_summary` event:**
+**After each `sim_checkpoint_data` event (internal, not published to Redis):**
+
+`social_runner.py` yields a `sim_checkpoint_data` event after each round. `tasks.py` intercepts this event, calls `save_checkpoint()`, and does NOT forward it to Redis (so the frontend never sees it):
+
 ```python
-if event["type"] == "sim_round_summary":
+if event["type"] == "sim_checkpoint_data":
     await asyncio.to_thread(
         save_checkpoint,
         DB_PATH, sim_id,
         event["round_num"],
-        current_platform_states,
-        current_personas,
-        context_nodes, domain_str, analysis_md, ontology, raw_items,
+        event["platform_states"],
+        event["personas"],
+        event["context_nodes"],
+        event["domain"],
+        event["analysis_md"],
+        event["ontology"],
+        event["raw_items"],
     )
+    continue  # do NOT publish to Redis
 ```
+
+This avoids the problem of `tasks.py` needing to access internal state from `social_runner.py`. The generator owns the state and serializes it directly.
 
 **On successful completion:**
 - Call `delete_checkpoint(DB_PATH, sim_id)` after `save_sim_results()`
@@ -122,18 +137,21 @@ async def run_simulation(
 ```
 
 When `checkpoint` is provided:
-- Skip persona generation loop → restore `platform_personas` from checkpoint dicts → reconstruct `Persona` dataclass instances
-- Skip seed post generation → restore `platform_states` from checkpoint dicts → reconstruct `PlatformState` + `SocialPost` dataclass instances
+- Skip persona generation loop → restore `platform_personas` from checkpoint dicts → reconstruct `Persona` dataclass instances (exclude `generation` — it's a property)
+- Skip seed post generation → restore `platform_states` from checkpoint dicts → reconstruct `PlatformState` (including `recent_speakers`) + `SocialPost` (including `structured_data`) dataclass instances
 - Set loop range to `range(checkpoint["last_round"] + 1, num_rounds + 1)`
-- Yield `sim_resume` event with `from_round` before entering the round loop
+- Yield `sim_resume` event with `from_round` before entering the round loop (owned by `social_runner.py`, not `tasks.py`)
+- After each completed round, yield `sim_checkpoint_data` event before `sim_round_summary`
 
 Dataclass reconstruction helpers (private functions in `social_runner.py`):
-- `_restore_platform_states(checkpoint_dict) -> dict[str, PlatformState]`
-- `_restore_personas(checkpoint_dict) -> dict[str, list[Persona]]`
+- `_restore_platform_states(states_dict) -> dict[str, PlatformState]`
+- `_restore_personas(personas_dict) -> dict[str, list[Persona]]`
 
 ### `main.py`
 
 **New endpoint: `POST /simulate/{sim_id}/resume`**
+
+The status update to `"running"` uses `allowed_current_statuses={"failed"}` to act as an atomic guard against double-resume: if two requests arrive simultaneously, only one `UPDATE WHERE status='failed'` can succeed.
 
 ```python
 @app.post("/simulate/{sim_id}/resume")
@@ -141,14 +159,19 @@ async def resume_simulation(sim_id: str):
     sim = get_simulation(DB_PATH, sim_id)
     if not sim:
         raise HTTPException(404, "Simulation not found")
-    if sim["status"] not in {"failed"}:
+    if sim["status"] != "failed":
         raise HTTPException(400, f"Only failed simulations can be resumed (status: {sim['status']})")
     checkpoint = get_checkpoint(DB_PATH, sim_id)
     if not checkpoint:
         raise HTTPException(409, "No checkpoint available; restart from scratch")
 
-    # Reset DB status to running
-    update_simulation_status(DB_PATH, sim_id, "running")
+    # Atomic guard: only succeeds if status is still 'failed'
+    updated = update_simulation_status(
+        DB_PATH, sim_id, "running",
+        allowed_current_statuses={"failed"},
+    )
+    if not updated:
+        raise HTTPException(409, "Simulation state changed; try again")
 
     # Re-dispatch Celery task with same sim_id and original config
     config = json.loads(sim["config_json"])
@@ -175,22 +198,34 @@ async def simulation_status(sim_id: str):
 
 **SSE endpoint: `Last-Event-ID` support**
 
+If the provided `Last-Event-ID` is stale (evicted from the stream), `xread` returns an empty result or an error. In this case, fall back to `"0"` to replay from the beginning. `STREAM_MAXLEN=2000` with 12 rounds × 5 platforms is well within this limit for normal runs.
+
 ```python
 @app.get("/simulate-stream/{sim_id}")
 async def simulate_stream(sim_id: str, request: Request):
     last_event_id = request.headers.get("Last-Event-ID", "0") or "0"
-    # Use last_event_id as starting position instead of hardcoded "0"
-    ...
+
     async def event_generator():
         last_id = last_event_id
+        try:
+            # Verify the ID exists in the stream; fall back to "0" if stale
+            info = await r.xinfo_stream(stream_key)
+            # If stream is empty or ID is before first entry, reset
+        except Exception:
+            last_id = "0"
+
         while True:
             results = await r.xread({stream_key: last_id}, count=100, block=30_000)
+            if not results:
+                yield 'data: {"type":"heartbeat"}\n\n'
+                continue
             for _stream_name, messages in results:
                 for msg_id, fields in messages:
                     last_id = msg_id
                     raw = fields["data"]
-                    yield f"id: {msg_id}\ndata: {raw}\n\n"  # include id: field
-                    ...
+                    yield f"id: {msg_id}\ndata: {raw}\n\n"
+                    if json.loads(raw).get("type") == "sim_done":
+                        return
 ```
 
 ---
@@ -300,11 +335,14 @@ Frontend
 - **Save**: `dataclasses.asdict()` → `json.dumps()`
 - **Restore**: Parse JSON → reconstruct dataclass instances field by field
 
-`SocialPost` dataclass fields: `id, platform, author_node_id, author_name, content, action_type, round_num, upvotes, downvotes, parent_id`
+`SocialPost` dataclass fields (all stored): `id, platform, author_node_id, author_name, content, action_type, round_num, upvotes, downvotes, parent_id, structured_data`
 
-`Persona` dataclass fields: `node_id, name, role, age, generation, seniority, affiliation, company, mbti, interests, skepticism, commercial_focus, innovation_openness`
+`Persona` dataclass fields (all stored): `node_id, name, role, age, seniority, affiliation, company, mbti, interests, skepticism, commercial_focus, innovation_openness, source_title`
+Note: `generation` is a `@property` (not a field) and is excluded from serialization.
 
-These are already serialized in the existing `sim_report` event, so the same structure is reused for checkpoints.
+`PlatformState` fields (all stored): `platform_name, round_num, recent_speakers, posts`
+
+Use `dataclasses.asdict()` for serialization — this correctly excludes properties and only captures true fields.
 
 ---
 
