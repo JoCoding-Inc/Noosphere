@@ -85,6 +85,7 @@ export interface SimResults {
   report_md: string
   analysis_md: string
   sources_json: SourceItem[]
+  final_report_md: string
 }
 
 export interface HistoryItem {
