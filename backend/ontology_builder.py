@@ -75,7 +75,9 @@ async def build_ontology(
         # Filter out entities missing required name/type before ID assignment
         raw_entities = [
             e for e in raw_entities
-            if isinstance(e, dict) and isinstance(e.get("name"), str) and isinstance(e.get("type"), str)
+            if isinstance(e, dict)
+            and isinstance(e.get("name"), str) and e.get("name")
+            and isinstance(e.get("type"), str) and e.get("type")
         ]
         entities = _assign_ids(raw_entities)
 

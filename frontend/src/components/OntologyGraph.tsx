@@ -1,5 +1,5 @@
 // frontend/src/components/OntologyGraph.tsx
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 import type { OntologyEntity, OntologyData } from '../types'
 
@@ -98,25 +98,31 @@ interface OntologyGraphProps {
   contextNodes?: Array<{ id: string; title: string; source: string; url?: string }>
 }
 
-export function OntologyGraph({ data, contextNodes = [] }: OntologyGraphProps) {
+export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = [] }: OntologyGraphProps) {
   const [selectedEntity, setSelectedEntity] = useState<OntologyEntity | null>(null)
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set())
 
-  const graphNodes: GraphNode[] = data.entities
-    .filter(e => !hiddenTypes.has(e.type))
-    .map(e => ({ ...e, color: NODE_COLORS[e.type] ?? '#94a3b8' }))
+  const graphNodes = useMemo<GraphNode[]>(() =>
+    data.entities
+      .filter(e => !hiddenTypes.has(e.type))
+      .map(e => ({ ...e, color: NODE_COLORS[e.type] ?? '#94a3b8' })),
+    [data.entities, hiddenTypes]
+  )
 
-  const visibleIds = new Set(graphNodes.map(n => n.id))
-  const graphLinks: GraphLink[] = data.relationships
-    .filter(r => visibleIds.has(r.from) && visibleIds.has(r.to))
-    .map(r => ({
-      source: r.from,
-      target: r.to,
-      type: r.type,
-      color: EDGE_COLORS[r.type] ?? '#cbd5e1',
-    }))
+  const graphData = useMemo(() => {
+    const visibleIds = new Set(graphNodes.map(n => n.id))
+    const links: GraphLink[] = data.relationships
+      .filter(r => visibleIds.has(r.from) && visibleIds.has(r.to))
+      .map(r => ({
+        source: r.from,
+        target: r.to,
+        type: r.type,
+        color: EDGE_COLORS[r.type] ?? '#cbd5e1',
+      }))
+    return { nodes: graphNodes, links }
+  }, [graphNodes, data.relationships])
 
-  const usedTypes = [...new Set(data.entities.map(e => e.type))]
+  const usedTypes = useMemo(() => [...new Set(data.entities.map(e => e.type))], [data.entities])
 
   const toggleType = useCallback((type: string) => {
     setHiddenTypes(prev => {
@@ -156,7 +162,7 @@ export function OntologyGraph({ data, contextNodes = [] }: OntologyGraphProps) {
       {/* Graph */}
       <div style={{ position: 'relative', height: 400 }}>
         <ForceGraph2D
-          graphData={{ nodes: graphNodes, links: graphLinks }}
+          graphData={graphData}
           nodeId="id"
           nodeLabel="name"
           nodeColor="color"
@@ -181,4 +187,4 @@ export function OntologyGraph({ data, contextNodes = [] }: OntologyGraphProps) {
       </div>
     </div>
   )
-}
+})
