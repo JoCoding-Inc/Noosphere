@@ -1,48 +1,12 @@
 # backend/simulation/persona_generator.py
 from __future__ import annotations
-import json
 import logging
-import os
-from typing import Any
-import openai
 from backend.simulation.models import Persona
 from backend.simulation.graph_utils import sanitize_neighbor_titles
-from backend.simulation.rate_limiter import api_sem as _api_sem
+from backend import llm
+from backend.llm import LLMToolRequired
 
 logger = logging.getLogger(__name__)
-
-_client: openai.AsyncOpenAI | None = None
-
-
-def _get_client() -> openai.AsyncOpenAI:
-    global _client
-    if _client is None:
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
-            raise RuntimeError(
-                "OPENAI_API_KEY environment variable is not set."
-            )
-        _client = openai.AsyncOpenAI(api_key=api_key, timeout=30.0)
-    return _client
-
-
-def _parse_tool_arguments(message: Any, *, expected_name: str) -> dict:
-    tool_calls = getattr(message, "tool_calls", None) or []
-    if not tool_calls:
-        raise ValueError("No tool_calls in persona response")
-
-    function = getattr(tool_calls[0], "function", None)
-    if function is None:
-        raise ValueError("Tool call is missing function metadata")
-    if function.name != expected_name:
-        raise ValueError(f"Unexpected tool call {function.name!r}, expected {expected_name!r}")
-    if not function.arguments:
-        raise ValueError("Tool call arguments are empty")
-
-    data = json.loads(function.arguments)
-    if not isinstance(data, dict):
-        raise ValueError("Tool call arguments must decode to an object")
-    return data
 
 
 # For academic sources, force low commercial_focus; others are LLM-decided
@@ -168,11 +132,30 @@ Guidelines:
 - Vary skepticism, commercial_focus, and innovation_openness to reflect the diversity of real users on this platform."""
 
 
+def _fallback_persona(node: dict, platform_name: str) -> Persona:
+    return Persona(
+        node_id=node.get("id", "unknown"),
+        name="Alex Morgan",
+        role="Software Engineer",
+        age=30,
+        seniority="mid",
+        affiliation="individual",
+        company="",
+        mbti="INTJ",
+        interests=["technology"],
+        skepticism=5,
+        commercial_focus=5,
+        innovation_openness=5,
+        source_title=node.get("title", ""),
+    )
+
+
 async def generate_persona(
     node: dict,
     idea_text: str = "",
     neighbor_titles: list[str] | None = None,
     platform_name: str = "",
+    provider: str = "openai",
 ) -> Persona:
     node_id = node.get("id")
     if not node_id:
@@ -200,32 +183,24 @@ async def generate_persona(
     )
     system = _SYSTEM_TMPL.format(platform_context=platform_context)
 
-    for attempt in range(4):
-        try:
-            async with _api_sem:
-                response = await _get_client().chat.completions.create(
-                    model="gpt-5.4-mini",
-                    max_tokens=1024,
-                    messages=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": prompt},
-                    ],
-                    tools=[_PERSONA_TOOL],
-                    tool_choice={"type": "function", "function": {"name": "create_persona"}},
-                )
-            break
-        except openai.RateLimitError as exc:
-            if attempt == 3:
-                raise
-            import asyncio as _asyncio
-            wait = 5 * (2 ** attempt)
-            logger.warning("Persona rate limit (attempt %d/4), retrying in %ds: %s", attempt + 1, wait, exc)
-            await _asyncio.sleep(wait)
-
-    data = _parse_tool_arguments(
-        response.choices[0].message,
-        expected_name="create_persona",
-    )
+    try:
+        response = await llm.complete(
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+            tier="mid",
+            provider=provider,
+            max_tokens=1024,
+            tools=[_PERSONA_TOOL],
+            tool_choice="create_persona",
+        )
+        data = response.tool_args
+    except LLMToolRequired:
+        raise
+    except Exception as exc:
+        logger.warning("generate_persona failed: %s", exc)
+        return _fallback_persona(node, platform_name)
 
     # Apply forced attributes for academic sources
     forced = _FORCED_ATTRS_BY_SOURCE.get(source, {})
