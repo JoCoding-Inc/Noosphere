@@ -5,6 +5,7 @@ from backend.simulation.models import Persona
 from backend.simulation.graph_utils import sanitize_neighbor_titles
 from backend import llm
 from backend.llm import LLMToolRequired
+from backend.ontology_builder import ontology_for_persona
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +157,7 @@ async def generate_persona(
     neighbor_titles: list[str] | None = None,
     platform_name: str = "",
     provider: str = "openai",
+    ontology: dict | None = None,
 ) -> Persona:
     node_id = node.get("id")
     if not node_id:
@@ -177,6 +179,9 @@ async def generate_persona(
         neighbor_str = ", ".join(sanitized_neighbors)
         prompt += f"\nNeighboring technologies (related nodes): {neighbor_str}"
 
+    if ontology:
+        prompt += f"\n\nEcosystem context:\n{ontology_for_persona(ontology)}"
+
     platform_context = _PLATFORM_AUDIENCE.get(
         platform_name,
         "A general online tech community. Generate a diverse persona appropriate to the idea's domain.",
@@ -191,7 +196,7 @@ async def generate_persona(
             ],
             tier="mid",
             provider=provider,
-            max_tokens=1024,
+            max_tokens=4096,
             tools=[_PERSONA_TOOL],
             tool_choice="create_persona",
         )
