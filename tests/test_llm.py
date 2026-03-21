@@ -345,6 +345,58 @@ async def test_complete_gemini_returns_tokens_used():
     assert result.tokens_used == 77
 
 
+async def test_complete_anthropic_tokens_used_none_when_usage_missing():
+    """Anthropic 응답에 usage 필드가 없으면 tokens_used는 None이다."""
+    from backend.llm import complete
+    import anthropic
+
+    mock_text_block = MagicMock(spec=anthropic.types.TextBlock)
+    mock_text_block.text = "response"
+
+    mock_response = MagicMock(spec=["content"])  # usage 속성 없음
+    mock_response.content = [mock_text_block]
+
+    mock_client = AsyncMock()
+    mock_client.messages.create = AsyncMock(return_value=mock_response)
+
+    with patch("backend.llm._get_anthropic_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="anthropic",
+            max_tokens=50,
+        )
+    assert result.tokens_used is None
+
+
+async def test_complete_gemini_tokens_used_none_when_usage_missing():
+    """Gemini 응답에 usage_metadata 필드가 없으면 tokens_used는 None이다."""
+    from backend.llm import complete
+
+    mock_response = MagicMock(spec=["text", "candidates"])  # usage_metadata 속성 없음
+    mock_response.text = "Gemini"
+    mock_part = MagicMock(spec=[])
+    mock_response.candidates = [MagicMock(content=MagicMock(parts=[mock_part]))]
+
+    mock_aio = AsyncMock()
+    mock_aio.models.generate_content = AsyncMock(return_value=mock_response)
+    mock_client = MagicMock()
+    mock_client.aio = mock_aio
+
+    with patch("backend.llm._get_gemini_client", return_value=mock_client), \
+         patch("backend.llm.acquire_api_slot", new_callable=AsyncMock), \
+         patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}):
+        result = await complete(
+            messages=[{"role": "user", "content": "hi"}],
+            tier="low",
+            provider="gemini",
+            max_tokens=50,
+        )
+    assert result.tokens_used is None
+
+
 def test_deep_strip_schema_keys():
     """_deep_strip_schema_keys removes additionalProperties/$schema and normalizes nullable unions."""
     from backend.llm import _deep_strip_schema_keys
