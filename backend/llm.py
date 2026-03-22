@@ -75,6 +75,7 @@ async def complete(
     timeout: float = 120.0,
     tools: list[dict] | None = None,
     tool_choice: str | None = None,
+    response_format: dict | None = None,
 ) -> LLMResponse:
     """Route LLM call to the appropriate provider."""
     check_provider_key(provider)
@@ -84,7 +85,7 @@ async def complete(
         max_tokens = min(max_tokens, model_max)
 
     if provider == "openai":
-        return await _complete_openai(messages, model, max_tokens, timeout, tools, tool_choice)
+        return await _complete_openai(messages, model, max_tokens, timeout, tools, tool_choice, response_format)
     if provider == "anthropic":
         return await _complete_anthropic(messages, model, max_tokens, timeout, tools, tool_choice)
     if provider == "gemini":
@@ -137,12 +138,15 @@ async def _complete_openai(
     timeout: float,
     tools: list[dict] | None,
     tool_choice: str | None,
+    response_format: dict | None = None,
 ) -> LLMResponse:
     client = _get_openai_client()
     kwargs: dict = {"model": model, "max_completion_tokens": max_tokens, "messages": messages}
     if tools:
         kwargs["tools"] = tools
         kwargs["tool_choice"] = _tool_choice_openai(tool_choice)
+    if response_format:
+        kwargs["response_format"] = response_format
 
     reservation_id = await acquire_tpm_slot("openai", max_tokens)
 

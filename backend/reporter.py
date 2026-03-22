@@ -58,7 +58,7 @@ async def generate_analysis_report(
     )
 
     prompt = f"""Domain: {domain}
-Idea: {input_text[:400]}
+Idea: {input_text}
 
 Collected {len(raw_items)} items from: {', '.join(sorted(by_source.keys()))}
 
@@ -130,7 +130,7 @@ async def generate_final_report(
 
     sim_summary = _fmt_report_json(report_json)
 
-    prompt = f"""Idea: {input_text[:400]}
+    prompt = f"""Idea: {input_text}
 
 ---
 ## 1. Competitive Landscape Analysis
