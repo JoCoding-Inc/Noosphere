@@ -175,7 +175,7 @@ export function HomePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
       <Header />
-      <main className="page-enter" style={{ maxWidth: 760, margin: '0 auto', padding: '52px 24px 80px' }}>
+      <main className="page-enter" style={{ maxWidth: 900, margin: '0 auto', padding: '52px 24px 80px' }}>
 
         {/* Hero */}
         <div style={{ marginBottom: 32, animation: 'fadeInUp 0.4s ease both' }}>

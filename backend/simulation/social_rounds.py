@@ -138,7 +138,6 @@ async def generate_seed_post(
     idea_text: str,
     language: str = "English",
     provider: str = "openai",
-    ontology: dict | None = None,
 ) -> SocialPost:
     """Generate the initial post for a platform that kicks off discussion."""
     tool = _to_openai_tool(platform.seed_tool())
@@ -148,13 +147,6 @@ async def generate_seed_post(
         f"Match the platform's tone and style exactly. Write in {language}.\n",
         f"Idea: {idea_text}",
     ]
-    if ontology:
-        tensions = ontology.get("market_tensions", [])
-        trends = ontology.get("key_trends", [])
-        if tensions:
-            context_lines.append(f"\nKey market tensions in this space: {'; '.join(tensions[:3])}")
-        if trends:
-            context_lines.append(f"Key trends shaping this space: {'; '.join(trends[:3])}")
     prompt = "\n".join(context_lines)
     structured_data: dict = {}
     content = f"[{platform.name}] Introducing: {idea_text[:200]}"
@@ -221,10 +213,8 @@ async def decide_action(
     feed_text: str,
     language: str = "English",
     provider: str = "openai",
-    ontology: dict | None = None,
 ) -> AgentAction:
     """LLM call 1: decide action_type and target_post_id."""
-    del ontology
     allowed = platform.get_allowed_actions(persona)
     prompt = (
         f"Platform: {platform.name}\n"
@@ -273,10 +263,8 @@ async def generate_content(
     language: str = "English",
     provider: str = "openai",
     cluster_docs_map: dict | None = None,
-    ontology: dict | None = None,
 ) -> tuple[str, dict]:
     """LLM call 2: generate post/comment text. Returns (content_str, structured_data)."""
-    del ontology
     tool = _to_openai_tool(platform.content_tool(action.action_type))
     tool_name = tool["function"]["name"]
     prior_knowledge = ""

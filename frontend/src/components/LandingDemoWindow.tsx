@@ -4,8 +4,7 @@ import { SOURCE_COLORS } from '../constants'
 import { ReportView } from './ReportView'
 import { MarkdownView } from './MarkdownView'
 import { PlatformSimFeed } from './PlatformSimFeed'
-import { PersonaCardView } from './PersonaCardView'
-import { SourcesView } from './SourcesView'
+import { DetailsView } from './DetailsView'
 import { ContextGraph } from './OntologyGraph'
 import type { Platform, SocialPost, SimResults, ContextGraphData } from '../types'
 
@@ -243,7 +242,33 @@ Across all five simulated platforms, the overall reception was **cautiously opti
     { id: 's7', source: 'product_hunt',     title: 'Top AI-powered research tools of 2024',                              score: 0.74, url: 'https://producthunt.com',                    date: '2024-12' },
     { id: 's8', source: 'arxiv',            title: 'AgentSims: An Open-Source Sandbox for LLM Agent Evaluation',        score: 0.71, url: 'https://arxiv.org/abs/2308.04026',          date: '2023-08' },
   ],
-  final_report_md: '',
+  final_report_md: `## Final Report — Noosphere
+
+### Overall Verdict: Mixed ⚖️
+
+The simulation of 127 interactions across 5 platforms reveals a product with strong practitioner-market fit and genuine technical ambition, tempered by recurring skepticism from highly technical audiences.
+
+---
+
+### Platform-by-Platform Summary
+
+**Hacker News** — Cautiously skeptical. The community engaged with depth but consistently pushed back on simulation fidelity and methodology opacity. Expect a polarised thread: enthusiasts vs. skeptics.
+
+**Product Hunt** — High potential. Clear resonance with the core value proposition. Expect strong Day 1 upvotes from founders who have experienced positioning failures.
+
+**Indie Hackers** — Strongest reception. Direct alignment with IH community pain points around pre-launch validation. High likelihood of organic word-of-mouth.
+
+**Reddit r/startups** — Mixed. Community values real customer conversations; simulation perceived as complement rather than replacement. Constructive tone overall.
+
+**LinkedIn** — Positive and professional. GTM and product audiences connected with structured output format.
+
+---
+
+### Top 3 Actions
+
+1. **Publish methodology** — transparency document for technical audiences
+2. **Add confidence indicators** — help users calibrate reliance on results
+3. **Reframe "simulate" → "predict"** — reduces friction with skeptical communities`,
 }
 
 // ── Demo config constants ─────────────────────────────────────────────────────
@@ -265,7 +290,7 @@ const PLATFORM_OPTIONS: Array<{ id: Platform; label: string; icon: string }> = [
 ]
 
 type Phase = 'home' | 'simulate' | 'results'
-type ResultTab = 'analysis' | 'report' | 'feed' | 'personas' | 'sources'
+type ResultTab = 'analysis' | 'simulation' | 'final' | 'details'
 
 // ── Sub-components (display-only, no event handlers) ─────────────────────────
 
@@ -471,27 +496,25 @@ function SimulatePhase({
 
   return (
     <div style={{ background: '#f8fafc', height: '100%', overflowY: 'hidden' }}>
-      {graphData ? (
-        /* 2컬럼 — 그래프 수신 후 (SimulatePage와 동일) */
+      {(showSources && graphData) ? (
+        /* 소싱 단계: 왼쪽 그래프 + 오른쪽 소스 타임라인 */
         <div style={{
           width: '100%', padding: '32px 24px',
           display: 'flex', gap: 24, alignItems: 'flex-start',
           boxSizing: 'border-box',
         }}>
-          {/* 좌측: Knowledge Graph */}
           <div style={{ width: 360, flexShrink: 0, minWidth: 0, animation: 'fadeInUp 0.4s ease' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
               Knowledge Graph
             </p>
             <ContextGraph data={graphData} width={360} />
           </div>
-          {/* 우측: 피드 */}
           <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
             {feedPanel}
           </div>
         </div>
       ) : (
-        /* 1컬럼 — 그래프 수신 전 */
+        /* 소싱 이후: 1컬럼 */
         <div style={{ padding: '36px 24px 20px' }}>
           {feedPanel}
         </div>
@@ -500,13 +523,12 @@ function SimulatePhase({
   )
 }
 
-function ResultsPhase({ tab }: { tab: ResultTab }) {
+function ResultsPhase({ tab, detailTab }: { tab: ResultTab; detailTab: 'feed' | 'personas' }) {
   const tabs: { id: ResultTab; label: string }[] = [
-    { id: 'analysis', label: 'Analysis' },
-    { id: 'report',   label: 'Simulation' },
-    { id: 'feed',     label: 'Social Feed' },
-    { id: 'personas', label: 'Personas' },
-    { id: 'sources',  label: 'Sources' },
+    { id: 'analysis',   label: 'Analysis' },
+    { id: 'simulation', label: 'Simulation' },
+    { id: 'final',      label: 'Final Report' },
+    { id: 'details',    label: 'Details' },
   ]
 
   return (
@@ -548,44 +570,27 @@ function ResultsPhase({ tab }: { tab: ResultTab }) {
       {/* Tab content — uses same components as DemoResultView */}
       <div key={tab} className="tab-content" style={{ flex: 1, overflow: 'hidden', padding: '0 24px' }}>
         {tab === 'analysis' && (
-          <MarkdownView content={MOCK_RESULTS.analysis_md} />
+          <div>
+            <MarkdownView content={MOCK_RESULTS.analysis_md} />
+            <div style={{ marginTop: 32 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'none', border: '1px solid #e2e8f0', borderRadius: 7,
+                padding: '7px 14px', fontSize: 13, color: '#64748b', width: 'fit-content',
+              }}>
+                ▸ Sources ({MOCK_RESULTS.sources_json.length})
+              </div>
+            </div>
+          </div>
         )}
-        {tab === 'report' && (
+        {tab === 'simulation' && (
           <ReportView report={MOCK_RESULTS.report_json} simId="demo" />
         )}
-        {tab === 'feed' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 16 }}>
-            {Object.entries(MOCK_RESULTS.posts_json).flatMap(([, posts]) => posts ?? []).map(post => (
-              <div key={post.id} style={{
-                background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
-                padding: '16px 18px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-                    background: '#f1f5f9', color: '#475569', textTransform: 'capitalize',
-                  }}>
-                    {post.platform.replace('_', ' ')}
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{post.author_name}</span>
-                  <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 'auto' }}>Round {post.round_num}</span>
-                </div>
-                <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.6 }}>{post.content}</p>
-                <div style={{ marginTop: 8, display: 'flex', gap: 12, fontSize: 12, color: '#94a3b8' }}>
-                  <span>▲ {post.upvotes}</span>
-                  {post.downvotes > 0 && <span>▼ {post.downvotes}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
+        {tab === 'final' && (
+          <MarkdownView content={MOCK_RESULTS.final_report_md} />
         )}
-        {tab === 'personas' && (
-          <PersonaCardView personas={MOCK_RESULTS.personas_json} />
-        )}
-        {tab === 'sources' && (
-          <div style={{ paddingTop: 16 }}>
-            <SourcesView sources={MOCK_RESULTS.sources_json} />
-          </div>
+        {tab === 'details' && (
+          <DetailsView posts={MOCK_RESULTS.posts_json} personas={MOCK_RESULTS.personas_json} forcedTab={detailTab} />
         )}
       </div>
     </div>
@@ -605,6 +610,7 @@ export function LandingDemoWindow() {
   const [posts,        setPosts]        = useState<SocialPost[]>([])
   const [simRound,     setSimRound]     = useState(0)
   const [resultTab,    setResultTab]    = useState<ResultTab>('analysis')
+  const [detailTab,    setDetailTab]    = useState<'feed' | 'personas'>('feed')
   const [activePlatform,  setActivePlatform]  = useState<Platform | undefined>(undefined)
   const [visible,         setVisible]         = useState(true)
 
@@ -618,6 +624,7 @@ export function LandingDemoWindow() {
     setPosts([])
     setSimRound(0)
     setResultTab('analysis')
+    setDetailTab('feed')
     setActivePlatform(undefined)
     setVisible(true)
 
@@ -635,14 +642,27 @@ export function LandingDemoWindow() {
     at(150, () => setTypedChars(DEMO_INPUT.length))
     at(1000, () => setRunClicked(true))
     at(400, () => setVisible(false))
-    at(300, () => { setPhase('simulate'); setVisible(true) })
+    at(300, () => { setPhase('simulate'); setVisible(true); setGraphData({ nodes: [], edges: [] }) })
 
     // ── Phase 2: Simulation ────────────────────────────────────────────────
     MOCK_SOURCES.forEach((src, i) => {
-      at(i === 0 ? 350 : 320, () => setSources(prev => [src, ...prev]))
+      at(i === 0 ? 350 : 320, () => {
+        setSources(prev => [src, ...prev])
+        if (i < MOCK_GRAPH_DATA.nodes.length) {
+          const newNode = MOCK_GRAPH_DATA.nodes[i]
+          setGraphData(prev => {
+            if (!prev) return prev
+            const existingIds = new Set(prev.nodes.map(n => n.id))
+            const newEdges = MOCK_GRAPH_DATA.edges.filter(e =>
+              (e.source === newNode.id && existingIds.has(e.target)) ||
+              (e.target === newNode.id && existingIds.has(e.source))
+            )
+            return { nodes: [...prev.nodes, newNode], edges: [...prev.edges, ...newEdges] }
+          })
+        }
+      })
     })
     at(500, () => setSources([]))
-    at(600, () => setGraphData(MOCK_GRAPH_DATA))
     MOCK_PERSONAS.forEach((_p, i) => {
       at(i === 0 ? 350 : 260, () => setPersonaCount(prev => prev + 1))
     })
@@ -685,10 +705,10 @@ export function LandingDemoWindow() {
     // ── Phase 3: Results ───────────────────────────────────────────────────
     at(700, () => setVisible(false))
     at(300, () => { setPhase('results'); setResultTab('analysis'); setVisible(true) })
-    at(2500, () => setResultTab('report'))
-    at(2500, () => setResultTab('feed'))
-    at(2500, () => setResultTab('personas'))
-    at(2500, () => setResultTab('sources'))
+    at(2500, () => setResultTab('simulation'))
+    at(2500, () => setResultTab('final'))
+    at(2500, () => { setResultTab('details'); setDetailTab('feed') })
+    at(2500, () => setDetailTab('personas'))
     at(2500, () => setVisible(false))
     at(400, () => setLoopCount(c => c + 1))
 
@@ -751,7 +771,7 @@ export function LandingDemoWindow() {
           />
         )}
         {phase === 'results' && (
-          <ResultsPhase tab={resultTab} />
+          <ResultsPhase tab={resultTab} detailTab={detailTab} />
         )}
       </div>
     </div>

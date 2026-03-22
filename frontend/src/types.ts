@@ -86,6 +86,7 @@ export interface SimResults {
   analysis_md: string
   sources_json: SourceItem[]
   final_report_md: string
+  context_nodes_json: ContextGraphNode[]
 }
 
 export interface HistoryItem {

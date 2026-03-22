@@ -42,6 +42,19 @@ def _ensure_columns(
         )
 
 
+def _drop_column_if_exists(
+    conn: sqlite3.Connection,
+    table_name: str,
+    column_name: str,
+) -> None:
+    existing_columns = {
+        row["name"]
+        for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    }
+    if column_name in existing_columns:
+        conn.execute(f"ALTER TABLE {table_name} DROP COLUMN {column_name}")
+
+
 def init_db(path: str | Path = DB_PATH) -> None:
     with _conn(path) as conn:
         conn.executescript("""
@@ -66,7 +79,8 @@ def init_db(path: str | Path = DB_PATH) -> None:
                 report_md TEXT NOT NULL DEFAULT '',
                 analysis_md TEXT NOT NULL DEFAULT '',
                 sources_json TEXT NOT NULL DEFAULT '[]',
-                final_report_md TEXT NOT NULL DEFAULT ''
+                final_report_md TEXT NOT NULL DEFAULT '',
+                context_nodes_json TEXT NOT NULL DEFAULT '[]'
             );
             CREATE TABLE IF NOT EXISTS sim_checkpoints (
                 sim_id TEXT PRIMARY KEY,
@@ -76,7 +90,6 @@ def init_db(path: str | Path = DB_PATH) -> None:
                 context_nodes_json TEXT NOT NULL,
                 domain TEXT NOT NULL,
                 analysis_md TEXT NOT NULL,
-                ontology_json TEXT,
                 raw_items_json TEXT NOT NULL,
                 saved_at TEXT NOT NULL
             );
@@ -85,6 +98,7 @@ def init_db(path: str | Path = DB_PATH) -> None:
             "analysis_md": "TEXT NOT NULL DEFAULT ''",
             "sources_json": "TEXT NOT NULL DEFAULT '[]'",
             "final_report_md": "TEXT NOT NULL DEFAULT ''",
+            "context_nodes_json": "TEXT NOT NULL DEFAULT '[]'",
         })
         _ensure_columns(conn, "simulations", {
             "cancel_requested": "INTEGER NOT NULL DEFAULT 0",
@@ -94,10 +108,10 @@ def init_db(path: str | Path = DB_PATH) -> None:
         })
         _ensure_columns(conn, "sim_checkpoints", {
             "analysis_md": "TEXT NOT NULL DEFAULT ''",
-            "ontology_json": "TEXT",
             "raw_items_json": "TEXT NOT NULL DEFAULT '[]'",
             "saved_at": "TEXT NOT NULL DEFAULT ''",
         })
+        _drop_column_if_exists(conn, "sim_checkpoints", "ontology_json")
         conn.commit()
 
 
@@ -301,15 +315,17 @@ def save_sim_results(
     analysis_md: str = "",
     raw_items: list[dict] | None = None,
     final_report_md: str = "",
+    context_nodes: list[dict] | None = None,
 ) -> None:
     with _conn(path) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO sim_results "
-            "(sim_id, posts_json, personas_json, report_json, report_md, analysis_md, sources_json, final_report_md) "
-            "VALUES (?,?,?,?,?,?,?,?)",
+            "(sim_id, posts_json, personas_json, report_json, report_md, analysis_md, sources_json, final_report_md, context_nodes_json) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
             (sim_id, json.dumps(posts, ensure_ascii=False), json.dumps(personas, ensure_ascii=False),
              json.dumps(report_json, ensure_ascii=False), report_md, analysis_md,
-             json.dumps(raw_items or [], ensure_ascii=False), final_report_md),
+             json.dumps(raw_items or [], ensure_ascii=False), final_report_md,
+             json.dumps(context_nodes or [], ensure_ascii=False)),
         )
 
 
@@ -325,6 +341,7 @@ def get_sim_results(path: str | Path, sim_id: str) -> dict | None:
     d["personas_json"] = json.loads(d["personas_json"])
     d["report_json"] = json.loads(d["report_json"])
     d["sources_json"] = json.loads(d.get("sources_json") or "[]")
+    d["context_nodes_json"] = json.loads(d.get("context_nodes_json") or "[]")
     return d
 
 
@@ -337,7 +354,6 @@ def save_checkpoint(
     context_nodes: list,
     domain: str,
     analysis_md: str,
-    ontology: dict | None,
     raw_items: list,
 ) -> None:
     now = _utc_now_iso()
@@ -346,8 +362,8 @@ def save_checkpoint(
             """
             INSERT OR REPLACE INTO sim_checkpoints
             (sim_id, last_round, platform_states_json, personas_json, context_nodes_json,
-             domain, analysis_md, ontology_json, raw_items_json, saved_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
+             domain, analysis_md, raw_items_json, saved_at)
+            VALUES (?,?,?,?,?,?,?,?,?)
             """,
             (
                 sim_id,
@@ -357,7 +373,6 @@ def save_checkpoint(
                 json.dumps(context_nodes, ensure_ascii=False),
                 domain,
                 analysis_md,
-                json.dumps(ontology, ensure_ascii=False) if ontology is not None else None,
                 json.dumps(raw_items, ensure_ascii=False),
                 now,
             ),
@@ -376,7 +391,6 @@ def get_checkpoint(path: str | Path, sim_id: str) -> dict | None:
         d["platform_states"] = json.loads(d.pop("platform_states_json"))
         d["personas"] = json.loads(d.pop("personas_json"))
         d["context_nodes"] = json.loads(d.pop("context_nodes_json"))
-        d["ontology"] = json.loads(d["ontology_json"]) if d.get("ontology_json") else None
         d["raw_items"] = json.loads(d.pop("raw_items_json"))
     except (TypeError, json.JSONDecodeError) as exc:
         logger.warning("Checkpoint %s is corrupted and will be ignored: %s", sim_id, exc)

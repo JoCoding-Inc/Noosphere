@@ -135,7 +135,6 @@ async def run_simulation(
     edges: list[dict] | None = None,
     activation_rate: float = 0.25,
     provider: str = "openai",
-    ontology: dict | None = None,
     checkpoint: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
     nodes = context_nodes  # alias for rest of function body
@@ -175,6 +174,39 @@ async def run_simulation(
         platform_states = _restore_platform_states(checkpoint["platform_states"])
         start_round = checkpoint["last_round"] + 1
         yield {"type": "sim_resume", "from_round": start_round}
+
+        # 이전 라운드 personas 재발행
+        for platform_name, personas_list in platform_personas.items():
+            for p in personas_list:
+                yield {
+                    "type": "sim_persona",
+                    "node_id": p.node_id,
+                    "platform": platform_name,
+                    "persona": {
+                        "name": p.name,
+                        "role": p.role,
+                        "age": p.age,
+                        "generation": p.generation,
+                        "seniority": p.seniority,
+                        "affiliation": p.affiliation,
+                        "company": p.company,
+                        "mbti": p.mbti,
+                        "interests": p.interests,
+                        "skepticism": p.skepticism,
+                        "commercial_focus": p.commercial_focus,
+                        "innovation_openness": p.innovation_openness,
+                        "source_title": p.source_title,
+                    },
+                }
+
+        # 이전 라운드 posts 재발행
+        for platform_name, state in platform_states.items():
+            for post in state.posts:
+                yield {
+                    "type": "sim_platform_post",
+                    "platform": platform_name,
+                    "post": dataclasses.asdict(post),
+                }
     else:
         # --- NORMAL PATH ---
         # Persona generation: one pool per platform, run in parallel
@@ -217,7 +249,7 @@ async def run_simulation(
         # Round 0: seed posts for each platform (parallel)
         platform_states: dict[str, PlatformState] = {}
         seed_tasks = {
-            p.name: asyncio.create_task(generate_seed_post(p, idea_text, language, provider=provider, ontology=ontology))
+            p.name: asyncio.create_task(generate_seed_post(p, idea_text, language, provider=provider))
             for p in active_platforms
         }
         for name, task in seed_tasks.items():
@@ -297,7 +329,6 @@ async def run_simulation(
             "context_nodes": context_nodes,
             "domain": domain,
             "analysis_md": "",  # tasks.py fills in the real value when saving
-            "ontology": ontology,
             "raw_items": [],    # tasks.py fills in the real value when saving
         }
         yield {

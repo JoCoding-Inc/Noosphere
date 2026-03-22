@@ -49,9 +49,9 @@ export function ResultPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#fafafa' }}>
       <Header />
-      <main className="page-enter" style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
+      <main className="page-enter" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <button onClick={() => navigate('/')}
+          <button onClick={() => navigate('/app')}
             style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14 }}>
             ← New simulation
           </button>

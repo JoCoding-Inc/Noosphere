@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Platform, SocialPost, OntologyData, ContextGraphData } from '../types'
+import type { Platform, SocialPost, ContextGraphData, ContextGraphNode, ContextGraphEdge } from '../types'
 
 export type SourceItem = { source: string; title: string; snippet: string }
 
@@ -8,8 +8,8 @@ export type SimEvent =
   | { type: 'sim_progress'; message: string }
   | { type: 'sim_source_item'; source: string; title: string; snippet: string }
   | { type: 'sim_analysis'; data: { markdown: string } }
-  | { type: 'sim_ontology'; data: OntologyData }
-  | { type: 'sim_graph'; data: ContextGraphData }
+  | { type: 'sim_graph_node'; node: ContextGraphNode }
+  | { type: 'sim_graph_edges'; edges: ContextGraphEdge[] }
   | { type: 'sim_persona'; name: string; role: string; platform: Platform }
   | { type: 'sim_platform_post'; post: SocialPost }
   | { type: 'sim_round_summary'; round_num: number }
@@ -32,7 +32,6 @@ export interface SimState {
   agentCount: number
   personaCount: number
   sourceTimeline: SourceItem[]
-  ontology: OntologyData | null
   graphData: ContextGraphData | null
   isSourcing: boolean
   lastRound: number
@@ -57,7 +56,6 @@ function createInitialState(): SimState {
     agentCount: 0,
     personaCount: 0,
     sourceTimeline: [],
-    ontology: null,
     graphData: null,
     isSourcing: false,
     lastRound: 0,
@@ -123,6 +121,7 @@ export function useSimulation(simId: string): UseSimulationResult {
             next.canResume = false
             next.lastRound = Math.max(prev.lastRound, event.from_round - 1)
           } else if (event.type === 'sim_source_item') {
+            next.isSourcing = true
             next.sourceTimeline = [
               { source: event.source, title: event.title, snippet: event.snippet },
               ...prev.sourceTimeline,
@@ -138,15 +137,23 @@ export function useSimulation(simId: string): UseSimulationResult {
             next.personaCount = prev.personaCount + 1
           } else if (event.type === 'sim_analysis') {
             next.analysisMd = event.data.markdown
-          } else if (event.type === 'sim_ontology') {
-            next.ontology = event.data
-          } else if (event.type === 'sim_graph') {
-            next.graphData = event.data
+          } else if (event.type === 'sim_graph_node') {
+            next.graphData = {
+              nodes: [...(prev.graphData?.nodes ?? []), event.node],
+              edges: prev.graphData?.edges ?? [],
+            }
+          } else if (event.type === 'sim_graph_edges') {
+            next.graphData = {
+              nodes: prev.graphData?.nodes ?? [],
+              edges: [...(prev.graphData?.edges ?? []), ...event.edges],
+            }
           } else if (event.type === 'sim_report') {
             next.report = (event.data as Record<string, unknown>).report_json as Record<string, unknown>
             next.personas = (event.data as Record<string, unknown>).personas as Record<string, unknown>
           } else if (event.type === 'sim_progress') {
-            if (event.message.toLowerCase().includes('searching') || event.message.toLowerCase().includes('sources')) {
+            if (event.message.toLowerCase().includes('searching') ||
+                event.message.toLowerCase().includes('sources') ||
+                event.message.toLowerCase().includes('structurizing')) {
               next.isSourcing = true
             }
           } else if (event.type === 'sim_error') {

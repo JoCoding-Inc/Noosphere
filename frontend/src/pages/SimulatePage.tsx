@@ -243,15 +243,14 @@ export function SimulatePage() {
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
       <Header />
 
-      {sim.graphData ? (
-        /* 2컬럼 레이아웃 — 그래프 데이터 수신 후 */
+      {sim.isSourcing ? (
+        /* 소싱 단계: 왼쪽 그래프 + 오른쪽 소스 타임라인 */
         <main className="page-enter" style={{
-          maxWidth: 1280, margin: '0 auto', padding: '16px 24px',
+          maxWidth: 1600, margin: '0 auto', padding: '16px 24px',
           display: 'flex', gap: 24, alignItems: 'flex-start',
         }}>
-          {/* 좌측: Ecosystem Map (sticky) */}
           <div style={{
-            width: 420, flexShrink: 0,
+            width: 520, flexShrink: 0,
             position: 'sticky', top: 8,
             animation: 'fadeInUp 0.4s ease',
           }}>
@@ -259,19 +258,17 @@ export function SimulatePage() {
               Knowledge Graph
             </p>
             <ContextGraph
-              data={sim.graphData}
-              width={420}
+              data={sim.graphData ?? { nodes: [], edges: [] }}
+              width={520}
             />
           </div>
-
-          {/* 우측: 시뮬레이션 피드 */}
           <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
             {feedPanel}
           </div>
         </main>
       ) : (
-        /* 1컬럼 레이아웃 — 그래프 데이터 수신 전 */
-        <main className="page-enter" style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px' }}>
+        /* 소싱 이후: 1컬럼 */
+        <main className="page-enter" style={{ maxWidth: 900, margin: '0 auto', padding: '48px 24px' }}>
           {feedPanel}
         </main>
       )}

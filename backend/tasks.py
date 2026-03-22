@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import signal
+from collections.abc import Callable
 
 import redis as _redis_sync
 
@@ -190,6 +191,49 @@ def _build_structured_edges(nodes: list[dict], min_score: int = 2) -> list[dict]
     return edges
 
 
+def _calc_edges_for_node(new_node: dict, existing_nodes: list[dict], min_score: int = 2) -> list[dict]:
+    """새 노드 1개와 기존 노드 목록 간의 엣지만 계산한다."""
+    if not new_node.get("id"):
+        return []
+    edges: list[dict] = []
+    src = new_node
+    src_entities = set(src.get("_entities") or [])
+    src_kw = set(src.get("_keywords") or [])
+    for tgt in existing_nodes:
+        if not tgt.get("id"):
+            continue
+        score = 0
+        tgt_entities = set(tgt.get("_entities") or [])
+        tgt_kw = set(tgt.get("_keywords") or [])
+        score += len(src_entities & tgt_entities) * 3
+        score += len(src_kw & tgt_kw) * 2
+        if src.get("_domain_type") and src.get("_domain_type") == tgt.get("_domain_type"):
+            score += 1
+        score += len(set(src.get("_tech_area") or []) & set(tgt.get("_tech_area") or [])) * 1
+        score += len(set(src.get("_market") or []) & set(tgt.get("_market") or [])) * 1
+        score += len(set(src.get("_problem_domain") or []) & set(tgt.get("_problem_domain") or [])) * 1
+        if score < min_score:
+            continue
+        # label 생성
+        shared_ents = sorted(src_entities & tgt_entities)[:2]
+        if shared_ents:
+            label = " · ".join(shared_ents[:2])
+        else:
+            shared_kws = sorted(src_kw & tgt_kw)[:2]
+            if shared_kws:
+                label = " · ".join(shared_kws[:2])
+            else:
+                tax_overlaps = []
+                if src.get("_domain_type") and src.get("_domain_type") == tgt.get("_domain_type"):
+                    tax_overlaps.append(src["_domain_type"])
+                tax_overlaps += list(set(src.get("_tech_area") or []) & set(tgt.get("_tech_area") or []))
+                tax_overlaps += list(set(src.get("_market") or []) & set(tgt.get("_market") or []))
+                tax_overlaps += list(set(src.get("_problem_domain") or []) & set(tgt.get("_problem_domain") or []))
+                label = " · ".join(tax_overlaps[:2])
+        edges.append({"source": src["id"], "target": tgt["id"], "weight": score, "label": label})
+    return edges
+
+
 async def _structurize_node(item: dict, provider: str) -> dict:
     """LLM으로 문서 1개를 구조화 JSON으로 변환."""
     from backend import llm as _llm
@@ -239,13 +283,25 @@ Return a JSON object with exactly these fields:
     }
 
 
-async def _enrich_context_nodes(raw_items: list[dict], provider: str) -> list[dict]:
-    """문서 목록을 병렬로 구조화한다. Semaphore로 동시 호출 10개 제한."""
+async def _enrich_context_nodes(
+    raw_items: list[dict],
+    provider: str,
+    on_node_done: "Callable[[dict, list[dict]], None] | None" = None,
+) -> list[dict]:
+    """문서 목록을 병렬로 구조화한다. 각 완료 시 on_node_done 콜백 호출."""
     sem = asyncio.Semaphore(10)
+    enriched: list[dict] = []
+    lock = asyncio.Lock()
 
     async def _limited(item):
         async with sem:
-            return await _structurize_node(item, provider)
+            node = await _structurize_node(item, provider)
+        async with lock:
+            existing = list(enriched)  # 현재까지 완료된 노드 목록 복사
+            enriched.append(node)
+        if on_node_done is not None:
+            on_node_done(node, existing)
+        return node
 
     return await asyncio.gather(*[_limited(item) for item in raw_items])
 
@@ -286,7 +342,6 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
     async def _run() -> None:
         from backend.analyzer import analyze
         from backend.context_builder import detect_domain
-        from backend.ontology_builder import build_ontology
         from backend.reporter import generate_analysis_report, generate_final_report
         from backend.simulation.social_runner import run_simulation
 
@@ -365,13 +420,55 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 raw_items = existing_checkpoint["raw_items"]
                 domain_str = existing_checkpoint["domain"]
                 analysis_md = existing_checkpoint["analysis_md"]
-                ontology = existing_checkpoint["ontology"]
                 context_nodes = existing_checkpoint["context_nodes"]
+                # 복원된 노드들을 순서대로 emit (LLM 재호출 없이)
+                _restored_so_far: list[dict] = []
+                for _node in context_nodes:
+                    publish({
+                        "type": "sim_graph_node",
+                        "node": {
+                            "id": _node["id"],
+                            "title": _node.get("title", ""),
+                            "source": _node.get("source", ""),
+                            "url": _node.get("url", ""),
+                        },
+                    })
+                    _new_edges = _calc_edges_for_node(_node, _restored_so_far)
+                    if _new_edges:
+                        publish({"type": "sim_graph_edges", "edges": _new_edges})
+                    _restored_so_far.append(_node)
                 # NOTE: do NOT publish sim_resume here — social_runner.py yields it
                 # and tasks.py will forward it to Redis via the normal event loop below
             else:
                 # Fresh run: run analysis pipeline
                 publish({"type": "sim_progress", "message": "Searching external sources..."})
+
+                # 소스 발견과 동시에 LLM 구조화를 병렬 실행 → 그래프 실시간 생성
+                _structurize_sem = asyncio.Semaphore(5)
+                _enriched_nodes: list[dict] = []
+                _enriched_lock = asyncio.Lock()
+                _structurize_tasks: list[asyncio.Task] = []
+                _event_loop = asyncio.get_event_loop()
+
+                async def _structurize_and_emit(item: dict) -> dict:
+                    async with _structurize_sem:
+                        node = await _structurize_node(item, provider)
+                    async with _enriched_lock:
+                        existing = list(_enriched_nodes)
+                        _enriched_nodes.append(node)
+                    publish({
+                        "type": "sim_graph_node",
+                        "node": {
+                            "id": node["id"],
+                            "title": node.get("title", ""),
+                            "source": node.get("source", ""),
+                            "url": node.get("url", ""),
+                        },
+                    })
+                    new_edges = _calc_edges_for_node(node, existing)
+                    if new_edges:
+                        publish({"type": "sim_graph_edges", "edges": new_edges})
+                    return node
 
                 def on_source_done(source_name: str, items: list[dict]) -> None:
                     for item in items:
@@ -388,6 +485,9 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                             "title": title,
                             "snippet": snippet,
                         })
+                        # 발견 즉시 LLM 구조화 태스크 생성 → 그래프 실시간 업데이트
+                        task = _event_loop.create_task(_structurize_and_emit(item))
+                        _structurize_tasks.append(task)
 
                 raw_items = await analyze(
                     config["input_text"],
@@ -396,6 +496,19 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                     provider=provider,
                 )
                 await checkpoint()
+
+                # 진행 중인 구조화 태스크 모두 완료 대기
+                if _structurize_tasks:
+                    _results = await asyncio.gather(*_structurize_tasks, return_exceptions=True)
+                    context_nodes = [n for n in _results if isinstance(n, dict)]
+                else:
+                    context_nodes = [{
+                        "id": "input",
+                        "title": config["input_text"][:80],
+                        "source": "input_text",
+                        "abstract": config["input_text"][:300],
+                    }]
+
                 domain_str = await detect_domain(config["input_text"], provider=provider)
 
                 publish({
@@ -412,44 +525,8 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 await checkpoint()
                 publish({"type": "sim_analysis", "data": {"markdown": analysis_md}})
 
-                publish({"type": "sim_progress", "message": "Structurizing documents..."})
-                if raw_items:
-                    context_nodes = await _enrich_context_nodes(raw_items, provider)
-                else:
-                    context_nodes = [{
-                        "id": "input",
-                        "title": config["input_text"][:80],
-                        "source": "input_text",
-                        "abstract": config["input_text"][:300],
-                    }]
-
-                publish({"type": "sim_progress", "message": "Building ecosystem ontology..."})
-                ontology = await build_ontology(
-                    context_nodes=context_nodes,
-                    input_text=config["input_text"],
-                    provider=provider,
-                )
-                if ontology:
-                    publish({"type": "sim_ontology", "data": ontology})
-
             context_nodes = _rank_nodes_by_relevance(context_nodes, config["input_text"])
             edges = _build_structured_edges(context_nodes)
-
-            publish({
-                "type": "sim_graph",
-                "data": {
-                    "nodes": [
-                        {
-                            "id": n["id"],
-                            "title": n.get("title", ""),
-                            "source": n.get("source", ""),
-                            "url": n.get("url", ""),
-                        }
-                        for n in context_nodes
-                    ],
-                    "edges": edges,
-                },
-            })
 
             publish({
                 "type": "sim_progress",
@@ -467,7 +544,6 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 activation_rate=config["activation_rate"],
                 edges=edges,
                 provider=provider,
-                ontology=ontology,
                 checkpoint=existing_checkpoint,
             ):
                 await checkpoint()
@@ -483,7 +559,6 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                         event["context_nodes"],
                         event["domain"] or domain_str,
                         analysis_md,
-                        event["ontology"],
                         raw_items,
                     )
                     continue  # do NOT publish to Redis
@@ -519,6 +594,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 analysis_md=analysis_md,
                 raw_items=raw_items,
                 final_report_md=final_report_md,
+                context_nodes=context_nodes,
             )
             completed = await asyncio.to_thread(
                 update_simulation_status,

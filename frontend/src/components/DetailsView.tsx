@@ -8,10 +8,12 @@ type DetailTab = 'feed' | 'personas'
 interface Props {
   posts: Partial<Record<Platform, SocialPost[]>>
   personas: Partial<Record<Platform, Persona[]>>
+  forcedTab?: DetailTab
 }
 
-export function DetailsView({ posts, personas }: Props) {
+export function DetailsView({ posts, personas, forcedTab }: Props) {
   const [tab, setTab] = useState<DetailTab>('feed')
+  const activeTab = forcedTab ?? tab
 
   // Extract sorted unique round numbers from all posts
   const allPosts = Object.values(posts).flat() as SocialPost[]
@@ -41,9 +43,9 @@ export function DetailsView({ posts, personas }: Props) {
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{
               padding: '8px 16px', fontSize: 13, cursor: 'pointer', border: 'none',
-              background: 'none', fontWeight: tab === t.id ? 600 : 400,
-              borderBottom: tab === t.id ? '2px solid #475569' : '2px solid transparent',
-              color: tab === t.id ? '#1e293b' : '#94a3b8',
+              background: 'none', fontWeight: activeTab === t.id ? 600 : 400,
+              borderBottom: activeTab === t.id ? '2px solid #475569' : '2px solid transparent',
+              color: activeTab === t.id ? '#1e293b' : '#94a3b8',
               transition: 'color 0.15s, border-color 0.15s',
             }}>
             {t.label}
@@ -52,7 +54,7 @@ export function DetailsView({ posts, personas }: Props) {
       </div>
 
       {/* Round pagination — only shown on Social Feed tab when multiple rounds exist */}
-      {tab === 'feed' && rounds.length > 1 && (
+      {activeTab === 'feed' && rounds.length > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>Round</span>
           {rounds.map(r => (
@@ -80,9 +82,9 @@ export function DetailsView({ posts, personas }: Props) {
         </div>
       )}
 
-      <div key={tab} className="tab-content">
-        {tab === 'feed' && <PlatformSimFeed postsByPlatform={filteredPosts} />}
-        {tab === 'personas' && <PersonaCardView personas={personas} />}
+      <div key={activeTab} className="tab-content">
+        {activeTab === 'feed' && <PlatformSimFeed postsByPlatform={filteredPosts} />}
+        {activeTab === 'personas' && <PersonaCardView personas={personas} />}
       </div>
     </div>
   )
