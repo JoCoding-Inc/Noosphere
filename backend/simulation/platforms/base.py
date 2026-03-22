@@ -97,11 +97,10 @@ class AbstractPlatform:
         action_type: str,
     ) -> SocialPost | None:
         """Mutate upvote/downvote count on target post. Returns updated post or None."""
-        for post in state.posts:
-            if post.id == target_post_id:
-                if action_type in ("upvote", "react"):
-                    post.upvotes += 1
-                elif action_type in ("downvote", "flag"):
-                    post.downvotes += 1
-                return post
-        return None
+        post = state.get_post(target_post_id)
+        if post is not None:
+            if action_type in ("upvote", "react"):
+                post.upvotes += 1
+            elif action_type in ("downvote", "flag"):
+                post.downvotes += 1
+        return post

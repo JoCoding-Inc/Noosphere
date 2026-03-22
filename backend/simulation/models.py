@@ -85,3 +85,28 @@ class PlatformState:
     round_num: int = 0
     recent_speakers: dict[str, int] = dataclasses.field(default_factory=dict)
     # node_id → 마지막 콘텐츠(comment/reply) 생성 round_num. vote/react는 기록 안 함.
+
+    def __post_init__(self) -> None:
+        # post_index는 dataclass 필드가 아닌 일반 속성으로 관리하여
+        # dataclasses.asdict() 직렬화에서 자동 제외됩니다.
+        self.rebuild_post_index()
+
+    def rebuild_post_index(self) -> None:
+        self.post_index: dict[str, SocialPost] = {post.id: post for post in self.posts}
+
+    def add_post(self, post: SocialPost) -> None:
+        self.posts.append(post)
+        self.post_index[post.id] = post
+
+    def get_post(self, post_id: str) -> SocialPost | None:
+        post_index = getattr(self, "post_index", None)
+        if not isinstance(post_index, dict) or len(post_index) != len(self.posts):
+            self.rebuild_post_index()
+            post_index = self.post_index
+
+        post = post_index.get(post_id)
+        if post is None and self.posts:
+            # Repair stale caches caused by out-of-band list mutation before giving up.
+            self.rebuild_post_index()
+            post = self.post_index.get(post_id)
+        return post

@@ -4,15 +4,18 @@ import json
 import logging
 import os
 import sqlite3
-from typing import Any
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from threading import Lock
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 DB_PATH = Path(os.environ.get("SOURCES_DB_PATH", str(Path(__file__).parent.parent / "noosphere_sources.db")))
 TTL_DAYS = 7
 _SCHEMA_VERSION = 2
+_initialized_paths: set[Path] = set()
+_init_lock = Lock()
 
 
 def _conn(path: Path = DB_PATH) -> sqlite3.Connection:
@@ -22,8 +25,13 @@ def _conn(path: Path = DB_PATH) -> sqlite3.Connection:
     return conn
 
 
+def _normalize_path(path: Path = DB_PATH) -> Path:
+    return Path(path).expanduser().resolve()
+
+
 def init_cache(path: Path = DB_PATH) -> None:
     """Initialize cache DB and run schema migration if needed."""
+    path = _normalize_path(path)
     logger.debug("Initializing cache DB at %s", path)
     with _conn(path) as conn:
         conn.executescript("""
@@ -41,12 +49,24 @@ def init_cache(path: Path = DB_PATH) -> None:
         )
 
 
+def _ensure_initialized(path: Path = DB_PATH) -> Path:
+    normalized_path = _normalize_path(path)
+    if normalized_path in _initialized_paths:
+        return normalized_path
+
+    with _init_lock:
+        if normalized_path not in _initialized_paths:
+            init_cache(normalized_path)
+            _initialized_paths.add(normalized_path)
+    return normalized_path
+
+
 def _hash(input_text: str) -> str:
     return hashlib.sha256(input_text.strip().lower().encode()).hexdigest()
 
 
 def get_cached(input_text: str, path: Path = DB_PATH) -> list[dict[str, Any]] | None:
-    init_cache(path)
+    path = _ensure_initialized(path)
     key = _hash(input_text)
     cutoff = (datetime.now(timezone.utc) - timedelta(days=TTL_DAYS)).isoformat()
     with _conn(path) as conn:
@@ -65,7 +85,7 @@ def get_cached(input_text: str, path: Path = DB_PATH) -> list[dict[str, Any]] | 
 
 
 def set_cache(input_text: str, results: list[dict[str, Any]], path: Path = DB_PATH) -> None:
-    init_cache(path)
+    path = _ensure_initialized(path)
     key = _hash(input_text)
     now = datetime.now(timezone.utc).isoformat()
     with _conn(path) as conn:
