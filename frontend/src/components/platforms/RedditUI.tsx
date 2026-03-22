@@ -1,11 +1,10 @@
 import type { SocialPost } from '../../types'
+import { getThreadedPosts } from './threadUtils'
 
 interface Props { posts: SocialPost[] }
 
 export function RedditUI({ posts }: Props) {
-  const topLevel = posts.filter(p => !p.parent_id)
-  const replies = posts.filter(p => p.parent_id)
-  const getReplies = (id: string) => replies.filter(r => r.parent_id === id)
+  const { topLevel, getReplies } = getThreadedPosts(posts)
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "IBM Plex Sans", sans-serif' }}>
@@ -34,72 +33,76 @@ export function RedditUI({ posts }: Props) {
               No posts yet...
             </div>
           )}
-          {topLevel.map((post, i) => (
-            <div key={post.id} className="post-item" style={{
-              background: '#fff', borderRadius: 4, overflow: 'hidden',
-              animationDelay: `${i * 60}ms`,
-            }}>
-              {/* 메인 포스트 */}
-              <div style={{ display: 'flex', gap: 0 }}>
-                {/* 투표 사이드바 */}
-                <div style={{
-                  background: '#f8f9fa', width: 36, flexShrink: 0,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: '8px 0', gap: 2,
-                }}>
-                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 16, padding: '2px', lineHeight: 1 }}>▲</button>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1c1c1c' }}>{post.upvotes}</span>
-                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 16, padding: '2px', lineHeight: 1 }}>▼</button>
-                </div>
+          {topLevel.map((post, i) => {
+            const replies = getReplies(post.id)
 
-                {/* 포스트 내용 */}
-                <div style={{ padding: '8px 8px 8px 8px', flex: 1 }}>
-                  <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 4 }}>
-                    Posted by{' '}
-                    <span style={{ color: '#0079d3', cursor: 'pointer' }}>u/{post.author_name.toLowerCase().replace(/\s/g, '_')}</span>
+            return (
+              <div key={post.id} className="post-item" style={{
+                background: '#fff', borderRadius: 4, overflow: 'hidden',
+                animationDelay: `${i * 60}ms`,
+              }}>
+                {/* 메인 포스트 */}
+                <div style={{ display: 'flex', gap: 0 }}>
+                  {/* 투표 사이드바 */}
+                  <div style={{
+                    background: '#f8f9fa', width: 36, flexShrink: 0,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    padding: '8px 0', gap: 2,
+                  }}>
+                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 16, padding: '2px', lineHeight: 1 }}>▲</button>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1c1c1c' }}>{post.upvotes}</span>
+                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 16, padding: '2px', lineHeight: 1 }}>▼</button>
                   </div>
-                  <p style={{ margin: '0 0 8px', fontSize: 14, color: '#1c1c1c', lineHeight: 1.5, fontWeight: 400 }}>
-                    {post.content}
-                  </p>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#878a8c' }}>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 12, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      💬 {getReplies(post.id).length} Comments
-                    </button>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 12, padding: 0 }}>
-                      Share
-                    </button>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 12, padding: 0 }}>
-                      Save
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              {/* 댓글 스레드 */}
-              {getReplies(post.id).length > 0 && (
-                <div style={{ borderTop: '1px solid #edeff1', padding: '8px 8px 8px 44px' }}>
-                  {getReplies(post.id).map((reply, ri) => (
-                    <div key={reply.id} className="post-item" style={{
-                      borderLeft: '2px solid #edeff1', paddingLeft: 10, marginBottom: 8,
-                      animationDelay: `${(i * 60) + (ri + 1) * 80}ms`,
-                    }}>
-                      <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 3 }}>
-                        <span style={{ fontWeight: 700, color: '#1c1c1c' }}>
-                          u/{reply.author_name.toLowerCase().replace(/\s/g, '_')}
-                        </span>
-                        {' · '}{reply.upvotes} points
-                      </div>
-                      <p style={{ margin: '0 0 4px', fontSize: 13, color: '#1c1c1c', lineHeight: 1.5 }}>{reply.content}</p>
-                      <div style={{ display: 'flex', gap: 8, fontSize: 11, color: '#878a8c' }}>
-                        <span style={{ cursor: 'pointer' }}>▲ {reply.upvotes}</span>
-                        <span style={{ cursor: 'pointer' }}>reply</span>
-                      </div>
+                  {/* 포스트 내용 */}
+                  <div style={{ padding: '8px 8px 8px 8px', flex: 1 }}>
+                    <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 4 }}>
+                      Posted by{' '}
+                      <span style={{ color: '#0079d3', cursor: 'pointer' }}>u/{post.author_name.toLowerCase().replace(/\s/g, '_')}</span>
                     </div>
-                  ))}
+                    <p style={{ margin: '0 0 8px', fontSize: 14, color: '#1c1c1c', lineHeight: 1.5, fontWeight: 400 }}>
+                      {post.content}
+                    </p>
+                    <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#878a8c' }}>
+                      <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 12, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        💬 {replies.length} Comments
+                      </button>
+                      <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 12, padding: 0 }}>
+                        Share
+                      </button>
+                      <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#878a8c', fontSize: 12, padding: 0 }}>
+                        Save
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* 댓글 스레드 */}
+                {replies.length > 0 && (
+                  <div style={{ borderTop: '1px solid #edeff1', padding: '8px 8px 8px 44px' }}>
+                    {replies.map((reply, ri) => (
+                      <div key={reply.id} className="post-item" style={{
+                        borderLeft: '2px solid #edeff1', paddingLeft: 10, marginBottom: 8,
+                        animationDelay: `${(i * 60) + (ri + 1) * 80}ms`,
+                      }}>
+                        <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 3 }}>
+                          <span style={{ fontWeight: 700, color: '#1c1c1c' }}>
+                            u/{reply.author_name.toLowerCase().replace(/\s/g, '_')}
+                          </span>
+                          {' · '}{reply.upvotes} points
+                        </div>
+                        <p style={{ margin: '0 0 4px', fontSize: 13, color: '#1c1c1c', lineHeight: 1.5 }}>{reply.content}</p>
+                        <div style={{ display: 'flex', gap: 8, fontSize: 11, color: '#878a8c' }}>
+                          <span style={{ cursor: 'pointer' }}>▲ {reply.upvotes}</span>
+                          <span style={{ cursor: 'pointer' }}>reply</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
