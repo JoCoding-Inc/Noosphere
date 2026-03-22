@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import random
 from backend.simulation.models import Persona
-from backend.simulation.graph_utils import sanitize_neighbor_titles
 from backend import llm
 from backend.llm import LLMToolRequired
 from backend.ontology_builder import ontology_for_persona
@@ -130,6 +129,32 @@ _PERSONA_TOOL = {
                     "minimum": 1,
                     "maximum": 10,
                 },
+                "domain_type": {
+                    "type": "string",
+                    "enum": ["tech", "research", "consumer", "business", "healthcare", "general"],
+                    "description": "Primary domain type of this persona's expertise and interest",
+                },
+                "tech_area": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["AI/ML", "cloud", "security", "data", "mobile", "web", "hardware", "other"]},
+                    "description": "1-2 tech areas this persona focuses on",
+                    "minItems": 0,
+                    "maxItems": 2,
+                },
+                "market": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["B2B", "B2C", "enterprise", "developer", "consumer", "academic"]},
+                    "description": "1-2 market segments this persona operates in",
+                    "minItems": 0,
+                    "maxItems": 2,
+                },
+                "problem_domain": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["automation", "analytics", "communication", "productivity", "infrastructure", "security", "UX", "compliance"]},
+                    "description": "1-2 problem domains this persona cares about",
+                    "minItems": 0,
+                    "maxItems": 2,
+                },
             },
             "required": [
                 "name", "role", "age", "seniority", "affiliation", "company",
@@ -162,9 +187,10 @@ _FALLBACK_NAMES = [
 _FALLBACK_MBTIS = ["INTJ", "INTP", "ENTP", "ENFP", "ISTJ", "ESTJ", "ISTP", "INFJ"]
 
 
-def _fallback_persona(node: dict, platform_name: str) -> Persona:
+def _fallback_persona(cluster: dict, platform_name: str) -> Persona:
+    rep = cluster.get("representative") or {}
     return Persona(
-        node_id=node.get("id", "unknown"),
+        node_id=cluster.get("id", "unknown"),
         name=random.choice(_FALLBACK_NAMES),
         role="Software Engineer",
         age=30,
@@ -176,40 +202,58 @@ def _fallback_persona(node: dict, platform_name: str) -> Persona:
         skepticism=5,
         commercial_focus=5,
         innovation_openness=5,
-        source_title=node.get("title", ""),
+        source_title=rep.get("title", ""),
+        domain_type="",
+        tech_area=[],
+        market=[],
+        problem_domain=[],
     )
 
 
+def _normalize_cluster_input(cluster_or_node: dict) -> dict:
+    """Accept either a cluster dict or a legacy single-node dict."""
+    if cluster_or_node.get("nodes") is not None or cluster_or_node.get("representative") is not None:
+        return cluster_or_node
+    node_id = cluster_or_node.get("id", "unknown")
+    return {
+        "id": node_id,
+        "nodes": [cluster_or_node] if cluster_or_node else [],
+        "representative": cluster_or_node,
+    }
+
+
 async def generate_persona(
-    node: dict,
+    cluster: dict,
     idea_text: str = "",
-    neighbor_titles: list[str] | None = None,
     platform_name: str = "",
     provider: str = "openai",
     ontology: dict | None = None,
 ) -> Persona:
-    node_id = node.get("id")
-    if not node_id:
-        raise ValueError(f"Node missing required 'id' field: {node!r}")
+    cluster = _normalize_cluster_input(cluster)
+    cluster_id = cluster.get("id", "unknown")
+    nodes: list[dict] = cluster.get("nodes", [])
+    representative: dict = cluster.get("representative") or (nodes[0] if nodes else {})
 
-    source = node.get("source", "")[:50].replace("\n", " ").replace("\r", " ")
-    title = node.get("title", "")[:200].replace("\n", " ").replace("\r", " ")
-    abstract = node.get("abstract", "")[:300].replace("\n", " ").replace("\r", " ")
+    rep_source = representative.get("source", "")[:50].replace("\n", " ").replace("\r", " ")
+    rep_title = representative.get("title", "")[:200].replace("\n", " ").replace("\r", " ")
+    rep_abstract = representative.get("abstract", "")[:300].replace("\n", " ").replace("\r", " ")
+
+    other_titles = ", ".join(
+        n.get("title", "")[:80].replace("\n", " ")
+        for n in nodes
+        if n.get("id") != representative.get("id") and n.get("title")
+    )[:300]
 
     idea_snippet = idea_text.replace("\n", " ").replace("\r", " ") if idea_text else ""
     prompt = (
         f"Idea being evaluated: {idea_snippet}\n\n"
-        f"Node — Title: {title}\n"
-        f"Source: {source}\n"
-        f"Abstract: {abstract}"
+        f"Knowledge cluster — Representative: [{rep_source}] {rep_title}\n"
+        f"Background: {rep_abstract}"
     )
-    sanitized_neighbors = sanitize_neighbor_titles(neighbor_titles)
-    if sanitized_neighbors:
-        neighbor_str = ", ".join(sanitized_neighbors)
-        prompt += f"\nNeighboring technologies (related nodes): {neighbor_str}"
-
+    if other_titles:
+        prompt += f"\nRelated topics in this cluster: {other_titles}"
     if ontology:
-        prompt += f"\n\nEcosystem context:\n{ontology_for_persona(ontology)}"
+        prompt += f"\n\nLegacy ecosystem context:\n{ontology_for_persona(ontology)}"
 
     platform_context = _PLATFORM_AUDIENCE.get(
         platform_name,
@@ -234,10 +278,10 @@ async def generate_persona(
         raise
     except Exception as exc:
         logger.warning("generate_persona failed: %s", exc)
-        return _fallback_persona(node, platform_name)
+        return _fallback_persona(cluster, platform_name)
 
     # Apply forced attributes for academic sources
-    forced = _FORCED_ATTRS_BY_SOURCE.get(source, {})
+    forced = _FORCED_ATTRS_BY_SOURCE.get(rep_source, {})
 
     # Normalize interests
     interests_raw = data.get("interests", [])
@@ -250,7 +294,7 @@ async def generate_persona(
     interests = interests[:8] or ["general"]
 
     return Persona(
-        node_id=node_id,
+        node_id=cluster_id,
         name=data.get("name", "Unknown"),
         role=data.get("role", "Professional"),
         age=int(data.get("age", 30)),
@@ -262,5 +306,9 @@ async def generate_persona(
         skepticism=forced.get("skepticism", int(data.get("skepticism", 5))),
         commercial_focus=forced.get("commercial_focus", int(data.get("commercial_focus", 5))),
         innovation_openness=forced.get("innovation_openness", int(data.get("innovation_openness", 5))),
-        source_title=node.get("title", ""),
+        source_title=rep_title,
+        domain_type=str(data.get("domain_type", "")),
+        tech_area=list(data.get("tech_area") or []),
+        market=list(data.get("market") or []),
+        problem_domain=list(data.get("problem_domain") or []),
     )

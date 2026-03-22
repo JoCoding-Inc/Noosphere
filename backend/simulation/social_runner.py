@@ -5,7 +5,7 @@ import logging
 from collections.abc import AsyncGenerator
 
 from backend.simulation.models import Persona, PlatformState, SocialPost
-from backend.simulation.graph_utils import build_adjacency, degree_centrality
+from backend.simulation.graph_utils import build_adjacency, degree_centrality, build_clusters
 from backend.simulation.social_rounds import (
     round_personas, generate_seed_post, platform_round, generate_report
 )
@@ -36,27 +36,44 @@ def _deduplicate_names(results: list[tuple[dict, "Persona | None"]]) -> None:
         name_counter[base_name] = count + 1
 
 
+def _coerce_int(value: object, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _restore_personas(personas_dict: dict) -> dict[str, list[Persona]]:
     """Reconstruct Persona dataclass instances from checkpoint dict."""
-    result = {}
-    for platform_name, persona_list in personas_dict.items():
-        restored = []
+    result: dict[str, list[Persona]] = {}
+    for platform_name, persona_list in (personas_dict or {}).items():
+        if not isinstance(persona_list, list):
+            logger.warning("Skipping invalid persona payload for platform %s", platform_name)
+            continue
+        restored: list[Persona] = []
         for d in persona_list:
+            if not isinstance(d, dict):
+                logger.warning("Skipping invalid persona entry for platform %s", platform_name)
+                continue
             # 'generation' is a @property — must not be passed to constructor
             restored.append(Persona(
-                node_id=d["node_id"],
-                name=d["name"],
-                role=d["role"],
-                age=d["age"],
-                seniority=d["seniority"],
-                affiliation=d["affiliation"],
-                company=d["company"],
-                mbti=d["mbti"],
-                interests=d["interests"],
-                skepticism=d["skepticism"],
-                commercial_focus=d["commercial_focus"],
-                innovation_openness=d["innovation_openness"],
-                source_title=d["source_title"],
+                node_id=str(d.get("node_id", "")),
+                name=str(d.get("name", "Unknown")),
+                role=str(d.get("role", "")),
+                age=_coerce_int(d.get("age"), 30),
+                seniority=str(d.get("seniority", "")),
+                affiliation=str(d.get("affiliation", "")),
+                company=str(d.get("company", "")),
+                mbti=str(d.get("mbti", "")),
+                interests=list(d.get("interests") or []),
+                skepticism=_coerce_int(d.get("skepticism"), 5),
+                commercial_focus=_coerce_int(d.get("commercial_focus"), 5),
+                innovation_openness=_coerce_int(d.get("innovation_openness"), 5),
+                source_title=str(d.get("source_title", "")),
+                domain_type=str(d.get("domain_type", "")),
+                tech_area=list(d.get("tech_area") or []),
+                market=list(d.get("market") or []),
+                problem_domain=list(d.get("problem_domain") or []),
             ))
         result[platform_name] = restored
     return result
@@ -64,29 +81,33 @@ def _restore_personas(personas_dict: dict) -> dict[str, list[Persona]]:
 
 def _restore_platform_states(states_dict: dict) -> dict[str, PlatformState]:
     """Reconstruct PlatformState dataclass instances from checkpoint dict."""
-    result = {}
-    for platform_name, state_d in states_dict.items():
+    result: dict[str, PlatformState] = {}
+    for platform_name, state_d in (states_dict or {}).items():
+        if not isinstance(state_d, dict):
+            logger.warning("Skipping invalid platform state payload for %s", platform_name)
+            continue
         posts = [
             SocialPost(
-                id=p["id"],
-                platform=p["platform"],
-                author_node_id=p["author_node_id"],
-                author_name=p["author_name"],
-                content=p["content"],
-                action_type=p["action_type"],
-                round_num=p["round_num"],
+                id=str(p.get("id", "")),
+                platform=str(p.get("platform", platform_name)),
+                author_node_id=str(p.get("author_node_id", "")),
+                author_name=str(p.get("author_name", "")),
+                content=str(p.get("content", "")),
+                action_type=str(p.get("action_type", "post")),
+                round_num=_coerce_int(p.get("round_num"), 0),
                 upvotes=p.get("upvotes", 0),
                 downvotes=p.get("downvotes", 0),
                 parent_id=p.get("parent_id"),
                 structured_data=p.get("structured_data", {}),
             )
             for p in state_d.get("posts", [])
+            if isinstance(p, dict)
         ]
         result[platform_name] = PlatformState(
-            platform_name=state_d["platform_name"],
+            platform_name=str(state_d.get("platform_name", platform_name)),
             posts=posts,
-            round_num=state_d.get("round_num", 0),
-            recent_speakers=state_d.get("recent_speakers", {}),
+            round_num=_coerce_int(state_d.get("round_num"), 0),
+            recent_speakers=dict(state_d.get("recent_speakers") or {}),
         )
     return result
 
@@ -119,12 +140,22 @@ async def run_simulation(
         yield {"type": "sim_done"}
         return
 
-    nodes = nodes[:max(1, min(150, max_agents))]
     adjacency = build_adjacency(edges or [])
     id_to_node = {node["id"]: node for node in nodes if node.get("id")}
-    degree = degree_centrality(adjacency, list(id_to_node.keys())) if edges else None
+    all_node_ids = list(id_to_node.keys())
 
-    yield {"type": "sim_start", "agent_count": len(nodes)}
+    clusters = build_clusters(adjacency, all_node_ids, id_to_node)
+    clusters = clusters[:max(1, max_agents)]
+
+    cluster_docs_map: dict[str, list[dict]] = {c["id"]: c["nodes"] for c in clusters}
+
+    node_degree = degree_centrality(adjacency, all_node_ids) if edges else {}
+    cluster_degree: dict[str, int] = {
+        c["id"]: sum(node_degree.get(n.get("id", ""), 0) for n in c["nodes"])
+        for c in clusters
+    }
+
+    yield {"type": "sim_start", "agent_count": len(clusters)}
 
     if checkpoint is not None:
         # --- RESUME PATH ---
@@ -140,8 +171,7 @@ async def run_simulation(
         async def collect_personas_for_platform(platform_name: str) -> list[tuple[dict, Persona]]:
             results = []
             async for event in round_personas(
-                nodes, idea_text,
-                adjacency=adjacency, id_to_node=id_to_node,
+                clusters, idea_text,
                 platform_name=platform_name,
                 provider=provider,
             ):
@@ -207,10 +237,9 @@ async def run_simulation(
                 logger.warning("No personas for platform %s, skipping round %d", plat.name, rn)
                 return events_out
             async for event in platform_round(
-                plat, state, plat_personas, degree, idea_text, rn, language, activation_rate,
+                plat, state, plat_personas, cluster_degree, idea_text, rn, language, activation_rate,
                 provider=provider,
-                adjacency=adjacency,
-                id_to_node=id_to_node,
+                cluster_docs_map=cluster_docs_map,
             ):
                 events_out.append(event)
             return events_out

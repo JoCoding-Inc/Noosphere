@@ -17,6 +17,10 @@ class Persona:
     commercial_focus: int   # 1-10: 1=idealistic/academic, 10=purely commercial
     innovation_openness: int  # 1-10: 1=very conservative, 10=early adopter
     source_title: str
+    domain_type: str = ""
+    tech_area: list[str] = dataclasses.field(default_factory=list)
+    market: list[str] = dataclasses.field(default_factory=list)
+    problem_domain: list[str] = dataclasses.field(default_factory=list)
 
     @property
     def generation(self) -> str:

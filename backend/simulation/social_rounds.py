@@ -8,11 +8,9 @@ from collections.abc import AsyncGenerator
 
 from backend.simulation.models import Persona, SocialPost, PlatformState
 from backend.simulation.persona_generator import generate_persona
-from backend.simulation.graph_utils import get_neighbor_titles
 from backend.simulation.platforms.base import AbstractPlatform, AgentAction
 from backend import llm
 from backend.llm import LLMToolRequired
-from backend.ontology_builder import ontology_for_persona, ontology_for_action, ontology_for_content
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +24,41 @@ def _to_openai_tool(tool: dict) -> dict:
             "parameters": tool["input_schema"],
         }
     }
+
+
+def _build_prior_knowledge(
+    cluster_id: str,
+    cluster_docs_map: dict,
+    persona,
+    top_k: int = 5,
+) -> str:
+    """Build prior knowledge text from the agent's cluster documents,
+    ranked by relevance to the persona's taxonomy fields."""
+    docs = cluster_docs_map.get(cluster_id, [])
+    if not docs:
+        return ""
+
+    def relevance_score(doc):
+        score = 0
+        if persona.domain_type and doc.get("_domain_type") == persona.domain_type:
+            score += 1
+        score += len(set(persona.tech_area) & set(doc.get("_tech_area") or []))
+        score += len(set(persona.market) & set(doc.get("_market") or []))
+        score += len(set(persona.problem_domain) & set(doc.get("_problem_domain") or []))
+        return score
+
+    ranked = sorted(docs, key=relevance_score, reverse=True)
+
+    parts: list[str] = []
+    for doc in ranked[:top_k]:
+        title = doc.get("title", "").strip()
+        source = doc.get("source", "").strip()
+        abstract = (doc.get("abstract") or "").strip()
+        line = f"  [{source}] {title}"
+        if abstract:
+            line += f"\n    {abstract}"
+        parts.append(line)
+    return "\n".join(parts)
 
 
 # ── 에이전트 선정 ─────────────────────────────────────────────────────────────
@@ -84,15 +117,24 @@ async def generate_seed_post(
     idea_text: str,
     language: str = "English",
     provider: str = "openai",
+    ontology: dict | None = None,
 ) -> SocialPost:
     """Generate the initial post for a platform that kicks off discussion."""
     tool = _to_openai_tool(platform.seed_tool())
     tool_name = tool["function"]["name"]
-    prompt = (
+    context_lines = [
         f"Introduce the following idea on {platform.name}. "
-        f"Match the platform's tone and style exactly. Write in {language}.\n\n"
-        f"Idea: {idea_text[:500]}"
-    )
+        f"Match the platform's tone and style exactly. Write in {language}.\n",
+        f"Idea: {idea_text}",
+    ]
+    if ontology:
+        tensions = ontology.get("market_tensions", [])
+        trends = ontology.get("key_trends", [])
+        if tensions:
+            context_lines.append(f"\nKey market tensions in this space: {'; '.join(tensions[:3])}")
+        if trends:
+            context_lines.append(f"Key trends shaping this space: {'; '.join(trends[:3])}")
+    prompt = "\n".join(context_lines)
     structured_data: dict = {}
     content = f"[{platform.name}] Introducing: {idea_text[:200]}"
     try:
@@ -161,6 +203,7 @@ async def decide_action(
     ontology: dict | None = None,
 ) -> AgentAction:
     """LLM call 1: decide action_type and target_post_id."""
+    del ontology
     allowed = platform.get_allowed_actions(persona)
     prompt = (
         f"Platform: {platform.name}\n"
@@ -173,8 +216,6 @@ async def decide_action(
         f"For vote/react actions, pick a target_post_id from the feed. "
         f"For new content, target_post_id can be null (new top-level) or a post id (reply)."
     )
-    if ontology:
-        prompt += f"\nEcosystem context:\n{ontology_for_action(ontology)}"
     try:
         response = await llm.complete(
             messages=[
@@ -210,11 +251,16 @@ async def generate_content(
     idea_text: str,
     language: str = "English",
     provider: str = "openai",
+    cluster_docs_map: dict | None = None,
     ontology: dict | None = None,
 ) -> tuple[str, dict]:
     """LLM call 2: generate post/comment text. Returns (content_str, structured_data)."""
+    del ontology
     tool = _to_openai_tool(platform.content_tool(action.action_type))
     tool_name = tool["function"]["name"]
+    prior_knowledge = ""
+    if cluster_docs_map is not None:
+        prior_knowledge = _build_prior_knowledge(persona.node_id, cluster_docs_map, persona)
     prompt = (
         f"Platform: {platform.name}\n"
         f"You are {persona.name}, {persona.role} at {persona.company} "
@@ -223,12 +269,11 @@ async def generate_content(
         f"Bias: {persona.bias_description()}\n"
         f"Action: {action.action_type}"
         + (f" (replying to post {action.target_post_id})" if action.target_post_id else "") + "\n\n"
-        f"Idea being discussed: {idea_text[:300]}\n\n"
-        f"{feed_text}\n\n"
+        f"Idea being discussed: {idea_text}\n\n"
+        + (f"Your domain knowledge:\n{prior_knowledge}\n\n" if prior_knowledge else "")
+        + f"{feed_text}\n\n"
         f"Write your {action.action_type} in {language}. Be authentic to your persona and the platform style."
     )
-    if ontology:
-        prompt += f"\nEcosystem context:\n{ontology_for_content(ontology)}"
     try:
         response = await llm.complete(
             messages=[
@@ -254,38 +299,28 @@ async def generate_content(
 # ── 페르소나 생성 라운드 ──────────────────────────────────────────────────────
 
 async def round_personas(
-    nodes: list[dict],
+    clusters: list[dict],
     idea_text: str,
     concurrency: int = 4,
-    adjacency: dict | None = None,
-    id_to_node: dict | None = None,
     platform_name: str = "",
     provider: str = "openai",
-    ontology: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
-    """Generate personas for all nodes for a specific platform. Yields sim_persona events."""
+    """Generate personas for all clusters for a specific platform. Yields sim_persona events."""
     sem = asyncio.Semaphore(concurrency)
     queue: asyncio.Queue = asyncio.Queue()
 
-    async def process_one(node: dict) -> None:
+    async def process_one(cluster: dict) -> None:
         async with sem:
             try:
-                neighbor_titles = None
-                if adjacency is not None and id_to_node is not None:
-                    neighbor_titles = get_neighbor_titles(
-                        node.get("id", ""), adjacency, id_to_node
-                    )
                 persona = await generate_persona(
-                    node,
+                    cluster,
                     idea_text=idea_text,
-                    neighbor_titles=neighbor_titles,
                     platform_name=platform_name,
                     provider=provider,
-                    ontology=ontology,
                 )
                 await queue.put({
                     "type": "sim_persona",
-                    "node_id": node.get("id", ""),
+                    "node_id": cluster.get("id", ""),
                     "platform": platform_name,
                     "persona": {
                         "name": persona.name,
@@ -305,11 +340,11 @@ async def round_personas(
                     "_persona": persona,
                 })
             except Exception as exc:
-                logger.warning("Persona gen failed for %s: %s", node.get("id", "?"), exc)
+                logger.warning("Persona gen failed for %s: %s", cluster.get("id", "?"), exc)
             finally:
                 await queue.put(None)
 
-    tasks = [asyncio.create_task(process_one(n)) for n in nodes]
+    tasks = [asyncio.create_task(process_one(c)) for c in clusters]
     try:
         remaining = len(tasks)
         while remaining > 0:
@@ -335,7 +370,7 @@ async def platform_round(
     language: str = "English",
     activation_rate: float = 0.25,
     provider: str = "openai",
-    ontology: dict | None = None,
+    cluster_docs_map: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Run one round for a single platform. Yields streaming events."""
     active = select_active_agents(
@@ -348,12 +383,13 @@ async def platform_round(
 
     for persona in active:
         feed_text = platform.build_feed(state)
-        action = await decide_action(persona, platform, feed_text, language, provider=provider, ontology=ontology)
+        action = await decide_action(persona, platform, feed_text, language, provider=provider)
 
         if platform.requires_content(action.action_type):
             content, structured_data = await generate_content(
                 persona, action, platform, feed_text, idea_text, language,
-                provider=provider, ontology=ontology
+                provider=provider,
+                cluster_docs_map=cluster_docs_map,
             )
             post = SocialPost(
                 id=str(uuid.uuid4()),

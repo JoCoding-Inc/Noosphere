@@ -36,14 +36,18 @@ _STOPWORDS = {
 }
 
 
+def _extract_keywords(text: str) -> set[str]:
+    """Extract meaningful keywords from text, excluding stopwords."""
+    words = _re.findall(r'\b[a-z][a-z0-9]{2,}\b', text.lower())
+    return {w for w in words if w not in _STOPWORDS}
+
+
 def _build_keyword_edges(nodes: list[dict], min_overlap: int = 2) -> list[dict]:
     """Build edges between nodes that share at least min_overlap keywords."""
-    def _keywords(node: dict) -> set[str]:
-        text = f"{node.get('title', '')} {node.get('abstract', '')}".lower()
-        words = _re.findall(r'\b[a-z][a-z0-9]{2,}\b', text)
-        return {w for w in words if w not in _STOPWORDS}
-
-    kw_map = {n['id']: _keywords(n) for n in nodes if n.get('id')}
+    kw_map = {
+        n['id']: _extract_keywords(f"{n.get('title', '')} {n.get('abstract', '')}")
+        for n in nodes if n.get('id')
+    }
     ids = list(kw_map.keys())
     edges: list[dict] = []
     for i, src in enumerate(ids):
@@ -52,6 +56,111 @@ def _build_keyword_edges(nodes: list[dict], min_overlap: int = 2) -> list[dict]:
             if overlap >= min_overlap:
                 edges.append({'source': src, 'target': tgt, 'weight': overlap})
     return edges
+
+
+def _build_structured_edges(nodes: list[dict], min_score: int = 2) -> list[dict]:
+    """구조화 필드 기반 가중 엣지 빌딩."""
+    edges: list[dict] = []
+    node_list = [n for n in nodes if n.get("id")]
+    for i, src in enumerate(node_list):
+        for tgt in node_list[i + 1:]:
+            score = 0
+            # entities × 3
+            src_entities = set(src.get("_entities") or [])
+            tgt_entities = set(tgt.get("_entities") or [])
+            score += len(src_entities & tgt_entities) * 3
+            # keywords × 2
+            src_kw = set(src.get("_keywords") or [])
+            tgt_kw = set(tgt.get("_keywords") or [])
+            score += len(src_kw & tgt_kw) * 2
+            # domain_type × 1
+            if src.get("_domain_type") and src.get("_domain_type") == tgt.get("_domain_type"):
+                score += 1
+            # tech_area × 1
+            score += len(set(src.get("_tech_area") or []) & set(tgt.get("_tech_area") or [])) * 1
+            # market × 1
+            score += len(set(src.get("_market") or []) & set(tgt.get("_market") or [])) * 1
+            # problem_domain × 1
+            score += len(set(src.get("_problem_domain") or []) & set(tgt.get("_problem_domain") or [])) * 1
+
+            if score >= min_score:
+                edges.append({"source": src["id"], "target": tgt["id"], "weight": score})
+    return edges
+
+
+async def _structurize_node(item: dict, provider: str) -> dict:
+    """LLM으로 문서 1개를 구조화 JSON으로 변환."""
+    from backend import llm as _llm
+    content = item.get("text") or item.get("abstract") or ""
+    title = item.get("title", "")
+
+    prompt = f"""Analyze this document and extract structured metadata.
+
+Title: {title}
+Content: {content}
+
+Return a JSON object with exactly these fields:
+- summary: core content summary (under 500 chars)
+- domain_type: exactly ONE of [tech, research, consumer, business, healthcare, general]
+- tech_area: 1-2 items from [AI/ML, cloud, security, data, mobile, web, hardware, other]
+- market: 1-2 items from [B2B, B2C, enterprise, developer, consumer, academic]
+- problem_domain: 1-2 items from [automation, analytics, communication, productivity, infrastructure, security, UX, compliance]
+- keywords: 5-10 specific technical terms (free form)
+- entities: product/company/technology proper nouns (free form)"""
+
+    try:
+        resp = await _llm.complete(
+            messages=[{"role": "user", "content": prompt}],
+            tier="low",
+            provider=provider,
+            max_tokens=512,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(resp.content)
+    except Exception as exc:
+        logger.warning("_structurize_node failed for %s: %s", title, exc)
+        data = {}
+
+    return {
+        "id": item["id"],
+        "title": title,
+        "source": item.get("source", ""),
+        "abstract": data.get("summary") or content,
+        "_domain_type": data.get("domain_type", ""),
+        "_tech_area": data.get("tech_area") or [],
+        "_market": data.get("market") or [],
+        "_problem_domain": data.get("problem_domain") or [],
+        "_keywords": data.get("keywords") or [],
+        "_entities": data.get("entities") or [],
+    }
+
+
+async def _enrich_context_nodes(raw_items: list[dict], provider: str) -> list[dict]:
+    """문서 목록을 병렬로 구조화한다. Semaphore로 동시 호출 10개 제한."""
+    sem = asyncio.Semaphore(10)
+
+    async def _limited(item):
+        async with sem:
+            return await _structurize_node(item, provider)
+
+    return await asyncio.gather(*[_limited(item) for item in raw_items])
+
+
+def _rank_nodes_by_relevance(nodes: list[dict], idea_text: str) -> list[dict]:
+    """Sort nodes by relevance to idea_text. Uses structured fields if available, else keyword overlap."""
+    idea_keywords = _extract_keywords(idea_text)
+    if not idea_keywords:
+        return nodes
+
+    def score(node):
+        # 구조화 필드가 있으면 우선 사용
+        structured = set(node.get("_keywords") or []) | set(node.get("_entities") or [])
+        if structured:
+            return len(idea_keywords & {k.lower() for k in structured})
+        # fallback: regex
+        return len(idea_keywords & _extract_keywords(f"{node.get('title', '')} {node.get('abstract', '')}"))
+
+    return sorted(nodes, key=score, reverse=True)
 
 
 STREAM_KEY = "sim_stream:{}"
@@ -199,20 +308,16 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 await checkpoint()
                 publish({"type": "sim_analysis", "data": {"markdown": analysis_md}})
 
-                context_nodes = [
-                    {
-                        "id": item["id"],
-                        "title": item["title"],
-                        "source": item["source"],
-                        "abstract": item.get("text") or item.get("title", ""),
-                    }
-                    for item in raw_items
-                ] or [{
-                    "id": "input",
-                    "title": config["input_text"][:80],
-                    "source": "input_text",
-                    "abstract": config["input_text"][:300],
-                }]
+                publish({"type": "sim_progress", "message": "Structurizing documents..."})
+                if raw_items:
+                    context_nodes = await _enrich_context_nodes(raw_items, provider)
+                else:
+                    context_nodes = [{
+                        "id": "input",
+                        "title": config["input_text"][:80],
+                        "source": "input_text",
+                        "abstract": config["input_text"][:300],
+                    }]
 
                 publish({"type": "sim_progress", "message": "Building ecosystem ontology..."})
                 ontology = await build_ontology(
@@ -223,7 +328,8 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 if ontology:
                     publish({"type": "sim_ontology", "data": ontology})
 
-            edges = _build_keyword_edges(context_nodes)
+            context_nodes = _rank_nodes_by_relevance(context_nodes, config["input_text"])
+            edges = _build_structured_edges(context_nodes)
 
             publish({
                 "type": "sim_progress",
@@ -294,15 +400,17 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 raw_items=raw_items,
                 final_report_md=final_report_md,
             )
-            await asyncio.to_thread(delete_checkpoint, DB_PATH, sim_id)
-            if not await asyncio.to_thread(
+            completed = await asyncio.to_thread(
                 update_simulation_status,
                 DB_PATH,
                 sim_id,
                 "completed",
                 allowed_current_statuses={"running"},
                 require_not_cancelled=True,
-            ):
+            )
+            if completed:
+                await asyncio.to_thread(delete_checkpoint, DB_PATH, sim_id)
+            else:
                 logger.info(
                     "Simulation %s reached completion after its status changed; leaving DB status untouched",
                     sim_id,
