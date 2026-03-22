@@ -240,12 +240,12 @@ export function SimulatePage() {
 
       {sim.isSourcing ? (
         /* 소싱 단계: 왼쪽 그래프 + 오른쪽 소스 타임라인 */
-        <main className="page-enter" style={{
+        <main className="page-enter sim-sourcing-layout" style={{
           maxWidth: 1600, margin: '0 auto', padding: '16px 24px',
           display: 'flex', gap: 24, alignItems: 'flex-start',
         }}>
           <div style={{
-            width: 520, flexShrink: 0,
+            flex: 3, minWidth: 0,
             position: 'sticky', top: 8,
             animation: 'fadeInUp 0.4s ease',
           }}>
@@ -254,10 +254,9 @@ export function SimulatePage() {
             </p>
             <ContextGraph
               data={sim.graphData ?? { nodes: [], edges: [] }}
-              width={520}
             />
           </div>
-          <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
+          <div style={{ flex: 2, minWidth: 0, paddingTop: 4 }}>
             {feedPanel}
           </div>
         </main>
