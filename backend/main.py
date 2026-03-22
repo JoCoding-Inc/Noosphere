@@ -2,26 +2,98 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover - optional dependency in local dev only
+    def load_dotenv() -> bool:
+        return False
+
 load_dotenv()
 
-import redis.asyncio as aioredis
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+try:
+    import redis.asyncio as aioredis
+except ModuleNotFoundError:  # pragma: no cover - optional during config-only imports/tests
+    aioredis = None
+
+try:
+    from fastapi import FastAPI, HTTPException, Request
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import StreamingResponse
+except ModuleNotFoundError:  # pragma: no cover - allow config imports without web deps
+    class HTTPException(Exception):
+        def __init__(self, status_code: int, detail: str):
+            super().__init__(detail)
+            self.status_code = status_code
+            self.detail = detail
+
+    class Request:
+        pass
+
+    class StreamingResponse:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+    class CORSMiddleware:
+        pass
+
+    class FastAPI:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+        def add_middleware(self, *args, **kwargs):
+            return None
+
+        def get(self, *args, **kwargs):
+            def decorator(fn):
+                return fn
+            return decorator
+
+        def post(self, *args, **kwargs):
+            def decorator(fn):
+                return fn
+            return decorator
+
 from pydantic import BaseModel, field_validator
 
-from backend.celery_app import REDIS_URL
-from backend.db import (
-    init_db, create_simulation, update_simulation_status,
-    get_sim_results, list_history, get_simulation, DB_PATH,
-    count_active_simulations, reconcile_stale_simulations, request_simulation_cancel,
-    get_checkpoint,
-)
-from backend.tasks import run_simulation_task, STREAM_KEY
+try:
+    from backend.celery_app import REDIS_URL
+    from backend.db import (
+        init_db, create_simulation, update_simulation_status,
+        get_sim_results, list_history, get_simulation, DB_PATH,
+        count_active_simulations, reconcile_stale_simulations, request_simulation_cancel,
+        get_checkpoint,
+    )
+    from backend.tasks import run_simulation_task, STREAM_KEY
+except ModuleNotFoundError:  # pragma: no cover - allow SimConfig import in minimal envs
+    REDIS_URL = ""
+    DB_PATH = ""
+
+    def _missing_dependency(*args, **kwargs):
+        raise RuntimeError("Server dependencies are not installed")
+
+    init_db = _missing_dependency
+    create_simulation = _missing_dependency
+    update_simulation_status = _missing_dependency
+    get_sim_results = _missing_dependency
+    list_history = _missing_dependency
+    get_simulation = _missing_dependency
+    count_active_simulations = _missing_dependency
+    reconcile_stale_simulations = _missing_dependency
+    request_simulation_cancel = _missing_dependency
+    get_checkpoint = _missing_dependency
+
+    class _MissingTask:
+        def apply_async(self, *args, **kwargs):
+            raise RuntimeError("Task queue dependencies are not installed")
+
+    run_simulation_task = _MissingTask()
+    STREAM_KEY = "sim_stream:{}"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,6 +101,13 @@ logger = logging.getLogger(__name__)
 MAX_JOBS = int(os.getenv("MAX_JOBS", "5"))
 SIM_QUEUE_TIMEOUT_SECONDS = int(os.getenv("SIM_QUEUE_TIMEOUT_SECONDS", "900"))
 SIM_HEARTBEAT_TIMEOUT_SECONDS = int(os.getenv("SIM_HEARTBEAT_TIMEOUT_SECONDS", "90"))
+REDIS_STREAM_ID_RE = re.compile(r"^(0|\d+-\d+)$")
+
+
+def _require_aioredis():
+    if aioredis is None:
+        raise HTTPException(503, "Redis client is not installed")
+    return aioredis
 
 
 @asynccontextmanager
@@ -129,19 +208,22 @@ async def simulate(config: SimConfig):
 
 
 @app.get("/simulate-stream/{sim_id}")
-async def simulate_stream(sim_id: str, request: Request, last_id: str = "0"):
+async def simulate_stream(sim_id: str, request: Request, last_id: str | None = None):
     """SSE stream backed by Redis Streams.
     last_id: Redis stream ID to resume from (pass "0" to replay all, omit for default).
     """
     sim = get_simulation(DB_PATH, sim_id)
     if not sim:
         raise HTTPException(404, "Simulation not found")
+    if last_id is not None and not REDIS_STREAM_ID_RE.fullmatch(last_id):
+        raise HTTPException(400, "Invalid last_id")
 
     stream_key = STREAM_KEY.format(sim_id)
     start_id = last_id or "0"
 
     async def event_generator():
-        r = aioredis.from_url(REDIS_URL, decode_responses=True)
+        redis_client = _require_aioredis()
+        r = redis_client.from_url(REDIS_URL, decode_responses=True)
         current_id = start_id
         try:
             while True:
@@ -186,6 +268,7 @@ async def simulation_status(sim_id: str):
     return {
         "status": sim["status"],
         "last_round": checkpoint["last_round"] if checkpoint else 0,
+        "has_checkpoint": checkpoint is not None,
     }
 
 
@@ -224,9 +307,8 @@ async def resume_simulation(sim_id: str):
         raise HTTPException(409, "Simulation state changed; try again")
 
     config = json.loads(sim["config_json"])
-    resume_task_id = str(uuid.uuid4())
     try:
-        run_simulation_task.apply_async(args=[sim_id, config], task_id=resume_task_id)
+        run_simulation_task.apply_async(args=[sim_id, config], task_id=sim_id)
     except Exception:
         update_simulation_status(DB_PATH, sim_id, "failed", allowed_current_statuses={"running"})
         raise
@@ -259,7 +341,8 @@ async def cancel_simulation(sim_id: str):
         logger.exception("Failed to revoke simulation %s; relying on cooperative cancellation", sim_id)
 
     # Redis stream에 종료 이벤트 발행 (SSE 클라이언트가 연결 끊도록)
-    r = aioredis.from_url(REDIS_URL, decode_responses=True)
+    redis_client = _require_aioredis()
+    r = redis_client.from_url(REDIS_URL, decode_responses=True)
     stream_key = STREAM_KEY.format(sim_id)
     try:
         await r.xadd(stream_key, {"data": json.dumps({"type": "sim_error", "message": "Cancelled by user"})})

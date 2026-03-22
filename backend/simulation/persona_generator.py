@@ -63,6 +63,58 @@ _PLATFORM_AUDIENCE = {
     ),
 }
 
+_DOMAIN_TYPES = {"tech", "research", "consumer", "business", "healthcare", "general"}
+_TECH_AREAS = {"AI/ML", "cloud", "security", "data", "mobile", "web", "hardware", "other"}
+_MARKETS = {"B2B", "B2C", "enterprise", "developer", "consumer", "academic"}
+_PROBLEM_DOMAINS = {
+    "automation", "analytics", "communication", "productivity",
+    "infrastructure", "security", "UX", "compliance",
+}
+
+
+def _coerce_enum(value: object, allowed: set[str]) -> str:
+    if not isinstance(value, str):
+        return ""
+    text = value.strip()
+    if text in allowed:
+        return text
+    lowered = text.lower()
+    for option in allowed:
+        if option.lower() == lowered:
+            return option
+    return ""
+
+
+def _coerce_string_list(
+    value: object,
+    *,
+    allowed: set[str] | None = None,
+    max_items: int | None = None,
+) -> list[str]:
+    if isinstance(value, str):
+        raw_items = [part.strip() for part in value.replace("\n", ",").replace(";", ",").split(",") if part.strip()]
+    elif isinstance(value, list):
+        raw_items = [str(part).strip() for part in value if str(part).strip()]
+    else:
+        raw_items = []
+
+    seen: set[str] = set()
+    items: list[str] = []
+    for item in raw_items:
+        normalized = item
+        if allowed is not None:
+            normalized = _coerce_enum(item, allowed)
+            if not normalized:
+                continue
+        dedupe_key = normalized.lower()
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        items.append(normalized)
+        if max_items is not None and len(items) >= max_items:
+            break
+    return items
+
 _PERSONA_TOOL = {
     "type": "function",
     "function": {
@@ -159,6 +211,7 @@ _PERSONA_TOOL = {
             "required": [
                 "name", "role", "age", "seniority", "affiliation", "company",
                 "mbti", "interests", "skepticism", "commercial_focus", "innovation_openness",
+                "domain_type", "tech_area", "market", "problem_domain",
             ],
         },
     },
@@ -273,7 +326,7 @@ async def generate_persona(
             tools=[_PERSONA_TOOL],
             tool_choice="create_persona",
         )
-        data = response.tool_args
+        data = response.tool_args or {}
     except LLMToolRequired:
         raise
     except Exception as exc:
@@ -286,12 +339,20 @@ async def generate_persona(
     # Normalize interests
     interests_raw = data.get("interests", [])
     if isinstance(interests_raw, str):
-        interests = [t.strip() for t in interests_raw.split(",") if t.strip()]
+        interests = [
+            t.strip() for t in interests_raw.replace("\n", ",").replace(";", ",").split(",")
+            if t.strip()
+        ]
     elif isinstance(interests_raw, list):
         interests = [str(i) for i in interests_raw]
     else:
         interests = []
     interests = interests[:8] or ["general"]
+
+    domain_type = _coerce_enum(data.get("domain_type"), _DOMAIN_TYPES)
+    tech_area = _coerce_string_list(data.get("tech_area"), allowed=_TECH_AREAS, max_items=2)
+    market = _coerce_string_list(data.get("market"), allowed=_MARKETS, max_items=2)
+    problem_domain = _coerce_string_list(data.get("problem_domain"), allowed=_PROBLEM_DOMAINS, max_items=2)
 
     return Persona(
         node_id=cluster_id,
@@ -307,8 +368,8 @@ async def generate_persona(
         commercial_focus=forced.get("commercial_focus", int(data.get("commercial_focus", 5))),
         innovation_openness=forced.get("innovation_openness", int(data.get("innovation_openness", 5))),
         source_title=rep_title,
-        domain_type=str(data.get("domain_type", "")),
-        tech_area=list(data.get("tech_area") or []),
-        market=list(data.get("market") or []),
-        problem_domain=list(data.get("problem_domain") or []),
+        domain_type=domain_type,
+        tech_area=tech_area,
+        market=market,
+        problem_domain=problem_domain,
     )

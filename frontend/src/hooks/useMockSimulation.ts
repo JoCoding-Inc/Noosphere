@@ -75,6 +75,8 @@ export function useMockSimulation(): SimState {
     ontology: null,
     isSourcing: false,
     lastRound: 0,
+    backendStatus: null,
+    canResume: false,
   })
 
   useEffect(() => {

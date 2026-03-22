@@ -15,6 +15,24 @@ from backend.llm import LLMToolRequired
 logger = logging.getLogger(__name__)
 
 
+def _normalized_value(value: object) -> str:
+    return str(value).strip().lower() if isinstance(value, str) and value.strip() else ""
+
+
+def _normalized_list(value: object) -> set[str]:
+    if isinstance(value, str):
+        items = [
+            part.strip()
+            for part in value.replace("\n", ",").replace(";", ",").split(",")
+            if part.strip()
+        ]
+    elif isinstance(value, list):
+        items = [str(part).strip() for part in value if str(part).strip()]
+    else:
+        items = []
+    return {item.lower() for item in items}
+
+
 def _to_openai_tool(tool: dict) -> dict:
     return {
         "type": "function",
@@ -29,7 +47,7 @@ def _to_openai_tool(tool: dict) -> dict:
 def _build_prior_knowledge(
     cluster_id: str,
     cluster_docs_map: dict,
-    persona,
+    persona: Persona,
     top_k: int = 5,
 ) -> str:
     """Build prior knowledge text from the agent's cluster documents,
@@ -40,11 +58,14 @@ def _build_prior_knowledge(
 
     def relevance_score(doc):
         score = 0
-        if persona.domain_type and doc.get("_domain_type") == persona.domain_type:
+        if (
+            _normalized_value(persona.domain_type)
+            and _normalized_value(doc.get("_domain_type")) == _normalized_value(persona.domain_type)
+        ):
             score += 1
-        score += len(set(persona.tech_area) & set(doc.get("_tech_area") or []))
-        score += len(set(persona.market) & set(doc.get("_market") or []))
-        score += len(set(persona.problem_domain) & set(doc.get("_problem_domain") or []))
+        score += len(_normalized_list(persona.tech_area) & _normalized_list(doc.get("_tech_area")))
+        score += len(_normalized_list(persona.market) & _normalized_list(doc.get("_market")))
+        score += len(_normalized_list(persona.problem_domain) & _normalized_list(doc.get("_problem_domain")))
         return score
 
     ranked = sorted(docs, key=relevance_score, reverse=True)

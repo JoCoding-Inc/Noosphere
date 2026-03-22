@@ -17,6 +17,7 @@ export type SimEvent =
   | { type: 'sim_error'; message: string }
   | { type: 'sim_done' }
   | { type: 'sim_resume'; from_round: number }
+  | { type: 'heartbeat' }
 
 export interface SimState {
   status: 'connecting' | 'running' | 'done' | 'error'
@@ -33,10 +34,16 @@ export interface SimState {
   ontology: OntologyData | null
   isSourcing: boolean
   lastRound: number
+  backendStatus: string | null
+  canResume: boolean
 }
 
-export function useSimulation(simId: string): SimState {
-  const [state, setState] = useState<SimState>({
+export type UseSimulationResult = SimState & {
+  reconnect: () => void
+}
+
+function createInitialState(): SimState {
+  return {
     status: 'connecting',
     events: [],
     postsByPlatform: {},
@@ -51,9 +58,20 @@ export function useSimulation(simId: string): SimState {
     ontology: null,
     isSourcing: false,
     lastRound: 0,
-  })
+    backendStatus: null,
+    canResume: false,
+  }
+}
 
+export function useSimulation(simId: string): UseSimulationResult {
+  const [state, setState] = useState<SimState>(createInitialState)
+  const [connectionKey, setConnectionKey] = useState(0)
   const lastEventIdRef = useRef<string>('0')
+
+  useEffect(() => {
+    setState(createInitialState())
+    lastEventIdRef.current = '0'
+  }, [simId])
 
   useEffect(() => {
     if (!simId) return
@@ -74,16 +92,33 @@ export function useSimulation(simId: string): SimState {
       currentEs = es
 
       es.onmessage = (e) => {
+        let event: SimEvent
+        try {
+          event = JSON.parse(e.data) as SimEvent
+        } catch {
+          return
+        }
+        if (event.type === 'heartbeat') return
+
         retryCount = 0
         if (e.lastEventId) lastEventIdRef.current = e.lastEventId
-        const event: SimEvent = JSON.parse(e.data)
+
         setState(prev => {
           const next = { ...prev, events: [...prev.events, event] }
           if (event.type === 'sim_start') {
             next.status = 'running'
             next.agentCount = event.agent_count
+            next.errorMsg = ''
+            next.isSourcing = false
+            next.backendStatus = 'running'
+            next.canResume = false
           } else if (event.type === 'sim_resume') {
             next.status = 'running'
+            next.errorMsg = ''
+            next.isSourcing = false
+            next.backendStatus = 'running'
+            next.canResume = false
+            next.lastRound = Math.max(prev.lastRound, event.from_round - 1)
           } else if (event.type === 'sim_source_item') {
             next.sourceTimeline = [
               { source: event.source, title: event.title, snippet: event.snippet },
@@ -130,7 +165,7 @@ export function useSimulation(simId: string): SimState {
         }
         const delay = RECONNECT_DELAYS[retryCount]
         retryCount++
-        setTimeout(connect, delay)
+        window.setTimeout(connect, delay)
       }
     }
 
@@ -139,20 +174,53 @@ export function useSimulation(simId: string): SimState {
       stopped = true
       currentEs?.close()
     }
-  }, [simId])
+  }, [simId, connectionKey])
 
   useEffect(() => {
     if (state.status !== 'error' || !simId) return
     const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-    fetch(`${API_BASE}/simulate/${simId}/status`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.last_round > 0) {
-          setState(prev => ({ ...prev, lastRound: data.last_round }))
-        }
-      })
-      .catch(() => {})
+    let cancelled = false
+    let retryTimer: number | null = null
+
+    const checkStatus = () => {
+      fetch(`${API_BASE}/simulate/${simId}/status`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (cancelled || !data) return
+          setState(prev => ({
+            ...prev,
+            status: data.status === 'completed' ? 'done' : prev.status,
+            lastRound: data.last_round ?? 0,
+            backendStatus: data.status ?? null,
+            canResume: data.status === 'failed' && (data.last_round ?? 0) > 0,
+          }))
+          if (!cancelled && data.status === 'running') {
+            retryTimer = window.setTimeout(checkStatus, 1500)
+          }
+        })
+        .catch(() => {})
+    }
+
+    checkStatus()
+    return () => {
+      cancelled = true
+      if (retryTimer !== null) window.clearTimeout(retryTimer)
+    }
   }, [state.status, simId])
 
-  return state
+  const reconnect = () => {
+    setState(prev => ({
+      ...prev,
+      status: 'connecting',
+      errorMsg: '',
+      backendStatus: 'running',
+      canResume: false,
+    }))
+    setConnectionKey(prev => prev + 1)
+  }
+
+  return {
+    ...state,
+    reconnect,
+  }
 }

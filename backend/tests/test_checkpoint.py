@@ -1,6 +1,5 @@
-import json
 import pytest
-from pathlib import Path
+import sqlite3
 from backend.db import init_db, save_checkpoint, get_checkpoint, delete_checkpoint
 
 
@@ -63,3 +62,59 @@ def test_checkpoint_ontology_null(db_path):
     save_checkpoint(db_path, "sim-1", 1, {}, {}, [], "domain", "", None, [])
     cp = get_checkpoint(db_path, "sim-1")
     assert cp["ontology"] is None
+
+
+def test_init_db_migrates_legacy_sim_checkpoints_schema(tmp_path):
+    path = tmp_path / "legacy.db"
+    conn = sqlite3.connect(path)
+    conn.executescript("""
+        CREATE TABLE sim_checkpoints (
+            sim_id TEXT PRIMARY KEY,
+            last_round INTEGER NOT NULL,
+            platform_states_json TEXT NOT NULL,
+            personas_json TEXT NOT NULL,
+            context_nodes_json TEXT NOT NULL,
+            domain TEXT NOT NULL
+        );
+    """)
+    conn.commit()
+    conn.close()
+
+    init_db(path)
+
+    conn = sqlite3.connect(path)
+    columns = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(sim_checkpoints)").fetchall()
+    }
+    conn.close()
+
+    assert {"analysis_md", "ontology_json", "raw_items_json", "saved_at"} <= columns
+
+
+def test_get_checkpoint_returns_none_for_corrupted_json(db_path):
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        INSERT INTO sim_checkpoints (
+            sim_id, last_round, platform_states_json, personas_json, context_nodes_json,
+            domain, analysis_md, ontology_json, raw_items_json, saved_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            "sim-bad",
+            1,
+            "{bad json",
+            "{}",
+            "[]",
+            "domain",
+            "",
+            None,
+            "[]",
+            "2026-01-01T00:00:00+00:00",
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    assert get_checkpoint(db_path, "sim-bad") is None

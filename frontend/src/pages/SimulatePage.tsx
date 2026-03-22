@@ -29,6 +29,7 @@ export function SimulatePage() {
     setResumeError(null)
     try {
       await resumeSimulation(simId)
+      sim.reconnect()
     } catch (e) {
       setResumeError(e instanceof Error ? e.message : 'Resume failed')
     } finally {
@@ -103,7 +104,7 @@ export function SimulatePage() {
       {sim.status === 'error' && (
         <div style={{ margin: '8px 0 20px' }}>
           <p style={{ color: '#ef4444', fontSize: 14, margin: '0 0 12px' }}>{sim.errorMsg}</p>
-          {sim.lastRound > 0 && (
+          {sim.canResume && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
                 {sim.lastRound}라운드까지 저장됨
@@ -121,6 +122,11 @@ export function SimulatePage() {
                 {isResuming ? '재개 중...' : `${sim.lastRound + 1}라운드부터 재개하기`}
               </button>
             </div>
+          )}
+          {!sim.canResume && sim.backendStatus === 'running' && (
+            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+              연결이 끊겼지만 시뮬레이션은 아직 실행 중일 수 있습니다.
+            </p>
           )}
           {resumeError && (
             <p style={{ color: '#ef4444', fontSize: 13, margin: '8px 0 0' }}>{resumeError}</p>

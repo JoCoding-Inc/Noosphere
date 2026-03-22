@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import logging
 import os
 import sqlite3
 import uuid
@@ -10,6 +11,7 @@ DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "noo
 
 ACTIVE_SIMULATION_STATUS = "running"
 TERMINAL_SIMULATION_STATUSES = {"completed", "failed"}
+logger = logging.getLogger(__name__)
 
 
 def _conn(path: str | Path = DB_PATH) -> sqlite3.Connection:
@@ -21,6 +23,23 @@ def _conn(path: str | Path = DB_PATH) -> sqlite3.Connection:
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _ensure_columns(
+    conn: sqlite3.Connection,
+    table_name: str,
+    column_defs: dict[str, str],
+) -> None:
+    existing_columns = {
+        row["name"]
+        for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    }
+    for column_name, column_def in column_defs.items():
+        if column_name in existing_columns:
+            continue
+        conn.execute(
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_def}"
+        )
 
 
 def init_db(path: str | Path = DB_PATH) -> None:
@@ -62,54 +81,24 @@ def init_db(path: str | Path = DB_PATH) -> None:
                 saved_at TEXT NOT NULL
             );
         """)
-        # 기존 DB 마이그레이션 (analysis_md 컬럼 없으면 추가)
-        try:
-            conn.execute("ALTER TABLE sim_results ADD COLUMN analysis_md TEXT NOT NULL DEFAULT ''")
-            conn.commit()
-        except Exception:
-            pass  # 이미 있으면 무시
-        try:
-            conn.execute("ALTER TABLE sim_results ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[]'")
-            conn.commit()
-        except Exception:
-            pass  # 이미 있으면 무시
-        try:
-            conn.execute("ALTER TABLE sim_results ADD COLUMN final_report_md TEXT NOT NULL DEFAULT ''")
-            conn.commit()
-        except Exception:
-            pass  # 이미 있으면 무시
-
-        # 기존 DB 마이그레이션 (시뮬레이션 메타 컬럼이 없으면 추가)
-        for sql in (
-            "ALTER TABLE simulations ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE simulations ADD COLUMN started_at TEXT",
-            "ALTER TABLE simulations ADD COLUMN heartbeat_at TEXT",
-            "ALTER TABLE simulations ADD COLUMN finished_at TEXT",
-        ):
-            try:
-                conn.execute(sql)
-                conn.commit()
-            except Exception:
-                pass  # 이미 있으면 무시
-
-        try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS sim_checkpoints (
-                    sim_id TEXT PRIMARY KEY,
-                    last_round INTEGER NOT NULL,
-                    platform_states_json TEXT NOT NULL,
-                    personas_json TEXT NOT NULL,
-                    context_nodes_json TEXT NOT NULL,
-                    domain TEXT NOT NULL,
-                    analysis_md TEXT NOT NULL,
-                    ontology_json TEXT,
-                    raw_items_json TEXT NOT NULL,
-                    saved_at TEXT NOT NULL
-                )
-            """)
-            conn.commit()
-        except Exception:
-            pass
+        _ensure_columns(conn, "sim_results", {
+            "analysis_md": "TEXT NOT NULL DEFAULT ''",
+            "sources_json": "TEXT NOT NULL DEFAULT '[]'",
+            "final_report_md": "TEXT NOT NULL DEFAULT ''",
+        })
+        _ensure_columns(conn, "simulations", {
+            "cancel_requested": "INTEGER NOT NULL DEFAULT 0",
+            "started_at": "TEXT",
+            "heartbeat_at": "TEXT",
+            "finished_at": "TEXT",
+        })
+        _ensure_columns(conn, "sim_checkpoints", {
+            "analysis_md": "TEXT NOT NULL DEFAULT ''",
+            "ontology_json": "TEXT",
+            "raw_items_json": "TEXT NOT NULL DEFAULT '[]'",
+            "saved_at": "TEXT NOT NULL DEFAULT ''",
+        })
+        conn.commit()
 
 
 def create_simulation(
@@ -383,11 +372,15 @@ def get_checkpoint(path: str | Path, sim_id: str) -> dict | None:
     if not row:
         return None
     d = dict(row)
-    d["platform_states"] = json.loads(d.pop("platform_states_json"))
-    d["personas"] = json.loads(d.pop("personas_json"))
-    d["context_nodes"] = json.loads(d.pop("context_nodes_json"))
-    d["ontology"] = json.loads(d["ontology_json"]) if d.get("ontology_json") else None
-    d["raw_items"] = json.loads(d.pop("raw_items_json"))
+    try:
+        d["platform_states"] = json.loads(d.pop("platform_states_json"))
+        d["personas"] = json.loads(d.pop("personas_json"))
+        d["context_nodes"] = json.loads(d.pop("context_nodes_json"))
+        d["ontology"] = json.loads(d["ontology_json"]) if d.get("ontology_json") else None
+        d["raw_items"] = json.loads(d.pop("raw_items_json"))
+    except (TypeError, json.JSONDecodeError) as exc:
+        logger.warning("Checkpoint %s is corrupted and will be ignored: %s", sim_id, exc)
+        return None
     d.pop("ontology_json", None)
     return d
 

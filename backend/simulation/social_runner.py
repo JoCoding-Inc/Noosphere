@@ -43,6 +43,18 @@ def _coerce_int(value: object, default: int) -> int:
         return default
 
 
+def _coerce_str_list(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [
+            part.strip()
+            for part in value.replace("\n", ",").replace(";", ",").split(",")
+            if part.strip()
+        ]
+    if isinstance(value, list):
+        return [str(part).strip() for part in value if str(part).strip()]
+    return []
+
+
 def _restore_personas(personas_dict: dict) -> dict[str, list[Persona]]:
     """Reconstruct Persona dataclass instances from checkpoint dict."""
     result: dict[str, list[Persona]] = {}
@@ -65,15 +77,15 @@ def _restore_personas(personas_dict: dict) -> dict[str, list[Persona]]:
                 affiliation=str(d.get("affiliation", "")),
                 company=str(d.get("company", "")),
                 mbti=str(d.get("mbti", "")),
-                interests=list(d.get("interests") or []),
+                interests=_coerce_str_list(d.get("interests")),
                 skepticism=_coerce_int(d.get("skepticism"), 5),
                 commercial_focus=_coerce_int(d.get("commercial_focus"), 5),
                 innovation_openness=_coerce_int(d.get("innovation_openness"), 5),
                 source_title=str(d.get("source_title", "")),
                 domain_type=str(d.get("domain_type", "")),
-                tech_area=list(d.get("tech_area") or []),
-                market=list(d.get("market") or []),
-                problem_domain=list(d.get("problem_domain") or []),
+                tech_area=_coerce_str_list(d.get("tech_area")),
+                market=_coerce_str_list(d.get("market")),
+                problem_domain=_coerce_str_list(d.get("problem_domain")),
             ))
         result[platform_name] = restored
     return result

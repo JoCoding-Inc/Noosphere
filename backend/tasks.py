@@ -35,6 +35,81 @@ _STOPWORDS = {
     'one', 'two', 'three', 'large', 'high', 'low', 'via', 'into', 'over',
 }
 
+_DOMAIN_TYPES = {"tech", "research", "consumer", "business", "healthcare", "general"}
+_TECH_AREAS = {"AI/ML", "cloud", "security", "data", "mobile", "web", "hardware", "other"}
+_MARKETS = {"B2B", "B2C", "enterprise", "developer", "consumer", "academic"}
+_PROBLEM_DOMAINS = {
+    "automation", "analytics", "communication", "productivity",
+    "infrastructure", "security", "UX", "compliance",
+}
+
+
+def _coerce_enum(value: object, allowed: set[str]) -> str:
+    if not isinstance(value, str):
+        return ""
+    text = value.strip()
+    if text in allowed:
+        return text
+    lowered = text.lower()
+    for option in allowed:
+        if option.lower() == lowered:
+            return option
+    return ""
+
+
+def _coerce_string_list(
+    value: object,
+    *,
+    allowed: set[str] | None = None,
+    max_items: int | None = None,
+) -> list[str]:
+    if isinstance(value, str):
+        raw_items = [part.strip() for part in _re.split(r"[,;\n|]+", value) if part.strip()]
+    elif isinstance(value, list):
+        raw_items = [str(part).strip() for part in value if str(part).strip()]
+    else:
+        raw_items = []
+
+    seen: set[str] = set()
+    items: list[str] = []
+    for item in raw_items:
+        normalized = item
+        if allowed is not None:
+            normalized = _coerce_enum(item, allowed)
+            if not normalized:
+                continue
+        dedupe_key = normalized.lower()
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        items.append(normalized)
+        if max_items is not None and len(items) >= max_items:
+            break
+    return items
+
+
+def _normalize_structured_payload(payload: object, fallback_summary: str) -> dict:
+    data = payload if isinstance(payload, dict) else {}
+    summary = data.get("summary")
+    if not isinstance(summary, str) or not summary.strip():
+        summary = fallback_summary
+    else:
+        summary = summary.strip()
+
+    return {
+        "summary": summary,
+        "domain_type": _coerce_enum(data.get("domain_type"), _DOMAIN_TYPES),
+        "tech_area": _coerce_string_list(data.get("tech_area"), allowed=_TECH_AREAS, max_items=2),
+        "market": _coerce_string_list(data.get("market"), allowed=_MARKETS, max_items=2),
+        "problem_domain": _coerce_string_list(data.get("problem_domain"), allowed=_PROBLEM_DOMAINS, max_items=2),
+        "keywords": _coerce_string_list(data.get("keywords"), max_items=10),
+        "entities": _coerce_string_list(data.get("entities"), max_items=10),
+    }
+
+
+def _normalized_token_set(value: object) -> set[str]:
+    return {item.lower() for item in _coerce_string_list(value)}
+
 
 def _extract_keywords(text: str) -> set[str]:
     """Extract meaningful keywords from text, excluding stopwords."""
@@ -66,22 +141,33 @@ def _build_structured_edges(nodes: list[dict], min_score: int = 2) -> list[dict]
         for tgt in node_list[i + 1:]:
             score = 0
             # entities × 3
-            src_entities = set(src.get("_entities") or [])
-            tgt_entities = set(tgt.get("_entities") or [])
+            src_entities = _normalized_token_set(src.get("_entities"))
+            tgt_entities = _normalized_token_set(tgt.get("_entities"))
             score += len(src_entities & tgt_entities) * 3
             # keywords × 2
-            src_kw = set(src.get("_keywords") or [])
-            tgt_kw = set(tgt.get("_keywords") or [])
+            src_kw = _normalized_token_set(src.get("_keywords"))
+            tgt_kw = _normalized_token_set(tgt.get("_keywords"))
             score += len(src_kw & tgt_kw) * 2
             # domain_type × 1
-            if src.get("_domain_type") and src.get("_domain_type") == tgt.get("_domain_type"):
+            src_domain = _coerce_enum(src.get("_domain_type"), _DOMAIN_TYPES)
+            tgt_domain = _coerce_enum(tgt.get("_domain_type"), _DOMAIN_TYPES)
+            if src_domain and src_domain == tgt_domain:
                 score += 1
             # tech_area × 1
-            score += len(set(src.get("_tech_area") or []) & set(tgt.get("_tech_area") or [])) * 1
+            score += len(
+                set(_coerce_string_list(src.get("_tech_area"), allowed=_TECH_AREAS))
+                & set(_coerce_string_list(tgt.get("_tech_area"), allowed=_TECH_AREAS))
+            )
             # market × 1
-            score += len(set(src.get("_market") or []) & set(tgt.get("_market") or [])) * 1
+            score += len(
+                set(_coerce_string_list(src.get("_market"), allowed=_MARKETS))
+                & set(_coerce_string_list(tgt.get("_market"), allowed=_MARKETS))
+            )
             # problem_domain × 1
-            score += len(set(src.get("_problem_domain") or []) & set(tgt.get("_problem_domain") or [])) * 1
+            score += len(
+                set(_coerce_string_list(src.get("_problem_domain"), allowed=_PROBLEM_DOMAINS))
+                & set(_coerce_string_list(tgt.get("_problem_domain"), allowed=_PROBLEM_DOMAINS))
+            )
 
             if score >= min_score:
                 edges.append({"source": src["id"], "target": tgt["id"], "weight": score})
@@ -120,18 +206,19 @@ Return a JSON object with exactly these fields:
     except Exception as exc:
         logger.warning("_structurize_node failed for %s: %s", title, exc)
         data = {}
+    data = _normalize_structured_payload(data, content)
 
     return {
         "id": item["id"],
         "title": title,
         "source": item.get("source", ""),
-        "abstract": data.get("summary") or content,
-        "_domain_type": data.get("domain_type", ""),
-        "_tech_area": data.get("tech_area") or [],
-        "_market": data.get("market") or [],
-        "_problem_domain": data.get("problem_domain") or [],
-        "_keywords": data.get("keywords") or [],
-        "_entities": data.get("entities") or [],
+        "abstract": data["summary"],
+        "_domain_type": data["domain_type"],
+        "_tech_area": data["tech_area"],
+        "_market": data["market"],
+        "_problem_domain": data["problem_domain"],
+        "_keywords": data["keywords"],
+        "_entities": data["entities"],
     }
 
 
@@ -154,9 +241,9 @@ def _rank_nodes_by_relevance(nodes: list[dict], idea_text: str) -> list[dict]:
 
     def score(node):
         # 구조화 필드가 있으면 우선 사용
-        structured = set(node.get("_keywords") or []) | set(node.get("_entities") or [])
+        structured = _normalized_token_set(node.get("_keywords")) | _normalized_token_set(node.get("_entities"))
         if structured:
-            return len(idea_keywords & {k.lower() for k in structured})
+            return len(idea_keywords & structured)
         # fallback: regex
         return len(idea_keywords & _extract_keywords(f"{node.get('title', '')} {node.get('abstract', '')}"))
 

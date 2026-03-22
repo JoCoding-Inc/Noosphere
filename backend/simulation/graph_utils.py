@@ -83,6 +83,34 @@ def connected_components(
     return components
 
 
+def build_clusters(
+    adjacency: dict[str, list[tuple[str, float]]],
+    all_node_ids: list[str],
+    id_to_node: dict[str, dict],
+) -> list[dict]:
+    """Build clusters from connected components of the keyword graph.
+
+    Returns list of cluster dicts sorted by size desc.
+    Each cluster: {"id": str, "nodes": list[dict], "representative": dict}
+    The representative is the node with the highest degree in the cluster.
+    """
+    components = connected_components(adjacency, all_node_ids)
+    deg = degree_centrality(adjacency, all_node_ids)
+
+    clusters: list[dict] = []
+    for i, comp in enumerate(sorted(components, key=lambda c: -len(c))):
+        nodes = [id_to_node[nid] for nid in comp if nid in id_to_node]
+        if not nodes:
+            continue
+        representative = max(nodes, key=lambda n: deg.get(n.get("id", ""), 0))
+        clusters.append({
+            "id": f"cluster_{i}",
+            "nodes": nodes,
+            "representative": representative,
+        })
+    return clusters
+
+
 def summarize_graph(
     edges: list[dict],
     id_to_node: dict[str, dict],
