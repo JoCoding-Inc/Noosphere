@@ -166,3 +166,79 @@ button:active:not(:disabled) {
 .run-btn-click {
   animation: runClick 200ms ease forwards;
 }
+
+/* ── 모바일 반응형 (≤640px) ─────────────────────────── */
+
+/* Landing hamburger: 데스크탑에서 숨김 (media query 밖에 위치) */
+.landing-hamburger { display: none; }
+
+@media (max-width: 640px) {
+  /* Landing nav */
+  .landing-nav        { padding: 12px 18px !important; }
+  .landing-nav-links  { display: none !important; }
+  .landing-nav-signin { display: none !important; }
+  .landing-hamburger  { display: flex !important; align-items: center; justify-content: center; }
+
+  /* Landing mobile menu (Slide+Fade) */
+  .landing-mobile-menu {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: max-height 0.28s ease, opacity 0.28s ease, transform 0.28s ease;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .landing-mobile-menu.open {
+    max-height: 200px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Landing hero */
+  .landing-hero-h1  { font-size: 30px !important; }
+  .landing-hero-cta { flex-direction: column !important; }
+
+  /* Landing how it works */
+  .landing-how-row     { flex-direction: column !important; gap: 6px !important; padding: 20px 18px !important; }
+  .landing-how-divider { display: none !important; }
+  .landing-how-title   { min-width: unset !important; }
+
+  /* Landing footer */
+  .landing-footer {
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 14px 20px !important;
+    gap: 4px !important;
+    text-align: center;
+  }
+
+  /* HomePage advanced options */
+  .options-grid { grid-template-columns: 1fr !important; }
+
+  /* ResultPage verdict */
+  .result-verdict-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  /* ResultPage / SimulatePage tabs */
+  .result-tabs {
+    overflow-x: auto !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .result-tabs::-webkit-scrollbar { display: none; }
+
+  /* SimulatePage sourcing 2열 레이아웃 */
+  .sim-sourcing-layout { flex-direction: column !important; }
+
+  /* HistoryPage item row */
+  .history-item-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  .history-item-actions { align-self: flex-start; }
+}
