@@ -60,6 +60,21 @@ except ModuleNotFoundError:  # pragma: no cover - allow config imports without w
                 return fn
             return decorator
 
+        def delete(self, *args, **kwargs):
+            def decorator(fn):
+                return fn
+            return decorator
+
+        def put(self, *args, **kwargs):
+            def decorator(fn):
+                return fn
+            return decorator
+
+        def patch(self, *args, **kwargs):
+            def decorator(fn):
+                return fn
+            return decorator
+
 from pydantic import BaseModel, field_validator
 
 try:
