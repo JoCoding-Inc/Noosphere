@@ -404,7 +404,7 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
       fg.d3Force('cluster', null)
       fg.d3Force('collide', null)
     }
-  }, [graphData, compOf])
+  }, [graphData])
 
   // Nodes/edges connected to the selected entity
   const highlightSet = useMemo(() => {
@@ -613,7 +613,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
       fg.d3Force('cluster', null)
       fg.d3Force('collide', null)
     }
-  }, [graphData, compOf])
+  }, [graphData])
 
   const handleEngineStop = useCallback(() => {
     graphRef.current?.zoomToFit(400, 24)
