@@ -440,6 +440,12 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
     return highlightSet.links.has(`${srcId}→${tgtId}`) ? link.color : link.color + '25'
   }, [highlightSet])
 
+  const handleNodeClick = useCallback((node: unknown) => {
+    if (!isGraphNode(node)) return
+    const entity = data.entities.find(e => e.id === node.id)
+    setSelectedEntity(prev => prev?.id === node.id ? null : (entity ?? null))
+  }, [data.entities])
+
   return (
     <div style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', background: '#f8fafc' }}>
       {/* Header */}
@@ -486,11 +492,7 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
           linkDirectionalArrowLength={6}
           linkDirectionalArrowRelPos={1}
           linkLineDash={(link: unknown) => isGraphLink(link) && EDGE_DASHED[link.type] ? [4, 2] : null}
-          onNodeClick={(node: unknown) => {
-            if (!isGraphNode(node)) return
-            const entity = data.entities.find(e => e.id === node.id)
-            setSelectedEntity(prev => prev?.id === node.id ? null : (entity ?? null))
-          }}
+          onNodeClick={handleNodeClick}
           backgroundColor="#f8fafc"
         />
         {selectedEntity && (
@@ -557,7 +559,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
     })
   }, [])
 
-  const [hoveredLink, setHoveredLink] = useState<string | null>(null) // "sourceId→targetId"
+  const [hoveredLink, setHoveredLink] = useState<{ key: string; label: string | null } | null>(null)
 
   const graphNodes = useMemo(() =>
     data.nodes
@@ -625,7 +627,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
 
   const getLinkColor = useCallback((link: ContextRenderLink) => {
     const key = `${getEndpointId(link.source)}→${getEndpointId(link.target)}`
-    if (hoveredLink === key) return '#f1f5f9'
+    if (hoveredLink?.key === key) return '#f1f5f9'
     const t = normalizeWeight(link)
     const opacity = (0.15 + t * 0.55).toFixed(2)      // 0.15 ~ 0.70
     return `rgba(148,163,184,${opacity})`
@@ -633,22 +635,15 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
 
   const getLinkWidth = useCallback((link: ContextRenderLink) => {
     const key = `${getEndpointId(link.source)}→${getEndpointId(link.target)}`
-    if (hoveredLink === key) return 2.5
+    if (hoveredLink?.key === key) return 2.5
     return 0.5 + normalizeWeight(link) * 1.5            // 0.5 ~ 2.0
   }, [hoveredLink])
 
-  const [hoveredLinkLabel, setHoveredLinkLabel] = useState<string | null>(null)
-
   const handleLinkHover = useCallback((link: ContextRenderLink | null) => {
-    if (!link) {
-      setHoveredLink(null)
-      setHoveredLinkLabel(null)
-      return
-    }
+    if (!link) { setHoveredLink(null); return }
     const srcId = getEndpointId(link.source)
     const tgtId = getEndpointId(link.target)
-    setHoveredLink(`${srcId}→${tgtId}`)
-    setHoveredLinkLabel(link.label)
+    setHoveredLink({ key: `${srcId}→${tgtId}`, label: link.label })
   }, [])
 
   return (
@@ -678,7 +673,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
       </div>
 
       {/* Hover label tooltip */}
-      {hoveredLinkLabel && (
+      {hoveredLink?.label && (
         <div style={{
           position: 'absolute', top: 50, left: '50%', transform: 'translateX(-50%)',
           background: 'rgba(15,23,42,0.9)', color: '#e2e8f0',
@@ -687,7 +682,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
           border: '1px solid rgba(255,255,255,0.1)',
           backdropFilter: 'blur(4px)',
         }}>
-          {hoveredLinkLabel}
+          {hoveredLink.label}
         </div>
       )}
 
