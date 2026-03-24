@@ -362,24 +362,18 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
   const graphData = useMemo(() => {
     const visibleIds = new Set(graphNodes.map(n => n.id))
     const edgePairs: [string, string][] = []
-    const links: GraphLink[] = data.relationships
-      .filter(r => visibleIds.has(r.from) && visibleIds.has(r.to))
-      .map(r => {
+    const links: GraphLink[] = []
+    for (const r of data.relationships) {
+      if (visibleIds.has(r.from) && visibleIds.has(r.to)) {
         edgePairs.push([r.from, r.to])
-        return {
-          source: r.from,
-          target: r.to,
-          from: r.from,
-          to: r.to,
-          type: r.type,
-          color: EDGE_COLORS[r.type] ?? '#cbd5e1',
-        }
-      })
-    return { nodes: graphNodes, links, edgePairs }
+        links.push({ source: r.from, target: r.to, from: r.from, to: r.to, type: r.type, color: EDGE_COLORS[r.type] ?? '#cbd5e1' })
+      }
+    }
+    return { nodes: graphNodes, links, edgePairs, nodeIds: graphNodes.map(n => n.id) }
   }, [graphNodes, data.relationships])
 
   const compOf = useMemo(() => buildComponentMap(
-    graphData.nodes.map(n => n.id),
+    graphData.nodeIds,
     graphData.edgePairs
   ), [graphData])
 
@@ -575,19 +569,20 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
   const graphData = useMemo(() => {
     const visibleIds = new Set(graphNodes.map(n => n.id))
     const edgePairs: [string, string][] = []
-    const links: ContextRenderLink[] = data.edges
-      .filter(e => visibleIds.has(e.source) && visibleIds.has(e.target))
-      .map(e => {
+    const links: ContextRenderLink[] = []
+    for (const e of data.edges) {
+      if (visibleIds.has(e.source) && visibleIds.has(e.target)) {
         edgePairs.push([e.source, e.target])
-        return { ...e, source: e.source, target: e.target }
-      })
-    return { nodes: graphNodes, links, edgePairs }
+        links.push({ ...e })
+      }
+    }
+    return { nodes: graphNodes, links, edgePairs, nodeIds: graphNodes.map(n => n.id) }
   }, [graphNodes, data.edges])
 
   const graphRef = useRef<ContextGraphHandle | undefined>(undefined)
 
   const compOf = useMemo(() => buildComponentMap(
-    graphData.nodes.map(n => n.id),
+    graphData.nodeIds,
     graphData.edgePairs
   ), [graphData])
 
