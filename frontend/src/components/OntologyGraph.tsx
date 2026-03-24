@@ -145,24 +145,26 @@ type SimNodeBase = { id: string; x: number; y: number; vx: number; vy: number }
 
 /** compOf 맵을 기반으로 연결 컴포넌트 중심으로 노드를 끌어당기는 d3 force 콜백을 반환한다. */
 function makeClusterForce(nodes: readonly { id: string }[], compOf: Map<string, number>, strength: number) {
+  // compCenter를 클로저 수준으로 끌어올려 틱마다 Map을 새로 할당하지 않고 재사용한다.
+  const compCenter = new Map<number, { x: number; y: number; count: number }>()
   return (alpha: number) => {
     const simNodes = nodes as unknown as SimNodeBase[]
-    const compCenter = new Map<number, { x: number; y: number; count: number; cx: number; cy: number }>()
+    compCenter.clear()
     for (const n of simNodes) {
       const comp = compOf.get(n.id)
       if (comp === undefined) continue
-      const c = compCenter.get(comp) ?? { x: 0, y: 0, count: 0, cx: 0, cy: 0 }
+      const c = compCenter.get(comp) ?? { x: 0, y: 0, count: 0 }
       c.x += n.x; c.y += n.y; c.count++
       compCenter.set(comp, c)
     }
-    for (const c of compCenter.values()) { c.cx = c.x / c.count; c.cy = c.y / c.count }
+    for (const c of compCenter.values()) { c.x /= c.count; c.y /= c.count }
     for (const n of simNodes) {
       const comp = compOf.get(n.id)
       if (comp === undefined) continue
       const c = compCenter.get(comp)
       if (!c || c.count <= 1) continue
-      n.vx += (c.cx - n.x) * alpha * strength
-      n.vy += (c.cy - n.y) * alpha * strength
+      n.vx += (c.x - n.x) * alpha * strength
+      n.vy += (c.y - n.y) * alpha * strength
     }
   }
 }
@@ -500,6 +502,12 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
 
 // ── ContextGraph ───────────────────────────────────────────────────────────────
 
+/** weight를 [0, 1] 범위로 정규화한다. weight 범위: 8(최소) ~ 30+(최대) */
+function normalizeWeight(link: unknown): number {
+  const w = (link as { weight?: number }).weight ?? 8
+  return Math.min(Math.max((w - 8) / 22, 0), 1)
+}
+
 function getSourceColor(source: string): string {
   for (const [key, color] of Object.entries(SOURCE_COLORS)) {
     if (source.startsWith(key) || source === key) return color
@@ -583,12 +591,9 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
     let cancelled = false
 
     fg.d3Force('charge')?.strength(-400)
-    // weight 범위: 8(최소, 200px 거리) ~ 30+(최대, 60px 거리)
-    fg.d3Force('link')?.distance((link: ContextRenderLink) => {
-      const w = (link as unknown as { weight?: number }).weight ?? 8
-      const t = Math.min(Math.max((w - 8) / 22, 0), 1)
-      return 200 - t * 140
-    })
+    fg.d3Force('link')?.distance((link: ContextRenderLink) =>
+      200 - normalizeWeight(link) * 140  // 8→200px, 30+→60px
+    )
     fg.d3Force('cluster', makeClusterForce(graphData.nodes, compOf, 0.25))
 
     import('d3-force-3d').then(({ forceCollide }) => {
@@ -608,24 +613,17 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
   }, [])
 
   const getLinkColor = useCallback((link: ContextRenderLink) => {
-    const srcId = getEndpointId(link.source)
-    const tgtId = getEndpointId(link.target)
-    const key = `${srcId}→${tgtId}`
+    const key = `${getEndpointId(link.source)}→${getEndpointId(link.target)}`
     if (hoveredLink === key) return '#f1f5f9'
-    const w = (link as unknown as { weight?: number }).weight ?? 8
-    const t = Math.min(Math.max((w - 8) / 22, 0), 1) // 8→0, 30+→1
+    const t = normalizeWeight(link)
     const opacity = (0.15 + t * 0.55).toFixed(2)      // 0.15 ~ 0.70
     return `rgba(148,163,184,${opacity})`
   }, [hoveredLink])
 
   const getLinkWidth = useCallback((link: ContextRenderLink) => {
-    const srcId = getEndpointId(link.source)
-    const tgtId = getEndpointId(link.target)
-    const key = `${srcId}→${tgtId}`
+    const key = `${getEndpointId(link.source)}→${getEndpointId(link.target)}`
     if (hoveredLink === key) return 2.5
-    const w = (link as unknown as { weight?: number }).weight ?? 8
-    const t = Math.min(Math.max((w - 8) / 22, 0), 1)
-    return 0.5 + t * 1.5 // 0.5 ~ 2.0
+    return 0.5 + normalizeWeight(link) * 1.5            // 0.5 ~ 2.0
   }, [hoveredLink])
 
   const [hoveredLinkLabel, setHoveredLinkLabel] = useState<string | null>(null)
