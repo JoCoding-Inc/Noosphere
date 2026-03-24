@@ -344,11 +344,14 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set())
   const graphRef = useRef<OntologyGraphHandle | undefined>(undefined)
 
+  const entityMap = useMemo(
+    () => new Map(data.entities.map(e => [e.id, e])),
+    [data.entities]
+  )
+
   useEffect(() => {
-    setSelectedEntity(
-      autoSelectId ? (data.entities.find(e => e.id === autoSelectId) ?? null) : null
-    )
-  }, [autoSelectId, data.entities])
+    setSelectedEntity(autoSelectId ? (entityMap.get(autoSelectId) ?? null) : null)
+  }, [autoSelectId, entityMap])
 
   const handleEngineStop = useCallback(() => {
     graphRef.current?.zoomToFit(400, 24)
@@ -442,9 +445,8 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
 
   const handleNodeClick = useCallback((node: unknown) => {
     if (!isGraphNode(node)) return
-    const entity = data.entities.find(e => e.id === node.id)
-    setSelectedEntity(prev => prev?.id === node.id ? null : (entity ?? null))
-  }, [data.entities])
+    setSelectedEntity(prev => prev?.id === node.id ? null : (entityMap.get(node.id) ?? null))
+  }, [entityMap])
 
   return (
     <div style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', background: '#f8fafc' }}>
