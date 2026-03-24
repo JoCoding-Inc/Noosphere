@@ -37,7 +37,7 @@ export function PersonaCardView({ personas }: { personas: Partial<Record<Platfor
       gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
       gap: 12,
     }}>
-      {allPersonas.slice(0, 24).map((p, i) => (
+      {allPersonas.map((p, i) => (
         <div key={i} style={{
           padding: 14, borderRadius: 8, border: '1px solid #e2e8f0',
           background: '#fff',

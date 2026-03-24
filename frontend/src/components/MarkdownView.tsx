@@ -2,9 +2,16 @@ import ReactMarkdown from 'react-markdown'
 
 export function MarkdownView({ content }: { content: string | null | undefined }) {
   // Normalize curly/smart quotes to ASCII so CommonMark bold delimiter rules work correctly
-  // e.g. **"text"** fails because " (U+201C) is a punctuation char that blocks left-flanking **
+  // Then insert zero-width joiner (U+200D) between ** and adjacent quotes:
+  // CommonMark spec says ** followed/preceded by a punctuation char (like ") is not a valid
+  // flanking delimiter run unless surrounded by whitespace/punctuation on the other side.
+  // U+200D is category Cf (not whitespace, not punctuation), so it makes ** flanking-valid.
   const normalized = content
-    ? content.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'")
+    ? content
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/\*\*(['"'"])/g, '**\u200D$1')
+        .replace(/(['"'"])\*\*/g, '$1\u200D**')
     : content
   if (!normalized?.trim()) {
     return (
