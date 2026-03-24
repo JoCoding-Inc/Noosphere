@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
 import { LandingDemoWindow } from '../components/LandingDemoWindow'
 
 const SIMULATION_PLATFORMS = [
@@ -30,19 +29,6 @@ const STEPS = [
 ]
 
 export function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    if (menuOpen) document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpen])
-
   return (
     <div style={{
       background: '#f8fafc',
@@ -52,128 +38,31 @@ export function LandingPage() {
     }}>
 
       {/* ── Nav ──────────────────────────────────────────────────────── */}
-      <div ref={menuRef} style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-        <nav className="landing-nav" style={{
+      <nav className="landing-nav" style={{
+        position: 'sticky', top: 0, zIndex: 10,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 48px',
+          padding: '12px 28px',
           background: '#fff',
           borderBottom: '1px solid #e2e8f0',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <div style={{
-              width: 28, height: 28, borderRadius: 7,
+              width: 26, height: 26, borderRadius: 7,
               background: 'linear-gradient(135deg, #6355e0, #8070ff)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 2px 8px rgba(99,85,224,0.28)',
             }}>
-              <div style={{ width: 11, height: 11, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.85)' }} />
+              <div style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.85)' }} />
             </div>
             <span style={{
               fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 14, fontWeight: 500, color: '#1e293b',
+              fontSize: 13, fontWeight: 500, color: '#1e293b',
             }}>
               Noosphere
             </span>
           </div>
 
-          <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-            <a href="#how-it-works" style={{
-              fontSize: 13, color: '#64748b', textDecoration: 'none',
-              transition: 'color 0.15s',
-            }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#1e293b')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
-            >
-              How it works
-            </a>
-            <a href="#platforms" style={{
-              fontSize: 13, color: '#64748b', textDecoration: 'none',
-              transition: 'color 0.15s',
-            }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#1e293b')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
-            >
-              Platforms
-            </a>
-          </div>
-
-          <Link to="/app" className="landing-nav-signin" style={{
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 12, fontWeight: 500, color: '#fff',
-            padding: '8px 18px', borderRadius: 7,
-            background: '#1e293b', textDecoration: 'none',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.14)',
-            transition: 'opacity 0.15s',
-          }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.82')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            Sign in →
-          </Link>
-
-          {/* 햄버거 버튼 */}
-          <button
-            className="landing-hamburger"
-            onClick={() => setMenuOpen(o => !o)}
-            aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
-            aria-expanded={menuOpen}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: 12, margin: -12,
-              display: 'none',
-              flexDirection: 'column', gap: 4,
-            }}
-          >
-            <span style={{
-              display: 'block', width: 20, height: 2, background: '#1e293b', borderRadius: 2,
-              transition: 'transform 0.25s ease, opacity 0.25s ease',
-              transform: menuOpen ? 'translateY(6px) rotate(45deg)' : 'none',
-            }} />
-            <span style={{
-              display: 'block', width: 20, height: 2, background: '#1e293b', borderRadius: 2,
-              transition: 'opacity 0.25s ease',
-              opacity: menuOpen ? 0 : 1,
-            }} />
-            <span style={{
-              display: 'block', width: 20, height: 2, background: '#1e293b', borderRadius: 2,
-              transition: 'transform 0.25s ease, opacity 0.25s ease',
-              transform: menuOpen ? 'translateY(-6px) rotate(-45deg)' : 'none',
-            }} />
-          </button>
-        </nav>
-
-        {/* 모바일 드롭다운 메뉴 */}
-        <div className={`landing-mobile-menu${menuOpen ? ' open' : ''}`}>
-          <div style={{ padding: '8px 0 12px' }}>
-            <a
-              href="#how-it-works"
-              onClick={() => setMenuOpen(false)}
-              style={{ display: 'block', padding: '10px 20px', fontSize: 14, color: '#475569', textDecoration: 'none' }}
-            >
-              How it works
-            </a>
-            <a
-              href="#platforms"
-              onClick={() => setMenuOpen(false)}
-              style={{ display: 'block', padding: '10px 20px', fontSize: 14, color: '#475569', textDecoration: 'none' }}
-            >
-              Platforms
-            </a>
-            <Link
-              to="/app"
-              onClick={() => setMenuOpen(false)}
-              style={{
-                display: 'block', margin: '6px 16px 0', padding: '10px 18px',
-                background: '#1e293b', color: '#fff', borderRadius: 8,
-                fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 500,
-                textDecoration: 'none', textAlign: 'center',
-              }}
-            >
-              Sign in →
-            </Link>
-          </div>
-        </div>
-      </div>
+      </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section style={{
@@ -215,7 +104,7 @@ export function LandingPage() {
           maxWidth: 500, margin: '0 0 36px',
         }}>
           Simulate real-world reactions across 5 tech communities — grounded in signals
-          from GitHub, arXiv, and Hacker News.
+          from GitHub, arXiv, Semantic Scholar, Hacker News, Reddit, Product Hunt, and more.
         </p>
 
         <div className="landing-hero-cta" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 52 }}>
@@ -233,18 +122,19 @@ export function LandingPage() {
           >
             Get Started →
           </Link>
-          <a href="#how-it-works" style={{
+          <a href="https://github.com/TaeyoungPark1005/Noosphere" target="_blank" rel="noopener noreferrer" style={{
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 13, color: '#64748b',
             padding: '11px 26px', borderRadius: 9,
             border: '1.5px solid #e2e8f0', textDecoration: 'none',
             transition: 'border-color 0.15s, color 0.15s',
-            display: 'inline-block',
+            display: 'inline-flex', alignItems: 'center', gap: 7,
           }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#1e293b' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b' }}
           >
-            See how it works ↓
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            GitHub
           </a>
         </div>
 
