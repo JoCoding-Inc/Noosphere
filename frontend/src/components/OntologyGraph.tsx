@@ -399,7 +399,11 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
       fg.d3Force('collide', forceCollide(28))
       fg.d3ReheatSimulation()
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      fg.d3Force('cluster', null)
+      fg.d3Force('collide', null)
+    }
   }, [graphData, compOf])
 
   // Nodes/edges connected to the selected entity
@@ -604,7 +608,11 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
       fg.d3Force('collide', forceCollide(50))
       fg.d3ReheatSimulation()
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      fg.d3Force('cluster', null)
+      fg.d3Force('collide', null)
+    }
   }, [graphData, compOf])
 
   const handleEngineStop = useCallback(() => {

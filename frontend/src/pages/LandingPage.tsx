@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { AppLogo } from '../components/AppLogo'
 import { LandingDemoWindow } from '../components/LandingDemoWindow'
 
 const SIMULATION_PLATFORMS = [
@@ -46,14 +47,7 @@ export function LandingPage() {
           borderBottom: '1px solid #e2e8f0',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{
-              width: 26, height: 26, borderRadius: 7,
-              background: 'linear-gradient(135deg, #6355e0, #8070ff)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(99,85,224,0.28)',
-            }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.85)' }} />
-            </div>
+            <AppLogo />
             <span style={{
               fontFamily: "'IBM Plex Mono', monospace",
               fontSize: 13, fontWeight: 500, color: '#1e293b',
