@@ -5,7 +5,7 @@ export type Platform =
   | 'reddit_startups'
   | 'linkedin'
 
-export type Provider = 'openai' | 'anthropic' | 'gemini'
+export type Provider = 'openai'
 
 export interface SimConfig {
   input_text: string

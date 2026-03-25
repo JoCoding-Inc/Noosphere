@@ -3,14 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/Header'
 import { startSimulation } from '../api'
 import { PLATFORM_OPTIONS } from '../constants'
-import type { Platform, Provider, SimConfig } from '../types'
-
-const PROVIDER_OPTIONS: Array<{ id: Provider; label: string; description: string; disabled?: boolean }> = [
-  { id: 'openai',    label: 'GPT',    description: 'OpenAI GPT-5.4' },
-  { id: 'anthropic', label: 'Claude', description: 'Coming Soon', disabled: true },
-  { id: 'gemini',    label: 'Gemini', description: 'Coming Soon', disabled: true },
-]
-
+import type { Platform, SimConfig } from '../types'
 
 const LANGUAGE_OPTIONS = [
   { value: 'English',    label: 'English' },
@@ -383,41 +376,6 @@ export function HomePage() {
               )}
             </div>
           )}
-        </div>
-
-        {/* Provider selector */}
-        <div style={{ marginTop: 20, animation: 'fadeInUp 0.55s ease both' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 10 }}>
-            AI Provider
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {PROVIDER_OPTIONS.map(p => {
-              const active = config.provider === p.id
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => !p.disabled && setConfig(c => ({ ...c, provider: p.id }))}
-                  className={p.disabled ? '' : 'platform-btn'}
-                  title={p.description}
-                  disabled={p.disabled}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 16px', fontSize: 13, borderRadius: 8,
-                    cursor: p.disabled ? 'not-allowed' : 'pointer',
-                    border: '1.5px solid',
-                    background: p.disabled ? '#f8fafc' : active ? '#1e293b' : '#fff',
-                    color: p.disabled ? '#cbd5e1' : active ? '#fff' : '#475569',
-                    borderColor: p.disabled ? '#e2e8f0' : active ? '#1e293b' : '#e2e8f0',
-                    fontWeight: active ? 600 : 400,
-                    boxShadow: active ? '0 2px 8px rgba(30,41,59,0.25)' : 'none',
-                    opacity: p.disabled ? 0.6 : 1,
-                  }}>
-                  {p.label}
-                  {p.disabled && <span style={{ fontSize: 10, marginLeft: 4, color: '#94a3b8' }}>Soon</span>}
-                </button>
-              )
-            })}
-          </div>
         </div>
 
         {error && (
