@@ -260,7 +260,8 @@ async def decide_action(
         f"{feed_text}\n\n"
         f"Choose one action from {allowed}. "
         f"For vote/react actions, pick a target_post_id from the feed. "
-        f"For new content, target_post_id can be null (new top-level) or a post id (reply)."
+        f"For new content, target_post_id can be null (new top-level) or a post id (reply). "
+        f"If you see a comment you strongly agree or disagree with, reply to that comment's ID directly."
     )
     try:
         response = await llm.complete(
@@ -318,7 +319,9 @@ async def generate_content(
         f"Someone else's idea being discussed: {idea_text}\n\n"
         + (f"Your domain knowledge:\n{prior_knowledge}\n\n" if prior_knowledge else "")
         + f"{feed_text}\n\n"
-        f"Write your {action.action_type} in {language}. Be authentic to your persona and the platform style. Do NOT claim to be the founder or creator of this idea."
+        f"Write your {action.action_type} in {language}. Be authentic to your persona and the platform style. Do NOT claim to be the founder or creator of this idea. "
+        f"If replying to a comment, directly address what that person said — agree, push back, or add nuance. "
+        f"Even when posting independently, you may reference or react to opinions already visible in the feed."
     )
     try:
         response = await llm.complete(

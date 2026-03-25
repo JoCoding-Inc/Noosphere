@@ -85,9 +85,17 @@ class AbstractPlatform:
                     f"  [COMMENT id={c.id}] {c.author_name} (+{c.upvotes})\n"
                     f"  {c.content[:150]}"
                 )
-        # Limit targetable IDs to prevent token explosion in later rounds
-        targetable_ids = [p.id for p in top_level_sorted]
-        lines.append("\n[Available post IDs for targeting]: " + ", ".join(targetable_ids))
+        # Include comment IDs so agents can reply to specific comments
+        comment_ids = [
+            c.id
+            for post in top_level_sorted
+            for c in sorted(
+                [p for p in state.posts if p.parent_id == post.id],
+                key=lambda p: -p.upvotes,
+            )[:top_comments_per_post]
+        ]
+        targetable_ids = [p.id for p in top_level_sorted] + comment_ids
+        lines.append("\n[Available post/comment IDs for targeting]: " + ", ".join(targetable_ids))
         return "\n".join(lines)
 
     def update_vote_counts(

@@ -6,6 +6,33 @@ interface Props { posts: SocialPost[] }
 export function RedditUI({ posts }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
+  function renderReplies(parentId: string, depth: number, baseDelay: number) {
+    const replies = getReplies(parentId)
+    if (replies.length === 0) return null
+    return replies.map((reply, ri) => (
+      <div key={reply.id} className="post-item" style={{
+        borderLeft: '2px solid #edeff1',
+        paddingLeft: 10,
+        marginLeft: Math.min((depth - 1) * 12, 36),
+        marginBottom: 8,
+        animationDelay: `${baseDelay + (ri + 1) * 80}ms`,
+      }}>
+        <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 3 }}>
+          <span style={{ fontWeight: 700, color: '#1c1c1c' }}>
+            u/{reply.author_name.toLowerCase().replace(/\s/g, '_')}
+          </span>
+          {' · '}{reply.upvotes} points
+        </div>
+        <p style={{ margin: '0 0 4px', fontSize: 13, color: '#1c1c1c', lineHeight: 1.5 }}>{reply.content}</p>
+        <div style={{ display: 'flex', gap: 8, fontSize: 11, color: '#878a8c' }}>
+          <span style={{ cursor: 'pointer' }}>▲ {reply.upvotes}</span>
+          <span style={{ cursor: 'pointer' }}>reply</span>
+        </div>
+        {renderReplies(reply.id, depth + 1, baseDelay + (ri + 1) * 80)}
+      </div>
+    ))
+  }
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "IBM Plex Sans", sans-serif' }}>
       {/* Reddit 헤더 */}
@@ -77,27 +104,10 @@ export function RedditUI({ posts }: Props) {
                   </div>
                 </div>
 
-                {/* 댓글 스레드 */}
-                {replies.length > 0 && (
+                {/* 댓글 스레드 (재귀) */}
+                {getReplies(post.id).length > 0 && (
                   <div style={{ borderTop: '1px solid #edeff1', padding: '8px 8px 8px 44px' }}>
-                    {replies.map((reply, ri) => (
-                      <div key={reply.id} className="post-item" style={{
-                        borderLeft: '2px solid #edeff1', paddingLeft: 10, marginBottom: 8,
-                        animationDelay: `${(i * 60) + (ri + 1) * 80}ms`,
-                      }}>
-                        <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 3 }}>
-                          <span style={{ fontWeight: 700, color: '#1c1c1c' }}>
-                            u/{reply.author_name.toLowerCase().replace(/\s/g, '_')}
-                          </span>
-                          {' · '}{reply.upvotes} points
-                        </div>
-                        <p style={{ margin: '0 0 4px', fontSize: 13, color: '#1c1c1c', lineHeight: 1.5 }}>{reply.content}</p>
-                        <div style={{ display: 'flex', gap: 8, fontSize: 11, color: '#878a8c' }}>
-                          <span style={{ cursor: 'pointer' }}>▲ {reply.upvotes}</span>
-                          <span style={{ cursor: 'pointer' }}>reply</span>
-                        </div>
-                      </div>
-                    ))}
+                    {renderReplies(post.id, 1, i * 60)}
                   </div>
                 )}
               </div>

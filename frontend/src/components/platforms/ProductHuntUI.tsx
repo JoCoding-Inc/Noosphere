@@ -6,6 +6,33 @@ interface Props { posts: SocialPost[]; idea?: string }
 export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
+  function renderReplies(parentId: string, depth: number, baseDelay: number) {
+    const replies = getReplies(parentId)
+    if (replies.length === 0) return null
+    return replies.map((reply, ri) => (
+      <div key={reply.id} className="post-item" style={{
+        marginLeft: Math.min(depth * 16, 48), marginTop: 6,
+        background: depth % 2 === 1 ? '#fafafa' : '#f5f5f5',
+        border: '1px solid #efefef', borderRadius: 8, padding: '10px 14px',
+        animationDelay: `${baseDelay + (ri + 1) * 80}ms`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: '50%',
+            background: `hsl(${(reply.author_name.charCodeAt(0) * 53) % 360}, 55%, 60%)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0,
+          }}>
+            {reply.author_name[0].toUpperCase()}
+          </div>
+          <span style={{ fontWeight: 600, fontSize: 12, color: '#1a1a1a' }}>{reply.author_name}</span>
+        </div>
+        <p style={{ margin: 0, fontSize: 13, color: '#444', lineHeight: 1.5 }}>{reply.content}</p>
+        {renderReplies(reply.id, depth + 1, baseDelay + (ri + 1) * 80)}
+      </div>
+    ))
+  }
+
   const totalUpvotes = posts.reduce((s, p) => s + p.upvotes, 0) + 128
 
   return (
@@ -95,28 +122,8 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
                 </div>
               </div>
 
-              {/* 답글 */}
-              {replies.map((reply, ri) => (
-                <div key={reply.id} className="post-item" style={{
-                  marginLeft: 24, marginTop: 6,
-                  background: '#fafafa', border: '1px solid #efefef',
-                  borderRadius: 8, padding: '10px 14px',
-                  animationDelay: `${(i * 60) + (ri + 1) * 80}ms`,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <div style={{
-                      width: 22, height: 22, borderRadius: '50%',
-                      background: `hsl(${(reply.author_name.charCodeAt(0) * 53) % 360}, 55%, 60%)`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0,
-                    }}>
-                      {reply.author_name[0].toUpperCase()}
-                    </div>
-                    <span style={{ fontWeight: 600, fontSize: 12, color: '#1a1a1a' }}>{reply.author_name}</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: '#444', lineHeight: 1.5 }}>{reply.content}</p>
-                </div>
-              ))}
+              {/* 답글 (재귀) */}
+              {renderReplies(post.id, 1, i * 60)}
             </div>
           )
         })}

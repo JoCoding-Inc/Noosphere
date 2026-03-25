@@ -6,6 +6,25 @@ interface Props { posts: SocialPost[] }
 export function HackerNewsUI({ posts }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
+  function renderReplies(parentId: string, depth: number, baseDelay: number) {
+    const replies = getReplies(parentId)
+    if (replies.length === 0) return null
+    return replies.map((reply, ri) => (
+      <div key={reply.id} className="post-item" style={{
+        marginLeft: Math.min(depth * 20, 80), marginTop: 6, paddingLeft: 8,
+        borderLeft: '2px solid #e4e4d8',
+        animationDelay: `${baseDelay + (ri + 1) * 80}ms`,
+      }}>
+        <div style={{ color: '#828282', fontSize: 11, marginBottom: 3 }}>
+          <span style={{ color: '#828282', textDecoration: 'underline', cursor: 'pointer' }}>{reply.author_name}</span>
+          {' '}· {reply.upvotes} points
+        </div>
+        <div style={{ color: '#2a2a2a', lineHeight: 1.5, fontSize: 13 }}>{reply.content}</div>
+        {renderReplies(reply.id, depth + 1, baseDelay + (ri + 1) * 80)}
+      </div>
+    ))
+  }
+
   return (
     <div style={{ fontFamily: 'Verdana, Geneva, sans-serif', fontSize: 13 }}>
       {/* HN 헤더 */}
@@ -46,20 +65,10 @@ export function HackerNewsUI({ posts }: Props) {
                 </div>
               </div>
 
-              {/* 댓글 */}
-              {replies.map((reply, ri) => (
-                <div key={reply.id} className="post-item" style={{
-                  marginLeft: 36, marginTop: 6, paddingLeft: 8,
-                  borderLeft: '2px solid #e4e4d8',
-                  animationDelay: `${(i * 60) + (ri + 1) * 80}ms`,
-                }}>
-                  <div style={{ color: '#828282', fontSize: 11, marginBottom: 3 }}>
-                    <span style={{ color: '#828282', textDecoration: 'underline', cursor: 'pointer' }}>{reply.author_name}</span>
-                    {' '}· {reply.upvotes} points
-                  </div>
-                  <div style={{ color: '#2a2a2a', lineHeight: 1.5, fontSize: 13 }}>{reply.content}</div>
-                </div>
-              ))}
+              {/* 댓글 (재귀) */}
+              <div style={{ marginLeft: 16 }}>
+                {renderReplies(post.id, 1, i * 60)}
+              </div>
             </div>
           )
         })}

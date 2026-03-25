@@ -6,6 +6,37 @@ interface Props { posts: SocialPost[] }
 export function IndieHackersUI({ posts }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
+  function renderReplies(parentId: string, depth: number, baseDelay: number) {
+    const replies = getReplies(parentId)
+    if (replies.length === 0) return null
+    return replies.map((reply, ri) => (
+      <div key={reply.id} className="post-item" style={{
+        borderTop: depth === 1 ? '1px solid #f0f0f0' : 'none',
+        padding: `10px 16px 10px ${16 + depth * 16}px`,
+        background: depth % 2 === 1 ? '#fafbfc' : '#f5f6f8',
+        animationDelay: `${baseDelay + (ri + 1) * 80}ms`,
+      }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <div style={{
+            width: Math.max(26 - depth * 2, 20), height: Math.max(26 - depth * 2, 20),
+            borderRadius: '50%',
+            background: `hsl(${(reply.author_name.charCodeAt(0) * 59) % 360}, 50%, 65%)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
+          }}>
+            {reply.author_name[0].toUpperCase()}
+          </div>
+          <div style={{ flex: 1 }}>
+            <span style={{ fontWeight: 600, fontSize: 13, color: '#1f2d3d' }}>{reply.author_name}</span>
+            <span style={{ fontSize: 11, color: '#8492a6', marginLeft: 6 }}>· just now</span>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#3d4852', lineHeight: 1.6 }}>{reply.content}</p>
+          </div>
+        </div>
+        {renderReplies(reply.id, depth + 1, baseDelay + (ri + 1) * 80)}
+      </div>
+    ))
+  }
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       {/* IH 헤더 */}
@@ -68,31 +99,8 @@ export function IndieHackersUI({ posts }: Props) {
                 </div>
               </div>
 
-              {/* 댓글 */}
-              {replies.map((reply, ri) => (
-                <div key={reply.id} className="post-item" style={{
-                  borderTop: '1px solid #f0f0f0',
-                  padding: '10px 16px 10px 32px',
-                  background: '#fafbfc',
-                  animationDelay: `${(i * 60) + (ri + 1) * 80}ms`,
-                }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: 26, height: 26, borderRadius: '50%',
-                      background: `hsl(${(reply.author_name.charCodeAt(0) * 59) % 360}, 50%, 65%)`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
-                    }}>
-                      {reply.author_name[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: 600, fontSize: 13, color: '#1f2d3d' }}>{reply.author_name}</span>
-                      <span style={{ fontSize: 11, color: '#8492a6', marginLeft: 6 }}>· just now</span>
-                      <p style={{ margin: '4px 0 0', fontSize: 13, color: '#3d4852', lineHeight: 1.6 }}>{reply.content}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {/* 댓글 (재귀) */}
+              {renderReplies(post.id, 1, i * 60)}
             </div>
           )
         })}

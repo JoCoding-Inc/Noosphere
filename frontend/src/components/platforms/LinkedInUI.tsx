@@ -8,6 +8,39 @@ const REACTIONS = ['👍', '❤️', '🙌', '💡', '🤔']
 export function LinkedInUI({ posts }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
+  function renderReplies(parentId: string, depth: number, baseDelay: number) {
+    const replies = getReplies(parentId)
+    if (replies.length === 0) return null
+    return replies.map((reply, ri) => (
+      <div key={reply.id} className="post-item" style={{
+        borderTop: '1px solid rgba(0,0,0,0.06)',
+        padding: `10px 16px 10px ${16 + depth * 20}px`,
+        display: 'flex', gap: 8,
+        animationDelay: `${baseDelay + (ri + 1) * 80}ms`,
+      }}>
+        <div style={{
+          width: Math.max(32 - depth * 4, 24), height: Math.max(32 - depth * 4, 24),
+          borderRadius: '50%', flexShrink: 0,
+          background: `linear-gradient(135deg, hsl(${(reply.author_name.charCodeAt(0) * 53) % 360}, 50%, 60%), hsl(${(reply.author_name.charCodeAt(0) * 53 + 60) % 360}, 50%, 50%))`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 700, color: '#fff',
+        }}>
+          {reply.author_name[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            background: depth % 2 === 1 ? '#f2f2f2' : '#e8e8e8',
+            borderRadius: '0 8px 8px 8px', padding: '8px 12px',
+          }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: 'rgba(0,0,0,0.9)', marginBottom: 3 }}>{reply.author_name}</div>
+            <p style={{ margin: 0, fontSize: 13, color: 'rgba(0,0,0,0.8)', lineHeight: 1.5 }}>{reply.content}</p>
+          </div>
+          {renderReplies(reply.id, depth + 1, baseDelay + (ri + 1) * 80)}
+        </div>
+      </div>
+    ))
+  }
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f3f2ef', padding: '0', borderRadius: 8 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -83,31 +116,8 @@ export function LinkedInUI({ posts }: Props) {
                 ))}
               </div>
 
-              {/* 댓글 */}
-              {replies.map((reply, ri) => (
-                <div key={reply.id} className="post-item" style={{
-                  borderTop: '1px solid rgba(0,0,0,0.06)',
-                  padding: '10px 16px',
-                  display: 'flex', gap: 8,
-                  animationDelay: `${(i * 60) + (ri + 1) * 80}ms`,
-                }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: `linear-gradient(135deg, hsl(${(reply.author_name.charCodeAt(0) * 53) % 360}, 50%, 60%), hsl(${(reply.author_name.charCodeAt(0) * 53 + 60) % 360}, 50%, 50%))`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, fontWeight: 700, color: '#fff',
-                  }}>
-                    {reply.author_name[0].toUpperCase()}
-                  </div>
-                  <div style={{
-                    background: '#f2f2f2', borderRadius: '0 8px 8px 8px',
-                    padding: '8px 12px', flex: 1,
-                  }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: 'rgba(0,0,0,0.9)', marginBottom: 3 }}>{reply.author_name}</div>
-                    <p style={{ margin: 0, fontSize: 13, color: 'rgba(0,0,0,0.8)', lineHeight: 1.5 }}>{reply.content}</p>
-                  </div>
-                </div>
-              ))}
+              {/* 댓글 (재귀) */}
+              {renderReplies(post.id, 1, i * 60)}
             </div>
           )
         })}
