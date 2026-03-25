@@ -45,12 +45,13 @@ Vous décrivez votre produit. Noosphere crée des centaines de personas IA (dév
 ## Fonctionnalités
 
 - Simulation multi-plateformes : Hacker News, Product Hunt, Reddit Startups, LinkedIn, IndieHackers
-- Support multi-LLM : Anthropic Claude, OpenAI GPT, Google Gemini
+- Intégration OpenAI GPT
 - Streaming en temps réel via Server-Sent Events (SSE)
 - Simulations reprises grâce aux checkpoints
 - Extraction de graphe de connaissance / ontologie
 - Export de rapport PDF
 - Historique complet des simulations
+- Interface responsive mobile
 - Déploiement Docker
 
 ---
@@ -61,7 +62,7 @@ Vous décrivez votre produit. Noosphere crée des centaines de personas IA (dév
 - Python 3.11+, FastAPI, uvicorn
 - Celery + Redis (file de tâches asynchrones)
 - SQLite (persistance)
-- Anthropic, OpenAI, Google Generative AI SDKs
+- OpenAI SDK
 - Typst (génération PDF)
 
 **Frontend**
@@ -78,7 +79,7 @@ Vous décrivez votre produit. Noosphere crée des centaines de personas IA (dév
 
 - Docker & Docker Compose (recommandé), **ou** Python 3.11+ et Node.js 20+
 - Redis (en développement local sans Docker)
-- Au moins une clé API LLM : Anthropic, OpenAI ou Google Gemini
+- Clé API OpenAI requise
 
 ---
 
@@ -88,24 +89,12 @@ Vous décrivez votre produit. Noosphere crée des centaines de personas IA (dév
 cp .env.example .env
 ```
 
-### Clés API LLM (au moins une obligatoire)
-
-**`ANTHROPIC_API_KEY`**
-Clé API Claude d'Anthropic.
-- Inscrivez-vous sur : https://console.anthropic.com
-- Allez dans **API Keys** → **Create Key**
-- Utilisée comme fournisseur LLM principal pour la génération de personas et les tours de discussion.
+### Clé API LLM (obligatoire)
 
 **`OPENAI_API_KEY`**
 Clé API OpenAI.
 - Inscrivez-vous sur : https://platform.openai.com
 - Allez dans **API keys** → **Create new secret key**
-- Utilisée comme fournisseur LLM alternatif/fallback.
-
-**`GEMINI_API_KEY`**
-Clé API Google Gemini.
-- Obtenez votre clé sur : https://aistudio.google.com/app/apikey
-- Utilisée comme fournisseur LLM alternatif/fallback.
 
 ---
 
@@ -159,10 +148,8 @@ Avec Docker Compose : `redis://redis:6379/0`
 **`OPENAI_RPM`** — Requêtes par minute OpenAI. Par défaut : `500`
 **`OPENAI_RPM_SAFETY`** — Facteur de marge de sécurité (0–1). Par défaut : `0.80`
 **`OPENAI_TPM`** — Tokens par minute OpenAI. Par défaut : `100000`
-**`ANTHROPIC_TPM`** — Tokens par minute Anthropic. Par défaut : `40000`
-**`GEMINI_TPM`** — Tokens par minute Gemini. Par défaut : `250000`
 
-Consultez les limites réelles dans le tableau de bord de chaque fournisseur et ajustez en conséquence.
+Consultez les limites réelles dans le tableau de bord OpenAI et ajustez en conséquence.
 
 ---
 
@@ -178,8 +165,8 @@ URL de base du backend. Par défaut : `http://localhost:8000`
 ### Option A : Docker Compose (recommandé)
 
 ```bash
-git clone https://github.com/your-username/noosphere.git
-cd noosphere
+git clone https://github.com/TaeyoungPark1005/Noosphere.git
+cd Noosphere
 cp .env.example .env
 # Éditez .env avec vos clés API
 
@@ -221,7 +208,7 @@ npm run dev
 
 1. Ouvrez http://localhost:5173 dans votre navigateur
 2. Saisissez la description de votre produit sur la page d'accueil
-3. Choisissez le nombre de tours de simulation et les plateformes cibles
+3. Choisissez le nombre de tours, les plateformes cibles et le fournisseur LLM
 4. Observez la simulation en temps réel
 5. Consultez le rapport structuré et exportez-le en PDF
 6. Retrouvez vos simulations passées dans la page Historique
@@ -232,12 +219,13 @@ npm run dev
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
+| GET | `/health` | Vérification de l'état du service |
 | POST | `/simulate` | Démarrer une nouvelle simulation |
-| GET | `/simulate-stream/{id}` | Flux SSE en temps réel |
-| GET | `/results/{id}` | Récupérer les résultats |
+| GET | `/simulate-stream/{sim_id}` | Flux SSE en temps réel |
+| GET | `/results/{sim_id}` | Récupérer les résultats |
 | GET | `/history` | Lister toutes les simulations |
-| GET | `/export/{id}` | Télécharger le rapport PDF |
-| POST | `/simulate/{id}/cancel` | Annuler une simulation en cours |
-| POST | `/simulate/{id}/resume` | Reprendre une simulation en pause |
-| DELETE | `/simulate/{id}` | Supprimer une simulation |
-| GET | `/simulate/{id}/status` | Consulter le statut |
+| GET | `/export/{sim_id}` | Télécharger le rapport PDF |
+| POST | `/simulate/{sim_id}/cancel` | Annuler une simulation en cours |
+| POST | `/simulate/{sim_id}/resume` | Reprendre une simulation en pause |
+| DELETE | `/simulate/{sim_id}` | Supprimer une simulation |
+| GET | `/simulate/{sim_id}/status` | Consulter le statut |

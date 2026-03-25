@@ -44,12 +44,13 @@ You describe your product. Noosphere spins up hundreds of AI personas — develo
 ## Features
 
 - Multi-platform simulation: Hacker News, Product Hunt, Reddit Startups, LinkedIn, IndieHackers
-- Multi-provider LLM support: Anthropic Claude, OpenAI GPT, Google Gemini
+- OpenAI GPT integration
 - Real-time streaming progress via Server-Sent Events (SSE)
 - Resumable simulations with checkpointing
 - Knowledge graph / ontology extraction from input
 - PDF report export
 - Full simulation history
+- Mobile-responsive UI
 - Docker-based deployment
 
 ---
@@ -60,7 +61,7 @@ You describe your product. Noosphere spins up hundreds of AI personas — develo
 - Python 3.11+, FastAPI, uvicorn
 - Celery + Redis (async task queue)
 - SQLite (persistence)
-- Anthropic, OpenAI, Google Generative AI SDKs
+- OpenAI SDK
 - Typst (PDF generation)
 
 **Frontend**
@@ -77,7 +78,7 @@ You describe your product. Noosphere spins up hundreds of AI personas — develo
 
 - Docker & Docker Compose (recommended), **or** Python 3.11+ and Node.js 20+
 - Redis (if running locally without Docker)
-- At least one LLM API key: Anthropic, OpenAI, or Google Gemini
+- OpenAI API key required
 
 ---
 
@@ -89,24 +90,12 @@ Copy the template and fill in your keys:
 cp .env.example .env
 ```
 
-### LLM API Keys (at least one required)
-
-**`ANTHROPIC_API_KEY`**
-Claude API key from Anthropic.
-- Sign up: https://console.anthropic.com
-- Go to **API Keys** → **Create Key**
-- Used as the primary LLM provider for persona generation and discussion rounds.
+### LLM API Key (required)
 
 **`OPENAI_API_KEY`**
 OpenAI API key.
 - Sign up: https://platform.openai.com
 - Go to **API keys** → **Create new secret key**
-- Used as an alternative/fallback LLM provider.
-
-**`GEMINI_API_KEY`**
-Google Gemini API key.
-- Get key: https://aistudio.google.com/app/apikey
-- Used as an alternative/fallback LLM provider.
 
 ---
 
@@ -116,12 +105,10 @@ Google Gemini API key.
 Google Search API via Serper.dev. Enables web search for real-world context.
 - Sign up: https://serper.dev
 - Free tier: 2,500 queries/month
-- Go to **Dashboard** → copy your API key.
 
 **`PRODUCT_HUNT_API_KEY`**
 Product Hunt API for fetching trending products and community data.
 - Apply at: https://api.producthunt.com/v2/docs
-- Go to **Developer Settings** → create an application → copy the API token.
 
 **`SEMANTIC_SCHOLAR_API_KEY`**
 Semantic Scholar Academic API for research paper context.
@@ -175,10 +162,8 @@ These prevent you from exceeding your LLM provider quotas.
 **`OPENAI_RPM`** — OpenAI requests per minute. Default: `500`
 **`OPENAI_RPM_SAFETY`** — Safety margin multiplier (0–1). Default: `0.80`
 **`OPENAI_TPM`** — OpenAI tokens per minute. Default: `100000`
-**`ANTHROPIC_TPM`** — Anthropic tokens per minute. Default: `40000`
-**`GEMINI_TPM`** — Gemini tokens per minute. Default: `250000`
 
-Check your actual limits in each provider's dashboard and adjust accordingly.
+Check your actual limits in the OpenAI dashboard and adjust accordingly.
 
 ---
 
@@ -195,8 +180,8 @@ Set this if your backend runs on a different host or port.
 ### Option A: Docker Compose (Recommended)
 
 ```bash
-git clone https://github.com/your-username/noosphere.git
-cd noosphere
+git clone https://github.com/TaeyoungPark1005/Noosphere.git
+cd Noosphere
 cp .env.example .env
 # Edit .env with your API keys
 
@@ -241,7 +226,7 @@ npm run dev
 
 1. Open http://localhost:5173 in your browser.
 2. Enter a product description on the home page.
-3. Choose the number of simulation rounds and target platforms.
+3. Choose the number of simulation rounds, target platforms, and LLM provider.
 4. Watch the simulation stream in real time.
 5. View the structured report and export it as a PDF.
 6. Access past simulations from the History page.
@@ -250,17 +235,35 @@ npm run dev
 
 ## API Reference
 
+### Endpoints
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/health` | Health check |
 | POST | `/simulate` | Start a new simulation |
-| GET | `/simulate-stream/{id}` | SSE stream for live progress |
-| GET | `/results/{id}` | Fetch completed results |
+| GET | `/simulate-stream/{sim_id}` | SSE stream for live progress |
+| GET | `/results/{sim_id}` | Fetch completed results |
+| GET | `/simulate/{sim_id}/status` | Check simulation status |
+| POST | `/simulate/{sim_id}/resume` | Resume a paused simulation |
+| POST | `/simulate/{sim_id}/cancel` | Cancel a running simulation |
 | GET | `/history` | List all past simulations |
-| GET | `/export/{id}` | Download PDF report |
-| POST | `/simulate/{id}/cancel` | Cancel a running simulation |
-| POST | `/simulate/{id}/resume` | Resume a paused simulation |
-| DELETE | `/simulate/{id}` | Delete a simulation |
-| GET | `/simulate/{id}/status` | Check simulation status |
+| GET | `/export/{sim_id}` | Download PDF report |
+| DELETE | `/simulate/{sim_id}` | Delete a simulation |
+
+### POST `/simulate` — Request Body
+
+```json
+{
+  "input_text": "string (required) — product description",
+  "language": "string — output language, default: \"English\"",
+  "num_rounds": "integer 1–30, default: 8",
+  "max_agents": "integer 1–150, default: 30",
+  "platforms": ["hackernews", "producthunt", "indiehackers", "reddit_startups", "linkedin"],
+  "activation_rate": "float 0.1–1.0, default: 0.25",
+  "provider": "\"openai\", default: \"openai\"",
+  "source_limits": "object — optional per-source rate overrides"
+}
+```
 
 ---
 
