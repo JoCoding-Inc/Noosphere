@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AppLogo } from './AppLogo'
 import { HistorySidebar } from './HistorySidebar'
 
 export function Header() {
@@ -14,16 +13,7 @@ export function Header() {
         borderBottom: '1px solid #e2e8f0',
         background: '#fff',
       }}>
-        <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <AppLogo />
-          <span style={{
-            fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 13, fontWeight: 500,
-            color: '#1e293b', letterSpacing: '0.01em',
-          }}>
-            Noosphere
-          </span>
-        </Link>
+        <Link to="/" style={{ textDecoration: 'none' }} />
 
         <nav style={{ display: 'flex', gap: 4 }}>
           <button
