@@ -96,6 +96,28 @@ export function SimulatePage() {
         </p>
       )}
 
+      {/* 이메일 발송 안내 배너 */}
+      {(sim.status === 'running' || sim.status === 'connecting') &&
+        import.meta.env.VITE_CLERK_PUBLISHABLE_KEY && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: '#f0f9ff', color: '#0284c7',
+          border: '1px solid #bae6fd', borderRadius: 7,
+          fontSize: 12, padding: '8px 14px',
+          margin: '0 0 20px 0',
+          animation: 'fadeIn 0.4s ease',
+        }}>
+          <span style={{ flexShrink: 0 }}>📧</span>
+          <span>
+            We'll send the completed report to your registered email address.
+            {' '}
+            <span style={{ color: '#0369a1', opacity: 0.75 }}>
+              (시뮬레이션이 완료되면 등록된 계정의 이메일로 보고서를 보내드립니다.)
+            </span>
+          </span>
+        </div>
+      )}
+
       {sim.status === 'error' && (
         <div style={{ margin: '8px 0 20px' }}>
           <p style={{ color: '#ef4444', fontSize: 14, margin: '0 0 12px' }}>{sim.errorMsg}</p>

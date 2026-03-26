@@ -396,6 +396,13 @@ export function HomePage() {
           {loading && <span className="spinner" />}
           {loading ? 'Starting...' : 'Run Simulation →'}
         </button>
+
+        {import.meta.env.VITE_CLERK_PUBLISHABLE_KEY && (
+          <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span>📧</span>
+            <span>로그인 상태에서 시뮬레이션을 실행하면 완료 시 이메일로 보고서를 보내드립니다.</span>
+          </div>
+        )}
       </main>
     </div>
   )

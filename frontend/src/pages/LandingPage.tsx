@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { AppLogo } from '../components/AppLogo'
 import { LandingDemoWindow } from '../components/LandingDemoWindow'
 
 const SIMULATION_PLATFORMS = [
@@ -45,7 +46,12 @@ export function LandingPage() {
           background: '#fff',
           borderBottom: '1px solid #e2e8f0',
         }}>
-          <div />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <AppLogo size={24} />
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 500, color: '#1e293b' }}>
+              Noosphere
+            </span>
+          </div>
 
       </nav>
 
