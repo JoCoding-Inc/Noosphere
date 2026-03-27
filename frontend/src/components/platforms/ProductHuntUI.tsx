@@ -42,7 +42,7 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
     ))
   }
 
-  const totalUpvotes = posts.reduce((s, p) => s + p.upvotes, 0) + 128
+  const totalUpvotes = posts.reduce((s, p) => s + p.upvotes, 0)
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
