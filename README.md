@@ -16,8 +16,15 @@ Noosphere generates diverse personas across platforms like Hacker News, Product 
 
 ---
 
+## Demo
+
+[![Noosphere Demo](https://img.youtube.com/vi/WPQOuvVJQXM/maxresdefault.jpg)](https://youtu.be/WPQOuvVJQXM)
+
+---
+
 ## Table of Contents
 
+- [Demo](#demo)
 - [Overview](#overview)
 - [Features](#features)
 - [Tech Stack](#tech-stack)

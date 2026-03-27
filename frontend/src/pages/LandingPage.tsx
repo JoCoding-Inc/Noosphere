@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { AppLogo } from '../components/AppLogo'
-import { LandingDemoWindow } from '../components/LandingDemoWindow'
 
 const SIMULATION_PLATFORMS = [
   'Hacker News', 'Product Hunt', 'Indie Hackers', 'Reddit r/startups', 'LinkedIn',
@@ -129,9 +128,26 @@ export function LandingPage() {
           </a>
         </div>
 
-        {/* Auto-playing walkthrough window */}
-        <div style={{ width: '100%', maxWidth: 900, marginBottom: 48, textAlign: 'left' }}>
-          <LandingDemoWindow />
+        {/* Demo video */}
+        <div style={{ width: '100%', maxWidth: 900, marginBottom: 48 }}>
+          <div style={{
+            position: 'relative', paddingBottom: '56.25%', height: 0,
+            borderRadius: 14, overflow: 'hidden',
+            boxShadow: '0 4px 32px rgba(15,23,42,0.10)',
+            border: '1px solid #e2e8f0',
+          }}>
+            <iframe
+              src="https://www.youtube.com/embed/WPQOuvVJQXM?autoplay=0&rel=0&modestbranding=1"
+              title="Noosphere Demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: '100%',
+                border: 'none',
+              }}
+            />
+          </div>
         </div>
       </section>
 
