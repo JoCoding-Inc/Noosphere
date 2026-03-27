@@ -336,6 +336,8 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
   )
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set())
   const graphRef = useRef<OntologyGraphHandle | undefined>(undefined)
+  const prevNodeIdsRef = useRef<Set<string>>(new Set())
+  const pendingNewIdsRef = useRef<string[]>([])
 
   const entityMap = useMemo(
     () => new Map(data.entities.map(e => [e.id, e])),
@@ -347,8 +349,22 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
   }, [autoSelectId, entityMap])
 
   const handleEngineStop = useCallback(() => {
-    graphRef.current?.zoomToFit(400, 24)
-  }, [])
+    const fg = graphRef.current
+    if (!fg) return
+    const newIds = pendingNewIdsRef.current
+    pendingNewIdsRef.current = []
+    if (newIds.length === 0) {
+      fg.zoomToFit(400, 24)
+      return
+    }
+    const newNodeSet = new Set(newIds)
+    const positioned = (graphData.nodes as Array<{ id: string; x?: number; y?: number }>)
+      .filter(n => newNodeSet.has(n.id) && n.x != null && n.y != null)
+    if (positioned.length === 0) { fg.zoomToFit(400, 24); return }
+    const cx = positioned.reduce((s, n) => s + n.x!, 0) / positioned.length
+    const cy = positioned.reduce((s, n) => s + n.y!, 0) / positioned.length
+    fg.centerAt(cx, cy, 400)
+  }, [graphData])
 
   const graphNodes = useMemo<GraphNode[]>(() =>
     data.entities
@@ -375,6 +391,13 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
     graphData.nodeIds,
     graphData.edgePairs
   ), [graphData])
+
+  useEffect(() => {
+    const prev = prevNodeIdsRef.current
+    const newIds = graphData.nodes.filter(n => !prev.has(n.id)).map(n => n.id)
+    pendingNewIdsRef.current = newIds
+    prevNodeIdsRef.current = new Set(graphData.nodes.map(n => n.id))
+  }, [graphData])
 
   useEffect(() => {
     const fg = graphRef.current
@@ -478,7 +501,7 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
           nodeId="id"
           nodeLabel={(node: unknown) => isGraphNode(node) ? `${node.name} · ${node.type}` : ''}
           nodeColor={(node: unknown) => isGraphNode(node) ? getNodeColor(node) : '#94a3b8'}
-          nodeRelSize={6}
+          nodeRelSize={9}
           linkColor={(link: unknown) => isGraphLink(link) ? getLinkColor(link) : '#cbd5e1'}
           linkWidth={2}
           linkCurvature={0.25}
@@ -583,11 +606,20 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
   }, [graphNodes, data.edges])
 
   const graphRef = useRef<ContextGraphHandle | undefined>(undefined)
+  const prevNodeIdsRef = useRef<Set<string>>(new Set())
+  const pendingNewIdsRef = useRef<string[]>([])
 
   const compOf = useMemo(() => buildComponentMap(
     graphData.nodeIds,
     graphData.edgePairs
   ), [graphData])
+
+  useEffect(() => {
+    const prev = prevNodeIdsRef.current
+    const newIds = graphData.nodes.filter(n => !prev.has(n.id)).map(n => n.id)
+    pendingNewIdsRef.current = newIds
+    prevNodeIdsRef.current = new Set(graphData.nodes.map(n => n.id))
+  }, [graphData])
 
   useEffect(() => {
     const fg = graphRef.current
@@ -613,8 +645,22 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
   }, [graphData])
 
   const handleEngineStop = useCallback(() => {
-    graphRef.current?.zoomToFit(400, 24)
-  }, [])
+    const fg = graphRef.current
+    if (!fg) return
+    const newIds = pendingNewIdsRef.current
+    pendingNewIdsRef.current = []
+    if (newIds.length === 0) {
+      fg.zoomToFit(400, 24)
+      return
+    }
+    const newNodeSet = new Set(newIds)
+    const positioned = (graphData.nodes as Array<{ id: string; x?: number; y?: number }>)
+      .filter(n => newNodeSet.has(n.id) && n.x != null && n.y != null)
+    if (positioned.length === 0) { fg.zoomToFit(400, 24); return }
+    const cx = positioned.reduce((s, n) => s + n.x!, 0) / positioned.length
+    const cy = positioned.reduce((s, n) => s + n.y!, 0) / positioned.length
+    fg.centerAt(cx, cy, 400)
+  }, [graphData])
 
   const handleNodeClick = useCallback((node: ContextRenderNode) => {
     if (node.url) window.open(node.url, '_blank', 'noreferrer')
@@ -694,7 +740,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
         nodeId="id"
         nodeLabel={(node: unknown) => isContextRenderNode(node) ? `${node.title}\n${node.source}` : ''}
         nodeColor={(node: unknown) => isContextRenderNode(node) ? node.color : '#94a3b8'}
-        nodeRelSize={5}
+        nodeRelSize={7}
         linkColor={(link: unknown) => isContextRenderLink(link) ? getLinkColor(link) : 'rgba(148,163,184,0.3)'}
         linkWidth={(link: unknown) => isContextRenderLink(link) ? getLinkWidth(link) : 1}
         linkCurvature={0.25}
