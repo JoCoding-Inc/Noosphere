@@ -444,16 +444,28 @@ async def platform_round(
         persona_history = [p for p in state.posts if p.author_node_id == persona.node_id]
         action = await decide_action(persona, platform, feed_text, language)
 
-        # Always generate content — votes/reactions are optional, but writing is mandatory
+        # If the agent chose a vote/reaction action, apply it first
+        if not platform.requires_content(action.action_type) and action.target_post_id:
+            updated = platform.update_vote_counts(state, action.target_post_id, action.action_type)
+            round_stats["new_votes"] += 1
+            yield {
+                "type": "sim_platform_reaction",
+                "platform": platform.name,
+                "post_id": action.target_post_id,
+                "reaction_type": action.action_type,
+                "actor_name": persona.name,
+                "new_upvotes": updated.upvotes if updated else 0,
+                "new_downvotes": updated.downvotes if updated else 0,
+            }
+
+        # Always also generate a content post/comment
         allowed = platform.get_allowed_actions(persona)
         content_actions = [a for a in allowed if platform.requires_content(a)]
-        if not platform.requires_content(action.action_type) and content_actions:
-            # Override to content action; preserve target_post_id for reply context
-            action = AgentAction(action_type=content_actions[0], target_post_id=action.target_post_id)
-
         if content_actions:
+            content_action = action if platform.requires_content(action.action_type) else \
+                AgentAction(action_type=content_actions[0], target_post_id=action.target_post_id)
             content, structured_data = await generate_content(
-                persona, action, platform, feed_text, idea_text, language,
+                persona, content_action, platform, feed_text, idea_text, language,
                 cluster_docs_map=cluster_docs_map,
                 persona_history=persona_history or None,
             )
@@ -463,33 +475,19 @@ async def platform_round(
                 author_node_id=persona.node_id,
                 author_name=persona.name,
                 content=content,
-                action_type=action.action_type,
+                action_type=content_action.action_type,
                 round_num=round_num,
-                parent_id=action.target_post_id,
+                parent_id=content_action.target_post_id,
                 structured_data=structured_data,
             )
             state.add_post(post)
             state.recent_speakers[persona.node_id] = round_num
-            if action.target_post_id:
+            if content_action.target_post_id:
                 round_stats["new_comments"] += 1
             else:
                 round_stats["new_posts"] += 1
             yield {"type": "sim_platform_post", "platform": platform.name,
                    "post": dataclasses.asdict(post)}
-        else:
-            # Platform has no content actions (e.g., vote-only platform) — fall back to reaction
-            target_id = action.target_post_id or f"__seed__{platform.name}"
-            updated = platform.update_vote_counts(state, target_id, action.action_type)
-            round_stats["new_votes"] += 1
-            yield {
-                "type": "sim_platform_reaction",
-                "platform": platform.name,
-                "post_id": target_id,
-                "reaction_type": action.action_type,
-                "actor_name": persona.name,
-                "new_upvotes": updated.upvotes if updated else 0,
-                "new_downvotes": updated.downvotes if updated else 0,
-            }
 
     yield {
         "type": "__platform_round_done__",
