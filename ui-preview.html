@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noosphere — UI Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --primary-light: #eef2ff;
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background: #1a1d27;
+    border-bottom: 1px solid #2a2d3a;
+    height: 48px;
+    flex-shrink: 0;
+  }
+  .topbar-logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #64748b;
+    margin-right: 20px;
+    letter-spacing: 0.05em;
+  }
+  .topbar-logo span { color: #6366f1; }
+  .tab-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 16px; height: 48px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 400;
+    color: #64748b;
+    background: none; border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: #e2e8f0; }
+  .tab-btn.active { color: #e2e8f0; border-bottom-color: #6366f1; font-weight: 500; }
+  .tab-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Preview area */
+  .preview-wrap { flex: 1; overflow: hidden; }
+  .screen { display: none; width: 100%; height: 100%; }
+  .screen.active { display: block; }
+  .screen-inner {
+    width: 100%; height: 100%;
+    overflow-y: auto;
+    background: #f8fafc;
+  }
+
+  /* Shared app styles */
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 28px;
+    border-bottom: 1px solid #e2e8f0;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .app-logo { display: flex; align-items: center; gap: 9px; }
+  .logo-mark {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+  }
+  .logo-name { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; color: #1e293b; }
+  .nav-btn {
+    background: none; border: none; cursor: pointer;
+    color: #94a3b8; font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    font-family: 'DM Sans', sans-serif; transition: color 0.15s, background 0.15s;
+  }
+  .nav-btn:hover { background: #f8fafc; color: #1e293b; }
+
+  /* Cards */
+  .card {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 12px; padding: 20px 24px;
+    box-shadow: var(--shadow-card);
+  }
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #94a3b8; margin-bottom: 14px;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; font-size: 15px; font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff; border: none; border-radius: 10px; cursor: pointer;
+    box-shadow: 0 2px 12px rgba(99,102,241,0.35);
+    font-family: 'DM Sans', sans-serif; letter-spacing: -0.01em;
+  }
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 11px 26px; font-size: 13px; color: #64748b;
+    border: 1.5px solid #e2e8f0; border-radius: 9px;
+    background: none; text-decoration: none; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-outline:hover { border-color: #cbd5e1; color: #1e293b; }
+
+  /* Platform pill */
+  .platform-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; font-size: 13px; border-radius: 8px;
+    cursor: pointer; border: 1.5px solid; font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .platform-pill.active {
+    background: var(--primary); color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+    font-weight: 600;
+  }
+  .platform-pill.inactive {
+    background: #fff; color: #475569; border-color: #e2e8f0;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">noosphere / <span>ui-preview</span></div>
+  <button class="tab-btn active" onclick="switchTab(this,'landing')">
+    <span class="tab-dot" style="background:#6366f1"></span>Landing
+  </button>
+  <button class="tab-btn" onclick="switchTab(this,'home')">
+    <span class="tab-dot" style="background:#22c55e"></span>Home (입력)
+  </button>
+  <button class="tab-btn" onclick="switchTab(this,'simulate')">
+    <span class="tab-dot" style="background:#f59e0b"></span>Simulate (진행 중)
+  </button>
+  <button class="tab-btn" onclick="switchTab(this,'result')">
+    <span class="tab-dot" style="background:#ef4444"></span>Result (결과)
+  </button>
+</div>
+
+<div class="preview-wrap">
+  <div class="screen active" id="screen-landing"><div class="screen-inner" id="content-landing"></div></div>
+  <div class="screen" id="screen-home"><div class="screen-inner" id="content-home"></div></div>
+  <div class="screen" id="screen-simulate"><div class="screen-inner" id="content-simulate"></div></div>
+  <div class="screen" id="screen-result"><div class="screen-inner" id="content-result"></div></div>
+</div>
+
+<script>
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+/* ── Shared header ──────────────────────────────────────── */
+function appHeader() {
+  return `
+    <div class="app-header">
+      <div class="app-logo">
+        <div class="logo-mark"></div>
+        <span class="logo-name">Noosphere</span>
+      </div>
+      <button class="nav-btn">History</button>
+    </div>`;
+}
+
+/* ── LANDING ────────────────────────────────────────────── */
+document.getElementById('content-landing').innerHTML = `
+  <nav style="position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:12px 28px;background:rgba(255,255,255,0.9);border-bottom:1px solid #e2e8f0;backdrop-filter:blur(12px);">
+    <div class="app-logo"><div class="logo-mark"></div><span class="logo-name">Noosphere</span></div>
+  </nav>
+
+  <section style="position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:72px 24px 0;background:#fff;border-bottom:1px solid #f1f5f9;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6366f1,#818cf8,#a5b4fc);"></div>
+
+    <div style="display:inline-flex;align-items:center;gap:7px;padding:4px 14px;border-radius:100px;background:#f1f5f9;border:1px solid #e2e8f0;margin-bottom:22px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:#6355e0;"></div>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;color:#64748b;text-transform:uppercase;">Pre-launch Intelligence</span>
+    </div>
+
+    <h1 style="font-family:'Fraunces',serif;font-size:56px;font-weight:600;line-height:1.12;color:#0f172a;margin:0 0 18px;max-width:680px;letter-spacing:-0.02em;">
+      How will the market react <em style="font-style:italic;font-weight:300;color:#94a3b8;">before</em> you launch?
+    </h1>
+    <p style="font-size:17px;line-height:1.65;color:#64748b;max-width:500px;margin:0 0 36px;">
+      Simulate real-world reactions across 5 tech communities — grounded in signals from GitHub, arXiv, Hacker News, Reddit, Product Hunt, and more.
+    </p>
+
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:52px;">
+      <a href="#" style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:#fff;padding:12px 26px;border-radius:9px;background:var(--primary);text-decoration:none;box-shadow:0 2px 12px rgba(99,102,241,0.3);">Get Started →</a>
+      <a href="#" class="btn-outline">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+    </div>
+
+    <div style="width:100%;max-width:900px;margin-bottom:48px;">
+      <div style="position:relative;padding-bottom:56.25%;height:0;border-radius:14px;overflow:hidden;box-shadow:0 4px 32px rgba(15,23,42,0.10);border:1px solid #e2e8f0;background:#f1f5f9;">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;font-family:'IBM Plex Mono',monospace;">▶ Demo Video</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:860px;margin:0 auto;padding:80px 24px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.18em;color:#94a3b8;text-transform:uppercase;margin-bottom:32px;text-align:center;">How it works</div>
+    <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:flex-start;gap:28px;padding:28px 36px;border-bottom:1px solid #f1f5f9;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#94a3b8;min-width:26px;">01</span>
+        <div style="width:1px;align-self:stretch;background:#f1f5f9;flex-shrink:0;"></div>
+        <div style="min-width:160px;"><span style="font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:#1e293b;">Gather signals</span></div>
+        <p style="font-size:14px;line-height:1.7;color:#64748b;margin:0;padding-top:2px;">Real-world context sourced from GitHub, arXiv, Hacker News, Semantic Scholar, and more — to ground the simulation in truth.</p>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:28px;padding:28px 36px;border-bottom:1px solid #f1f5f9;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#94a3b8;min-width:26px;">02</span>
+        <div style="width:1px;align-self:stretch;background:#f1f5f9;flex-shrink:0;"></div>
+        <div style="min-width:160px;"><span style="font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:#1e293b;">Generate personas</span></div>
+        <p style="font-size:14px;line-height:1.7;color:#64748b;margin:0;padding-top:2px;">AI personas constructed with distinct biases, expertise levels, and platform-native behavior. Researchers, skeptics, early adopters.</p>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:28px;padding:28px 36px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#94a3b8;min-width:26px;">03</span>
+        <div style="width:1px;align-self:stretch;background:#f1f5f9;flex-shrink:0;"></div>
+        <div style="min-width:160px;"><span style="font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:#1e293b;">Read the verdict</span></div>
+        <p style="font-size:14px;line-height:1.7;color:#64748b;margin:0;padding-top:2px;">Multi-round simulation produces a structured report — sentiment by segment, criticism clusters, and concrete improvement suggestions.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:860px;margin:0 auto;padding:0 24px 80px;text-align:center;">
+    <div style="background:#fafbff;border-radius:16px;padding:40px 24px;border:1px solid #eef2ff;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.18em;color:#94a3b8;text-transform:uppercase;margin-bottom:14px;">Simulation platforms</div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:32px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#475569;padding:6px 14px;border:1px solid #e2e8f0;border-radius:100px;background:#fff;">Hacker News</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#475569;padding:6px 14px;border:1px solid #e2e8f0;border-radius:100px;background:#fff;">Product Hunt</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#475569;padding:6px 14px;border:1px solid #e2e8f0;border-radius:100px;background:#fff;">Indie Hackers</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#475569;padding:6px 14px;border:1px solid #e2e8f0;border-radius:100px;background:#fff;">Reddit r/startups</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#475569;padding:6px 14px;border:1px solid #e2e8f0;border-radius:100px;background:#fff;">LinkedIn</span>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.18em;color:#94a3b8;text-transform:uppercase;margin-bottom:14px;">Data sources</div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">GitHub</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">arXiv</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">Semantic Scholar</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">Hacker News</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">Reddit</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">Product Hunt</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">iTunes</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">Google Play</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">GDELT</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#94a3b8;padding:5px 12px;border:1px solid #f1f5f9;border-radius:100px;background:#f8fafc;">Serper</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="text-align:center;padding:72px 24px;background:#fff;border-top:1px solid #e2e8f0;">
+    <h2 style="font-family:'Fraunces',serif;font-size:42px;font-weight:600;line-height:1.15;color:#0f172a;margin:0 0 14px;letter-spacing:-0.02em;">
+      Launch with <em style="font-style:italic;font-weight:300;color:#94a3b8;">informed</em> conviction.
+    </h2>
+    <p style="font-size:15px;line-height:1.65;color:#64748b;margin:0 0 32px;">Run your first simulation in under 2 minutes.</p>
+    <a href="#" style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:#fff;padding:13px 32px;border-radius:9px;background:var(--primary);text-decoration:none;box-shadow:0 2px 12px rgba(99,102,241,0.3);display:inline-block;">Get Started →</a>
+  </section>
+
+  <footer style="display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-top:1px solid #f1f5f9;background:#fff;">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#94a3b8;">Noosphere</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#cbd5e1;">© 2026 · Pre-launch Intelligence</span>
+  </footer>
+`;
+
+/* ── HOME ───────────────────────────────────────────────── */
+document.getElementById('content-home').innerHTML = `
+  ${appHeader()}
+  <main style="max-width:900px;margin:0 auto;padding:52px 24px 80px;">
+    <div style="margin-bottom:32px;">
+      <h1 style="font-size:34px;font-weight:800;letter-spacing:-0.04em;margin:0 0 10px;color:#1e293b;">How will the market react?</h1>
+      <p style="color:#64748b;font-size:15px;margin:0;">Describe your product and simulate real-world reactions across tech communities.</p>
+    </div>
+
+    <textarea placeholder="Paste your landing page copy, pitch deck, or product description here..." rows="9"
+      style="width:100%;padding:16px 18px;font-size:15px;border:1.5px solid #e2e8f0;border-radius:12px;resize:vertical;font-family:inherit;box-sizing:border-box;background:#fff;line-height:1.6;outline:none;"></textarea>
+
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="platform-pill active">Hacker News</button>
+      <button class="platform-pill active">Product Hunt</button>
+      <button class="platform-pill active">Indie Hackers</button>
+      <button class="platform-pill inactive">Reddit r/startups</button>
+      <button class="platform-pill active">LinkedIn</button>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:#64748b;font-size:13px;padding:0;font-family:'DM Sans',sans-serif;">
+        <span>▶</span> Advanced options
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--primary-light);color:var(--primary);margin-left:4px;">English · 8r · 30a · ~500 sources</span>
+      </button>
+    </div>
+
+    <button class="btn-primary" style="margin-top:24px;">Run Simulation →</button>
+  </main>
+`;
+
+/* ── SIMULATE ───────────────────────────────────────────── */
+const sourceItems = [
+  { src: 'arxiv', color: '#7B2D8E', title: 'Large Language Models as Simulated Social Agents', snip: 'We present a framework for using LLMs to simulate human social behavior in complex environments...' },
+  { src: 'github', color: '#15803D', title: 'SimAgent: Multi-agent simulation framework', snip: 'A Python library for building AI-powered social simulations with configurable personas and behaviors.' },
+  { src: 'hackernews', color: '#FF6B35', title: 'Show HN: We simulated 1000 users reacting to our SaaS launch', snip: 'Interesting methodology — used GPT-4 personas to predict churn and feature requests before shipping.' },
+  { src: 'reddit', color: '#C5283D', title: 'r/startups: How do you validate ideas before building?', snip: "I've been using AI simulation tools to test market reactions before committing resources." },
+  { src: 'semantic_scholar', color: '#1D4ED8', title: 'Persona-Based Market Simulation Using Foundation Models', snip: 'This paper introduces a scalable approach to market research using AI agents with diverse personas.' },
+];
+
+const sourceHTML = sourceItems.map(item => `
+  <div style="padding:8px 12px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;border-left:3px solid ${item.color};box-shadow:var(--shadow-card);margin-bottom:6px;">
+    <div style="margin-bottom:3px;">
+      <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;background:${item.color}18;color:${item.color};text-transform:uppercase;letter-spacing:0.04em;">${item.src}</span>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#1e293b;line-height:1.4;">${item.title}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:3px;line-height:1.5;">${item.snip}</div>
+  </div>
+`).join('');
+
+document.getElementById('content-simulate').innerHTML = `
+  ${appHeader()}
+  <main style="max-width:1600px;margin:0 auto;padding:16px 24px;display:flex;gap:24px;align-items:flex-start;">
+    <!-- Graph panel -->
+    <div style="flex:3;min-width:0;">
+      <p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 10px;">Knowledge Graph</p>
+      <div style="height:520px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:center;">
+        <svg width="400" height="340" viewBox="0 0 400 340" style="opacity:0.85;">
+          <line x1="200" y1="170" x2="110" y2="90" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="200" y1="170" x2="290" y2="90" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="200" y1="170" x2="90" y2="230" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="200" y1="170" x2="310" y2="230" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="200" y1="170" x2="200" y2="290" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="110" y1="90" x2="60" y2="45" stroke="#f1f5f9" stroke-width="1"/>
+          <line x1="290" y1="90" x2="340" y2="45" stroke="#f1f5f9" stroke-width="1"/>
+          <circle cx="200" cy="170" r="20" fill="#6366f1" opacity="0.15"/>
+          <circle cx="200" cy="170" r="12" fill="#6366f1"/>
+          <text x="200" y="195" text-anchor="middle" font-size="11" fill="#64748b" font-family="IBM Plex Mono, monospace">Product</text>
+          <circle cx="110" cy="90" r="9" fill="#7B2D8E" opacity="0.85"/>
+          <text x="110" y="75" text-anchor="middle" font-size="10" fill="#7B2D8E" font-family="IBM Plex Mono, monospace">arXiv</text>
+          <circle cx="290" cy="90" r="9" fill="#15803D" opacity="0.85"/>
+          <text x="290" y="75" text-anchor="middle" font-size="10" fill="#15803D" font-family="IBM Plex Mono, monospace">GitHub</text>
+          <circle cx="90" cy="230" r="9" fill="#FF6B35" opacity="0.85"/>
+          <text x="90" y="250" text-anchor="middle" font-size="10" fill="#FF6B35" font-family="IBM Plex Mono, monospace">HN</text>
+          <circle cx="310" cy="230" r="9" fill="#C5283D" opacity="0.85"/>
+          <text x="310" y="250" text-anchor="middle" font-size="10" fill="#C5283D" font-family="IBM Plex Mono, monospace">Reddit</text>
+          <circle cx="200" cy="290" r="9" fill="#EC4899" opacity="0.85"/>
+          <text x="200" y="310" text-anchor="middle" font-size="10" fill="#EC4899" font-family="IBM Plex Mono, monospace">PH</text>
+          <circle cx="60" cy="45" r="5" fill="#1D4ED8" opacity="0.6"/>
+          <circle cx="340" cy="45" r="5" fill="#14B8A6" opacity="0.6"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Feed panel -->
+    <div style="flex:2;min-width:0;padding-top:4px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0;animation:pulse 1.5s infinite;"></span>
+        <h2 style="margin:0;font-size:20px;font-weight:700;letter-spacing:-0.02em;color:#1e293b;">Searching sources...</h2>
+      </div>
+      <p style="color:#64748b;font-size:13px;margin:0 0 20px 22px;">Fetching papers from arXiv related to AI simulation...</p>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;font-family:'IBM Plex Mono',monospace;">5 items collected</div>
+      ${sourceHTML}
+    </div>
+  </main>
+`;
+
+/* ── RESULT ─────────────────────────────────────────────── */
+const segments = [
+  { color: '#22c55e', name: 'Early Adopters', summary: 'Highly excited about the AI simulation approach. Strong intent to try immediately.', quote: 'Finally, a tool that lets me validate before spending months building.' },
+  { color: '#94a3b8', name: 'Pragmatic Developers', summary: 'Interested but want to see pricing and accuracy benchmarks first.', quote: 'Would love to see a comparison between AI-predicted reactions and real user tests.' },
+  { color: '#ef4444', name: 'Skeptics', summary: 'Concerned about the reliability of AI-generated feedback vs. real users.', quote: 'How do we know these AI personas actually reflect how humans behave?' },
+];
+const criticisms = [
+  { theme: 'Accuracy concerns', count: 18, ex: 'How do we know these AI personas reflect real users?' },
+  { theme: 'Pricing unclear', count: 12, ex: 'No pricing info on the landing page is a red flag for me.' },
+  { theme: 'Missing onboarding', count: 7, ex: 'I have no idea where to start after signing up.' },
+];
+const improvements = [
+  { suggestion: 'Add case studies or example simulation outputs on landing page', frequency: 14 },
+  { suggestion: 'Include pricing or free tier information upfront', frequency: 11 },
+  { suggestion: 'Show accuracy benchmarks compared to real user tests', frequency: 9 },
+];
+
+const segHTML = segments.map(s => `
+  <div style="padding:14px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;margin-bottom:12px;box-shadow:var(--shadow-card);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0;"></span>
+      <span style="font-weight:600;font-size:14px;color:#1e293b;">${s.name}</span>
+    </div>
+    <p style="margin:0 0 8px;font-size:14px;color:#475569;">${s.summary}</p>
+    <p style="margin:4px 0;padding-left:12px;border-left:3px solid #e2e8f0;font-size:13px;color:#64748b;font-style:italic;">"${s.quote}"</p>
+  </div>
+`).join('');
+
+const critHTML = criticisms.map(c => `
+  <div style="padding:12px;border-radius:8px;border:1px solid #fecdd3;background:#fff1f2;margin-bottom:8px;box-shadow:0 1px 3px rgba(239,68,68,0.06);">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+      <span style="font-weight:600;font-size:14px;color:#1e293b;">${c.theme}</span>
+      <span style="font-size:12px;color:#94a3b8;">${c.count} mentions</span>
+    </div>
+    <p style="margin:2px 0;font-size:13px;color:#64748b;">— "${c.ex}"</p>
+  </div>
+`).join('');
+
+const impHTML = improvements.map(i => `
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;border:1px solid #d1fae5;background:#f0fdf4;margin-bottom:6px;box-shadow:0 1px 3px rgba(34,197,94,0.06);">
+    <span style="font-size:14px;color:#1e293b;">${i.suggestion}</span>
+    <span style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:8px;">×${i.frequency}</span>
+  </div>
+`).join('');
+
+/* ── Result tab contents ──────────────────────────────── */
+const resultTabs = {
+  analysis: `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div>
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;color:#1e293b;">Segment Reactions</h3>
+        ${segHTML}
+      </div>
+      <div>
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;color:#1e293b;">Criticism Patterns</h3>
+        ${critHTML}
+        <h3 style="font-size:16px;font-weight:600;margin:20px 0 12px;color:#1e293b;">Improvement Suggestions</h3>
+        ${impHTML}
+      </div>
+    </div>`,
+
+  simulation: `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:4px;color:#1e293b;">Simulation Feed</h3>
+      ${[
+        { platform:'hackernews', color:'#f97316', user:'thraxas_dev', upvotes:47, content:'The concept is solid but I\'d want to see this validated against real launch data. Anyone done a comparison?' },
+        { platform:'producthunt', color:'#ef4444', user:'marina_k', upvotes:31, content:'Just ran a simulation for my SaaS idea and the personas felt surprisingly nuanced. Skeptics asked exactly the questions I was afraid of.' },
+        { platform:'indiehackers', color:'#6366f1', user:'bootstrapped_js', upvotes:28, content:'This is exactly the tool I\'ve been looking for. Pre-mortems with AI personas > guessing in the dark.' },
+        { platform:'linkedin', color:'#2563eb', user:'Sarah Chen · PM @Stripe', upvotes:19, content:'Fascinating approach to de-risking product launches. The segment breakdown (early adopters vs pragmatists) is directly actionable.' },
+        { platform:'hackernews', color:'#f97316', user:'skeptical_sam', upvotes:12, content:'How do you account for selection bias in the training data? LLMs trained on internet text might overrepresent certain demographics.' },
+        { platform:'reddit', color:'#b45309', user:'u/startupsfounder', upvotes:8, content:'Tried this for my B2B tool. The criticism cluster around "pricing" was dead on — we had no pricing page and lost 40% of signups.' },
+      ].map(p => `
+        <div style="padding:14px 16px;border-radius:10px;background:#fff;border:1px solid #e2e8f0;box-shadow:var(--shadow-card);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:${p.color}15;color:${p.color};text-transform:uppercase;letter-spacing:0.04em;">${p.platform}</span>
+            <span style="font-size:13px;font-weight:500;color:#1e293b;">${p.user}</span>
+            <span style="margin-left:auto;font-size:12px;color:#94a3b8;">▲ ${p.upvotes}</span>
+          </div>
+          <p style="font-size:14px;color:#475569;line-height:1.6;margin:0;">${p.content}</p>
+        </div>
+      `).join('')}
+    </div>`,
+
+  launch: `
+    <div style="max-width:720px;">
+      <div style="padding:20px 24px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;box-shadow:var(--shadow-card);margin-bottom:16px;">
+        <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:12px;">📣 Recommended Launch Channels</h3>
+        ${[
+          { channel:'Hacker News (Show HN)', score:92, note:'High technical affinity. Lead with the methodology, not the product.' },
+          { channel:'Product Hunt', score:85, note:'Strong early adopter signal. Prepare a 60-sec demo GIF.' },
+          { channel:'Indie Hackers', score:78, note:'Builder community. Share the backstory and your own validation journey.' },
+        ].map(c => `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:600;color:#1e293b;">${c.channel}</div>
+              <div style="font-size:12px;color:#64748b;margin-top:2px;">${c.note}</div>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:#6366f1;white-space:nowrap;">${c.score}/100</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="padding:20px 24px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;box-shadow:var(--shadow-card);margin-bottom:16px;">
+        <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:12px;">🗓 Suggested Launch Sequence</h3>
+        ${[
+          { week:'Week 1', action:'Soft launch on Indie Hackers with founder story post' },
+          { week:'Week 2', action:'Product Hunt launch — coordinate upvote push at 12:01 AM PST' },
+          { week:'Week 3', action:'Show HN post focusing on the technical simulation methodology' },
+          { week:'Week 4', action:'LinkedIn thought leadership article on AI-driven market research' },
+        ].map(w => `
+          <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#6366f1;white-space:nowrap;padding-top:2px;">${w.week}</span>
+            <span style="font-size:14px;color:#475569;">${w.action}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="padding:20px 24px;border-radius:12px;background:#fafbff;border:1px solid #eef2ff;box-shadow:var(--shadow-card);">
+        <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:8px;">⚡ Quick Wins Before Launch</h3>
+        <ul style="font-size:14px;color:#475569;line-height:2;padding-left:20px;">
+          <li>Add a transparent pricing page (even a waitlist tier)</li>
+          <li>Include 2–3 example simulation outputs on the landing page</li>
+          <li>Publish one accuracy benchmark comparing AI simulation vs. real A/B test</li>
+        </ul>
+      </div>
+    </div>`,
+
+  final: `
+    <div style="max-width:720px;">
+      <div style="padding:24px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;box-shadow:var(--shadow-card);">
+        <h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:#0f172a;margin-bottom:4px;">Noosphere — Pre-launch Intelligence Report</h2>
+        <p style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:#94a3b8;margin-bottom:24px;">Generated 2026-03-28 · 247 interactions · 5 platforms</p>
+
+        <h3 style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:12px;">Executive Summary</h3>
+        <p style="font-size:15px;line-height:1.75;color:#374151;margin-bottom:20px;">
+          The simulated market response is <strong style="color:#22c55e;">broadly positive</strong>, with strong enthusiasm from early adopters and indie founders. The primary friction points are a lack of transparent pricing and insufficient social proof. Addressing these two issues before launch could meaningfully improve conversion rates.
+        </p>
+
+        <h3 style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:12px;">Verdict Breakdown</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+          ${[
+            { label:'Positive', pct:58, color:'#22c55e' },
+            { label:'Mixed', pct:27, color:'#f59e0b' },
+            { label:'Negative', pct:15, color:'#ef4444' },
+          ].map(v => `
+            <div style="padding:16px;border-radius:8px;border:1px solid ${v.color}20;background:${v.color}08;text-align:center;">
+              <div style="font-size:28px;font-weight:800;color:${v.color};">${v.pct}%</div>
+              <div style="font-size:13px;color:#64748b;margin-top:2px;">${v.label}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <h3 style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:12px;">Top Recommendations</h3>
+        <ol style="font-size:14px;color:#374151;line-height:2;padding-left:20px;">
+          <li>Add transparent pricing or a clear free tier before launch</li>
+          <li>Publish a case study with real validation data to address accuracy skepticism</li>
+          <li>Add onboarding tour for new users — confusion at first login was a recurring theme</li>
+          <li>Highlight the methodology on the landing page to pre-empt credibility concerns</li>
+        </ol>
+      </div>
+    </div>`,
+
+  details: `
+    <div>
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Agent Personas</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;">
+        ${[
+          { name:'thraxas_dev', platform:'Hacker News', role:'Senior Backend Engineer', bias:'Skeptical of marketing claims, values technical depth', sentiment:'neutral' },
+          { name:'marina_k', platform:'Product Hunt', role:'Product Manager', bias:'Optimistic early adopter, excited by new tools', sentiment:'positive' },
+          { name:'bootstrapped_js', platform:'Indie Hackers', role:'Solo Founder', bias:'Pragmatic, cost-conscious, values proven ROI', sentiment:'positive' },
+          { name:'skeptical_sam', platform:'Hacker News', role:'ML Researcher', bias:'Critical of AI hype, demands evidence', sentiment:'negative' },
+          { name:'sarah_pm', platform:'LinkedIn', role:'PM @ Series B startup', bias:'Focused on business outcomes and team adoption', sentiment:'positive' },
+          { name:'validator_99', platform:'Reddit', role:'Growth Hacker', bias:'Data-driven, tests everything, high standards', sentiment:'neutral' },
+        ].map(p => `
+          <div style="padding:14px;border-radius:10px;background:#fff;border:1px solid #e2e8f0;box-shadow:var(--shadow-card);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">${p.name[0].toUpperCase()}</div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:#1e293b;">${p.name}</div>
+                <div style="font-size:11px;color:#94a3b8;">${p.platform}</div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:6px;">${p.role}</div>
+            <div style="font-size:11px;color:#94a3b8;font-style:italic;line-height:1.5;">${p.bias}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`
+};
+
+function switchResultTab(btn, tabId) {
+  document.querySelectorAll('.result-tab-btn').forEach(b => {
+    b.style.fontWeight = '400';
+    b.style.borderBottom = '2px solid transparent';
+    b.style.color = '#64748b';
+  });
+  btn.style.fontWeight = '600';
+  btn.style.borderBottom = '2px solid #6366f1';
+  btn.style.color = '#6366f1';
+  document.getElementById('result-tab-content').innerHTML = resultTabs[tabId];
+}
+
+document.getElementById('content-result').innerHTML = `
+  ${appHeader()}
+  <main style="max-width:1280px;margin:0 auto;padding:32px 24px;">
+    <div style="margin-bottom:24px;">
+      <button style="background:none;border:none;color:#64748b;cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;">← New simulation</button>
+    </div>
+
+    <!-- Verdict -->
+    <div style="padding:12px 18px;border-radius:10px;margin-bottom:20px;border:1px solid #22c55e30;background:#22c55e08;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 6L9 17l-5-5"/></svg>
+        <span style="font-size:16px;font-weight:700;color:#22c55e;">Positive</span>
+        <span style="font-size:13px;color:#94a3b8;">· 247 interactions simulated</span>
+      </div>
+      <a href="#" style="display:inline-block;padding:6px 14px;background:#6366f1;color:#fff;border-radius:7px;text-decoration:none;font-size:12px;font-weight:600;">↓ PDF</a>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid #e2e8f0;">
+      <button class="result-tab-btn" onclick="switchResultTab(this,'analysis')" style="padding:10px 20px;font-size:14px;border:none;background:none;font-weight:600;border-bottom:2px solid #6366f1;color:#6366f1;font-family:'DM Sans',sans-serif;cursor:pointer;">Analysis</button>
+      <button class="result-tab-btn" onclick="switchResultTab(this,'simulation')" style="padding:10px 20px;font-size:14px;border:none;background:none;font-weight:400;border-bottom:2px solid transparent;color:#64748b;font-family:'DM Sans',sans-serif;cursor:pointer;">Simulation</button>
+      <button class="result-tab-btn" onclick="switchResultTab(this,'launch')" style="padding:10px 20px;font-size:14px;border:none;background:none;font-weight:400;border-bottom:2px solid transparent;color:#64748b;font-family:'DM Sans',sans-serif;cursor:pointer;">Launch Strategy</button>
+      <button class="result-tab-btn" onclick="switchResultTab(this,'final')" style="padding:10px 20px;font-size:14px;border:none;background:none;font-weight:400;border-bottom:2px solid transparent;color:#64748b;font-family:'DM Sans',sans-serif;cursor:pointer;">Final Report</button>
+      <button class="result-tab-btn" onclick="switchResultTab(this,'details')" style="padding:10px 20px;font-size:14px;border:none;background:none;font-weight:400;border-bottom:2px solid transparent;color:#64748b;font-family:'DM Sans',sans-serif;cursor:pointer;">Details</button>
+    </div>
+
+    <!-- Tab content -->
+    <div id="result-tab-content">${resultTabs.analysis}</div>
+  </main>
+`;
+</script>
+</body>
+</html>
