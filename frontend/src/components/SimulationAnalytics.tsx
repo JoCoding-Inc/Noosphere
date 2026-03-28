@@ -6,13 +6,15 @@ import {
 import type { Platform, SocialPost, ReportJSON } from '../types'
 import { PLATFORM_COLORS } from '../constants'
 
-const PLATFORM_LABELS: Record<Platform, string> = {
+const PLATFORM_SHORT_LABELS: Record<Platform, string> = {
   hackernews:      'HN',
   producthunt:     'PH',
   indiehackers:    'IH',
   reddit_startups: 'Reddit',
   linkedin:        'LinkedIn',
 }
+
+const SENTIMENT_ORDER = ['positive', 'neutral', 'negative']
 
 const SENTIMENT_COLORS: Record<string, string> = {
   positive: '#22c55e',
@@ -32,8 +34,6 @@ export function SimulationAnalytics({ posts, report }: Props) {
   )
 
   // 감성 도넛 데이터
-  const SENTIMENT_ORDER = ['positive', 'neutral', 'negative']
-
   const sentimentData = useMemo(() => {
     if (!report?.segments) return []
     const counts: Record<string, number> = {}
@@ -69,7 +69,7 @@ export function SimulationAnalytics({ posts, report }: Props) {
   const platformData = useMemo(() => {
     return (Object.keys(posts) as Platform[])
       .map(platform => ({
-        name: PLATFORM_LABELS[platform] ?? platform,
+        name: PLATFORM_SHORT_LABELS[platform] ?? platform,
         count: posts[platform]?.length ?? 0,
         color: PLATFORM_COLORS[platform] ?? '#64748b',
       }))
@@ -93,7 +93,7 @@ export function SimulationAnalytics({ posts, report }: Props) {
           <span style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>Analytics</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
 
           {/* 감성 도넛 */}
           {sentimentData.length > 0 && (
@@ -102,16 +102,18 @@ export function SimulationAnalytics({ posts, report }: Props) {
                 Segment 감성 분포
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <ResponsiveContainer width={100} height={100}>
-                  <PieChart>
-                    <Pie data={sentimentData} cx="50%" cy="50%" innerRadius={28} outerRadius={44} dataKey="value" strokeWidth={0}>
-                      {sentimentData.map((entry) => (
-                        <Cell key={entry.name} fill={SENTIMENT_COLORS[entry.name] ?? '#94a3b8'} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width: 100, height: 100, flexShrink: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={sentimentData} cx="50%" cy="50%" innerRadius={28} outerRadius={44} dataKey="value" strokeWidth={0}>
+                        {sentimentData.map((entry) => (
+                          <Cell key={entry.name} fill={SENTIMENT_COLORS[entry.name] ?? '#94a3b8'} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {sentimentData.map(d => (
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569' }}>
