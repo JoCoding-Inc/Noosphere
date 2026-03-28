@@ -261,6 +261,7 @@ The simulation of 127 interactions across 5 platforms reveals a product with str
 1. **Publish methodology** — transparency document for technical audiences
 2. **Add confidence indicators** — help users calibrate reliance on results
 3. **Reframe "simulate" → "predict"** — reduces friction with skeptical communities`,
+  gtm_md: '',
 }
 
 // ── Demo config constants ─────────────────────────────────────────────────────

@@ -94,8 +94,6 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
           </div>
         )}
         {topLevel.map((post, i) => {
-          const replies = getReplies(post.id)
-
           return (
             <div key={post.id} className="post-item" style={{ animationDelay: `${i * 60}ms` }}>
               <div style={{

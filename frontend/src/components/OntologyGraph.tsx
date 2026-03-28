@@ -348,24 +348,6 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
     setSelectedEntity(autoSelectId ? (entityMap.get(autoSelectId) ?? null) : null)
   }, [autoSelectId, entityMap])
 
-  const handleEngineStop = useCallback(() => {
-    const fg = graphRef.current
-    if (!fg) return
-    const newIds = pendingNewIdsRef.current
-    pendingNewIdsRef.current = []
-    if (newIds.length === 0) {
-      fg.zoomToFit(400, 24)
-      return
-    }
-    const newNodeSet = new Set(newIds)
-    const positioned = (graphData.nodes as Array<{ id: string; x?: number; y?: number }>)
-      .filter(n => newNodeSet.has(n.id) && n.x != null && n.y != null)
-    if (positioned.length === 0) { fg.zoomToFit(400, 24); return }
-    const cx = positioned.reduce((s, n) => s + n.x!, 0) / positioned.length
-    const cy = positioned.reduce((s, n) => s + n.y!, 0) / positioned.length
-    fg.centerAt(cx, cy, 400)
-  }, [graphData])
-
   const graphNodes = useMemo<GraphNode[]>(() =>
     data.entities
       .filter(e => !hiddenTypes.has(e.type))
@@ -391,6 +373,24 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
     graphData.nodeIds,
     graphData.edgePairs
   ), [graphData])
+
+  const handleEngineStop = useCallback(() => {
+    const fg = graphRef.current
+    if (!fg) return
+    const newIds = pendingNewIdsRef.current
+    pendingNewIdsRef.current = []
+    if (newIds.length === 0) {
+      fg.zoomToFit(400, 24)
+      return
+    }
+    const newNodeSet = new Set(newIds)
+    const positioned = (graphData.nodes as Array<{ id: string; x?: number; y?: number }>)
+      .filter(n => newNodeSet.has(n.id) && n.x != null && n.y != null)
+    if (positioned.length === 0) { fg.zoomToFit(400, 24); return }
+    const cx = positioned.reduce((s, n) => s + n.x!, 0) / positioned.length
+    const cy = positioned.reduce((s, n) => s + n.y!, 0) / positioned.length
+    fg.centerAt(cx, cy, 400)
+  }, [graphData])
 
   useEffect(() => {
     const prev = prevNodeIdsRef.current

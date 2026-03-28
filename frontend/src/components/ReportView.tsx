@@ -85,7 +85,7 @@ export function ReportView({ report }: { report: ReportJSON | null | undefined }
               <span style={{ fontWeight: 600, fontSize: 14 }}>{c.theme}</span>
               <span style={{ fontSize: 12, color: '#94a3b8' }}>{c.count} mentions</span>
             </div>
-            {c.examples.slice(0, 2).map((ex, j) => (
+            {c.examples.map((ex, j) => (
               <p key={j} style={{ margin: '2px 0', fontSize: 13, color: '#64748b' }}>
                 — "{ex}"
               </p>
