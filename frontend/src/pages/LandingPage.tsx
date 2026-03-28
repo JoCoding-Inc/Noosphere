@@ -61,7 +61,14 @@ export function LandingPage() {
         padding: '72px 24px 0',
         background: '#fff',
         borderBottom: '1px solid #f1f5f9',
+        position: 'relative',
       }}>
+        {/* gradient accent */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+          background: 'linear-gradient(90deg, #6366f1, #818cf8, #a5b4fc)',
+          borderRadius: '0 0 2px 2px',
+        }} />
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 7,
           padding: '4px 14px', borderRadius: 100,
@@ -98,30 +105,24 @@ export function LandingPage() {
         </p>
 
         <div className="landing-hero-cta" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 52 }}>
-          <Link to="/app" style={{
+          <Link to="/app" className="landing-cta-primary" style={{
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 13, fontWeight: 500, color: '#fff',
             padding: '12px 26px', borderRadius: 9,
-            background: '#1e293b', textDecoration: 'none',
-            boxShadow: '0 2px 12px rgba(30,41,59,0.18)',
-            transition: 'opacity 0.15s, transform 0.15s',
+            background: 'var(--primary)', textDecoration: 'none',
+            boxShadow: '0 2px 12px rgba(99,102,241,0.3)',
             display: 'inline-block',
           }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '0.86'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
           >
             Get Started →
           </Link>
-          <a href="https://github.com/TaeyoungPark1005/Noosphere" target="_blank" rel="noopener noreferrer" style={{
+          <a href="https://github.com/TaeyoungPark1005/Noosphere" target="_blank" rel="noopener noreferrer" className="landing-cta-secondary" style={{
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 13, color: '#64748b',
             padding: '11px 26px', borderRadius: 9,
             border: '1.5px solid #e2e8f0', textDecoration: 'none',
-            transition: 'border-color 0.15s, color 0.15s',
             display: 'inline-flex', alignItems: 'center', gap: 7,
           }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#1e293b' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b' }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
             GitHub
@@ -167,6 +168,7 @@ export function LandingPage() {
         <div style={{
           border: '1px solid #e2e8f0', borderRadius: 12,
           overflow: 'hidden', background: '#fff',
+          boxShadow: 'var(--shadow-card)',
         }}>
           {STEPS.map((step, i) => (
             <div key={step.num} className="landing-how-row" style={{
@@ -205,6 +207,13 @@ export function LandingPage() {
         textAlign: 'center',
       }}>
         <div style={{
+          background: '#fafbff',
+          borderRadius: 16,
+          padding: '40px 24px',
+          border: '1px solid #eef2ff',
+        }}>
+
+        <div style={{
           fontFamily: "'IBM Plex Mono', monospace",
           fontSize: 10, letterSpacing: '0.18em',
           color: '#94a3b8', textTransform: 'uppercase' as const,
@@ -219,6 +228,7 @@ export function LandingPage() {
               color: '#475569', padding: '6px 14px',
               border: '1px solid #e2e8f0', borderRadius: 100,
               background: '#fff',
+              transition: 'border-color 0.15s ease, background 0.15s ease',
             }}>
               {name}
             </span>
@@ -245,6 +255,7 @@ export function LandingPage() {
             </span>
           ))}
         </div>
+        </div>
       </section>
 
       {/* ── CTA ──────────────────────────────────────────────────────── */}
@@ -263,19 +274,16 @@ export function LandingPage() {
           {' '}conviction.
         </h2>
         <p style={{ fontSize: 15, lineHeight: 1.65, color: '#64748b', margin: '0 0 32px' }}>
-          Run your first simulation in under 2 minutes. No credit card required.
+          Run your first simulation in under 2 minutes.
         </p>
-        <Link to="/app" style={{
+        <Link to="/app" className="landing-cta-primary" style={{
           fontFamily: "'IBM Plex Mono', monospace",
           fontSize: 13, fontWeight: 500, color: '#fff',
           padding: '13px 32px', borderRadius: 9,
-          background: '#1e293b', textDecoration: 'none',
-          boxShadow: '0 2px 12px rgba(30,41,59,0.18)',
+          background: 'var(--primary)', textDecoration: 'none',
+          boxShadow: '0 2px 12px rgba(99,102,241,0.3)',
           display: 'inline-block',
-          transition: 'opacity 0.15s, transform 0.15s',
         }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '0.86'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
         >
           Get Started →
         </Link>
@@ -284,8 +292,8 @@ export function LandingPage() {
       {/* ── Footer ───────────────────────────────────────────────────── */}
       <footer className="landing-footer" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '20px 48px', borderTop: '1px solid #e2e8f0',
-        background: '#f8fafc',
+        padding: '20px 48px', borderTop: '1px solid #f1f5f9',
+        background: '#fff',
       }}>
         <span style={{
           fontFamily: "'IBM Plex Mono', monospace",

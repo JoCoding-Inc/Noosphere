@@ -318,7 +318,7 @@ function HomePhase({ displayText, runClicked }: { displayText: string; runClicke
               background: '#1e293b', color: '#fff', fontWeight: 600,
               boxShadow: '0 2px 8px rgba(30,41,59,0.25)',
             }}>
-              <span>{p.icon}</span> {p.label}
+              {p.label}
             </span>
           ))}
         </div>

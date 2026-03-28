@@ -1,13 +1,21 @@
 import type { ReportJSON } from '../types'
 import { VERDICT_CONFIG } from '../constants'
 
-const SENTIMENT_ICONS: Record<string, string> = { positive: '👍', neutral: '😐', negative: '👎' }
+const SENTIMENT_DOT: Record<string, string> = {
+  positive: '#22c55e',
+  neutral:  '#94a3b8',
+  negative: '#ef4444',
+}
 
 export function ReportView({ report }: { report: ReportJSON | null | undefined }) {
   if (!report || !report.verdict) {
     return (
       <div style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
-        <div style={{ fontSize: 28, marginBottom: 12 }}>📊</div>
+        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </div>
         No simulation report available.
       </div>
     )
@@ -23,7 +31,13 @@ export function ReportView({ report }: { report: ReportJSON | null | undefined }
         background: `${v.color}08`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <span style={{ fontSize: 24 }}>{v.emoji}</span>
+          <svg
+            width="24" height="24" viewBox="0 0 24 24"
+            fill="none" stroke={v.color} strokeWidth="2"
+            aria-hidden="true"
+            style={{ flexShrink: 0 }}
+            dangerouslySetInnerHTML={{ __html: v.icon }}
+          />
           <span style={{ fontSize: 20, fontWeight: 700, color: v.color }}>{v.label}</span>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>
@@ -36,9 +50,14 @@ export function ReportView({ report }: { report: ReportJSON | null | undefined }
         {(report.segments || []).map(seg => (
           <div key={seg.name} style={{
             padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff',
+            boxShadow: 'var(--shadow-card)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span>{SENTIMENT_ICONS[seg.sentiment]}</span>
+              <span style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: SENTIMENT_DOT[seg.sentiment] || '#94a3b8',
+                  display: 'inline-block', flexShrink: 0,
+                }} />
               <span style={{ fontWeight: 600, fontSize: 14 }}>
                 {seg.name.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </span>
@@ -60,6 +79,7 @@ export function ReportView({ report }: { report: ReportJSON | null | undefined }
           <div key={i} style={{
             padding: 12, borderRadius: 8, border: '1px solid #fecdd3',
             background: '#fff1f2',
+            boxShadow: '0 1px 3px rgba(239,68,68,0.06)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontWeight: 600, fontSize: 14 }}>{c.theme}</span>
@@ -81,6 +101,7 @@ export function ReportView({ report }: { report: ReportJSON | null | undefined }
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             padding: '10px 14px', borderRadius: 8, border: '1px solid #d1fae5',
             background: '#f0fdf4',
+            boxShadow: '0 1px 3px rgba(34,197,94,0.06)',
           }}>
             <span style={{ fontSize: 14, color: '#1e293b' }}>{imp.suggestion}</span>
             <span style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap', marginLeft: 8 }}>

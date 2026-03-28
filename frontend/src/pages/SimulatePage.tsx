@@ -107,7 +107,7 @@ export function SimulatePage() {
           margin: '0 0 20px 0',
           animation: 'fadeIn 0.4s ease',
         }}>
-          <span style={{ flexShrink: 0 }}>📧</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           <span>
             We'll send the completed report to your registered email address.
             {' '}
@@ -120,7 +120,7 @@ export function SimulatePage() {
 
       {sim.status === 'error' && (
         <div style={{ margin: '8px 0 20px' }}>
-          <p style={{ color: '#ef4444', fontSize: 14, margin: '0 0 12px' }}>{sim.errorMsg}</p>
+          <p role="alert" style={{ color: '#ef4444', fontSize: 14, margin: '0 0 12px' }}>{sim.errorMsg}</p>
           {sim.canResume && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
@@ -146,7 +146,7 @@ export function SimulatePage() {
             </p>
           )}
           {resumeError && (
-            <p style={{ color: '#ef4444', fontSize: 13, margin: '8px 0 0' }}>{resumeError}</p>
+            <p role="alert" style={{ color: '#ef4444', fontSize: 13, margin: '8px 0 0' }}>{resumeError}</p>
           )}
         </div>
       )}
@@ -176,7 +176,8 @@ export function SimulatePage() {
           {(Object.entries(sim.postsByPlatform) as [Platform, SocialPost[]][]).map(([platform, posts]) => (
             <span key={platform} style={{
               fontSize: 12, padding: '4px 10px', borderRadius: 20,
-              background: '#f1f5f9', color: '#475569',
+              background: '#fafbff', color: '#475569',
+              border: '1px solid #e8eaf6',
               display: 'flex', alignItems: 'center', gap: 5,
               animation: 'scaleIn 0.2s ease',
             }}>
@@ -204,6 +205,7 @@ export function SimulatePage() {
                 style={{
                   padding: '8px 12px', borderRadius: 8,
                   background: '#fff', border: '1px solid #e2e8f0',
+                  boxShadow: 'var(--shadow-card)',
                   borderLeft: `3px solid ${SOURCE_COLORS[item.source] || '#94a3b8'}`,
                   animationDelay: i === 0 ? '0ms' : undefined,
                 }}
@@ -245,7 +247,9 @@ export function SimulatePage() {
           marginTop: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14,
           animation: 'fadeIn 0.5s ease',
         }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>⚙️</div>
+          <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
           {phase === 'personas'
             ? `Building ${sim.agentCount} agent personas across platforms...`
             : phase === 'seeding'

@@ -80,6 +80,7 @@ const css = {
     borderRadius: 12,
     padding: '20px 24px',
     marginBottom: 12,
+    boxShadow: 'var(--shadow-card)',
   } as React.CSSProperties,
   sectionTitle: {
     fontSize: 11,
@@ -115,7 +116,7 @@ const css = {
     cursor: 'pointer',
     border: 'none',
     borderRadius: 8,
-    background: active ? '#1e293b' : 'transparent',
+    background: active ? 'var(--primary)' : 'transparent',
     color: active ? '#fff' : '#64748b',
     transition: 'all 0.15s',
   }),
@@ -190,8 +191,8 @@ export function HomePage() {
             animation: 'fadeInUp 0.45s ease both',
           }}
           onFocus={e => {
-            e.target.style.borderColor = '#8b5cf6'
-            e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.12)'
+            e.target.style.borderColor = '#6366f1'
+            e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'
           }}
           onBlur={e => {
             e.target.style.borderColor = '#e2e8f0'
@@ -217,14 +218,14 @@ export function HomePage() {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '7px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
                   border: '1.5px solid',
-                  background: active ? '#1e293b' : '#fff',
+                  background: active ? 'var(--primary)' : '#fff',
                   color: active ? '#fff' : '#475569',
-                  borderColor: active ? '#1e293b' : '#e2e8f0',
+                  borderColor: active ? 'var(--primary)' : '#e2e8f0',
                   fontWeight: active ? 600 : 400,
-                  boxShadow: active ? '0 2px 8px rgba(30,41,59,0.25)' : 'none',
+                  boxShadow: active ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
                   animation: `fadeInUp 0.${50 + i * 5}s ease both`,
                 }}>
-                <span>{p.icon}</span> {p.label}
+                {p.label}
               </button>
             )
           })}
@@ -243,7 +244,7 @@ export function HomePage() {
             Advanced options
             <span style={{
               fontSize: 11, padding: '2px 8px', borderRadius: 10,
-              background: '#f1f5f9', color: '#94a3b8', marginLeft: 4,
+              background: 'var(--primary-light)', color: '#6366f1', marginLeft: 4,
             }}>
               {config.language} · {config.num_rounds}r · {config.max_agents}a · ~{totalSources} sources
             </span>
@@ -379,7 +380,7 @@ export function HomePage() {
         </div>
 
         {error && (
-          <p style={{ color: '#ef4444', fontSize: 14, marginTop: 12, marginBottom: 0 }}>{error}</p>
+          <p role="alert" style={{ color: '#ef4444', fontSize: 14, marginTop: 12, marginBottom: 0 }}>{error}</p>
         )}
 
         <button
@@ -388,7 +389,7 @@ export function HomePage() {
           className={loading ? '' : 'run-btn'}
           style={{
             marginTop: 24, padding: '14px 36px', fontSize: 15, fontWeight: 700,
-            background: loading ? '#94a3b8' : '#1e293b', color: '#fff',
+            background: loading ? '#94a3b8' : 'var(--primary)', color: '#fff',
             border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer',
             letterSpacing: '-0.01em', display: 'inline-flex', alignItems: 'center',
             animation: 'fadeInUp 0.6s ease both',
@@ -399,7 +400,7 @@ export function HomePage() {
 
         {import.meta.env.VITE_CLERK_PUBLISHABLE_KEY && (
           <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span>📧</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
             <span>로그인 상태에서 시뮬레이션을 실행하면 완료 시 이메일로 보고서를 보내드립니다.</span>
           </div>
         )}
