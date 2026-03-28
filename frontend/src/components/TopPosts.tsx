@@ -1,12 +1,10 @@
+import { useMemo } from 'react'
 import type { Platform, SocialPost } from '../types'
+import { PLATFORM_OPTIONS } from '../constants'
 
-const PLATFORM_LABELS: Record<Platform, string> = {
-  hackernews:      'Hacker News',
-  producthunt:     'Product Hunt',
-  indiehackers:    'Indie Hackers',
-  reddit_startups: 'r/startups',
-  linkedin:        'LinkedIn',
-}
+const PLATFORM_LABELS = Object.fromEntries(
+  PLATFORM_OPTIONS.map(({ id, label }) => [id, label])
+) as Record<Platform, string>
 
 interface Props {
   posts: Partial<Record<Platform, SocialPost[]>>
@@ -14,11 +12,10 @@ interface Props {
 }
 
 export function TopPosts({ posts, limit = 5 }: Props) {
-  const allPosts: (SocialPost & { platform: Platform })[] = Object.entries(posts).flatMap(
-    ([platform, list]) => (list ?? []).map(p => ({ ...p, platform: platform as Platform }))
-  )
-
-  const top = [...allPosts].sort((a, b) => b.upvotes - a.upvotes).slice(0, limit)
+  const top = useMemo(() => {
+    const all: SocialPost[] = Object.values(posts).flatMap(list => list ?? [])
+    return [...all].sort((a, b) => b.upvotes - a.upvotes).slice(0, limit)
+  }, [posts, limit])
 
   if (top.length === 0) return null
 
