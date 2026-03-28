@@ -52,7 +52,7 @@ export function TopPosts({ posts, limit = 5 }: Props) {
   return (
     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
       <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-        주요 의견
+        Notable Opinions
       </p>
       {top.map((post, i) => (
         <div key={post.id} style={{

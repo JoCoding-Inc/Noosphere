@@ -23,9 +23,9 @@ const SENTIMENT_COLORS: Record<string, string> = {
 }
 
 const SENTIMENT_LABELS: Record<string, string> = {
-  positive: '긍정',
-  neutral:  '중립',
-  negative: '부정',
+  positive: 'Positive',
+  neutral:  'Neutral',
+  negative: 'Negative',
 }
 
 interface Props {
@@ -39,25 +39,21 @@ export function SimulationAnalytics({ posts, report }: Props) {
     [posts]
   )
 
-  // 감성 도넛 데이터 — report.segments(페르소나 타입별 감성) 기반
+  // 포스트 단위 감성 집계
   const sentimentData = useMemo(() => {
-    if (!report?.segments) return []
-    const counts: Record<string, number> = {}
-    for (const seg of report.segments) {
-      counts[seg.sentiment] = (counts[seg.sentiment] ?? 0) + 1
+    const counts: Record<string, number> = { positive: 0, neutral: 0, negative: 0 }
+    for (const p of allPosts) {
+      if (p.sentiment && p.sentiment in counts) counts[p.sentiment]++
     }
-    return Object.entries(counts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => SENTIMENT_ORDER.indexOf(a.name) - SENTIMENT_ORDER.indexOf(b.name))
-  }, [report])
+    return SENTIMENT_ORDER
+      .map(name => ({ name, value: counts[name] }))
+      .filter(d => d.value > 0)
+  }, [allPosts])
 
-  // 페르소나 감성 상세 (segment 이름 + sentiment)
-  const segmentSentimentList = useMemo(() => {
-    if (!report?.segments) return []
-    return [...report.segments].sort((a, b) =>
-      SENTIMENT_ORDER.indexOf(a.sentiment) - SENTIMENT_ORDER.indexOf(b.sentiment)
-    )
-  }, [report])
+  const totalSentimentPosts = useMemo(
+    () => sentimentData.reduce((s, d) => s + d.value, 0),
+    [sentimentData]
+  )
 
   // Criticism 비중 데이터
   const criticismData = useMemo(() => {
@@ -71,17 +67,6 @@ export function SimulationAnalytics({ posts, report }: Props) {
         count: c.count,
       }))
   }, [report])
-
-  // 라운드별 활동량 데이터
-  const roundData = useMemo(() => {
-    const counts: Record<number, number> = {}
-    for (const p of allPosts) {
-      counts[p.round_num] = (counts[p.round_num] ?? 0) + 1
-    }
-    return Object.entries(counts)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([round, count]) => ({ round: `R${round}`, count }))
-  }, [allPosts])
 
   // 플랫폼별 평균 콘텐츠 길이 (참여 깊이 지표)
   const platformDepthData = useMemo(() => {
@@ -101,7 +86,7 @@ export function SimulationAnalytics({ posts, report }: Props) {
       .sort((a, b) => b.avgLen - a.avgLen)
   }, [posts])
 
-  const hasData = sentimentData.length > 0 || criticismData.length > 0 || roundData.length > 0
+  const hasData = sentimentData.length > 0 || criticismData.length > 0 || platformDepthData.length > 0
 
   if (!hasData) return null
 
@@ -118,11 +103,11 @@ export function SimulationAnalytics({ posts, report }: Props) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
 
-        {/* 페르소나 감성 분포 */}
-        {segmentSentimentList.length > 0 && (
+        {/* Post-level Sentiment Distribution */}
+        {sentimentData.length > 0 && (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              페르소나 감성 분포
+              Post Sentiment
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 90, height: 90, flexShrink: 0 }}>
@@ -137,53 +122,34 @@ export function SimulationAnalytics({ posts, report }: Props) {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {segmentSentimentList.map(seg => (
-                  <div key={seg.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                    <span style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: SENTIMENT_COLORS[seg.sentiment] ?? '#94a3b8',
-                      flexShrink: 0, display: 'inline-block',
-                    }} />
-                    <span style={{ color: '#475569', flex: 1 }}>
-                      {seg.name.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 600,
-                      color: SENTIMENT_COLORS[seg.sentiment] ?? '#94a3b8',
-                    }}>
-                      {SENTIMENT_LABELS[seg.sentiment]}
-                    </span>
-                  </div>
-                ))}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {sentimentData.map(d => {
+                  const pct = totalSentimentPosts > 0 ? Math.round(d.value / totalSentimentPosts * 100) : 0
+                  return (
+                    <div key={d.name}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                        <span style={{ color: SENTIMENT_COLORS[d.name] ?? '#94a3b8', fontWeight: 600 }}>
+                          {SENTIMENT_LABELS[d.name]}
+                        </span>
+                        <span style={{ color: '#94a3b8' }}>{d.value} ({pct}%)</span>
+                      </div>
+                      <div style={{ height: 5, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: SENTIMENT_COLORS[d.name] ?? '#94a3b8', borderRadius: 3 }} />
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
         )}
 
-        {/* 라운드별 활동량 */}
-        {roundData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              라운드별 활동량
-            </p>
-            <ResponsiveContainer width="100%" height={100}>
-              <BarChart data={roundData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="round" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} />
-                <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
 
         {/* Criticism 비중 */}
         {criticismData.length > 0 && (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Criticism 비중
+              Criticism Breakdown
             </p>
             <ResponsiveContainer width="100%" height={Math.max(120, criticismData.length * 36)}>
               <BarChart data={criticismData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
@@ -215,15 +181,15 @@ export function SimulationAnalytics({ posts, report }: Props) {
         {platformDepthData.length > 0 && (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              플랫폼별 의견 깊이
+              Avg. Response Depth
             </p>
-            <p style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 10 }}>평균 답변 길이 (자)</p>
+            <p style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 10 }}>Avg. content length (chars)</p>
             <ResponsiveContainer width="100%" height={Math.max(100, platformDepthData.length * 28)}>
               <BarChart data={platformDepthData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [`${v}자`, '평균 길이']} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [`${v} chars`, 'Avg. length']} />
                 <Bar dataKey="avgLen" radius={[0, 3, 3, 0]}>
                   {platformDepthData.map((entry) => (
                     <Cell key={entry.name} fill={entry.color} />

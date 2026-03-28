@@ -29,6 +29,7 @@ export interface SocialPost {
   upvotes: number
   downvotes: number
   parent_id: string | null
+  sentiment?: 'positive' | 'neutral' | 'negative' | ''
 }
 
 export interface Persona {
