@@ -372,6 +372,7 @@ async def run_simulation(
                         "upvotes": p.upvotes,
                         "downvotes": p.downvotes,
                         "parent_id": p.parent_id,
+                        "sentiment": p.sentiment,
                     }
                     for p in state.posts
                 ]

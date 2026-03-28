@@ -83,6 +83,7 @@ class SocialPost:
     upvotes: int = 0
     downvotes: int = 0
     parent_id: str | None = None   # None = 최상위; 댓글/답글은 부모 post id
+    sentiment: str = ""            # "positive" | "neutral" | "negative" | ""
     structured_data: dict = dataclasses.field(default_factory=dict)  # platform-specific structured fields
 
 

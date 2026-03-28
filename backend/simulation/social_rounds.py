@@ -479,6 +479,7 @@ async def platform_round(
                 round_num=round_num,
                 parent_id=content_action.target_post_id,
                 structured_data=structured_data,
+                sentiment=structured_data.get("sentiment", ""),
             )
             state.add_post(post)
             state.recent_speakers[persona.node_id] = round_num

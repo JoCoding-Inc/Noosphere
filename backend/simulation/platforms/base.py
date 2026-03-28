@@ -35,8 +35,13 @@ class AbstractPlatform:
                 "type": "object",
                 "properties": {
                     "text": {"type": "string", "description": "Content text"},
+                    "sentiment": {
+                        "type": "string",
+                        "enum": ["positive", "neutral", "negative"],
+                        "description": "Overall sentiment of this post toward the idea being discussed",
+                    },
                 },
-                "required": ["text"],
+                "required": ["text", "sentiment"],
             },
         }
 
