@@ -61,10 +61,12 @@ const DEFAULT_SOURCE_LIMITS: Record<string, number> = Object.fromEntries(
   SOURCE_GROUPS.flatMap(g => g.sources.map(s => [s.key, s.defaultVal]))
 )
 
+const AGENT_OPTIONS = [100, 150, 200] as const
+
 const DEFAULT_CONFIG: Omit<SimConfig, 'input_text'> = {
   language: 'English',
   num_rounds: 8,
-  max_agents: 30,
+  max_agents: 150,
   platforms: ['hackernews', 'producthunt', 'indiehackers', 'reddit_startups', 'linkedin'],
   activation_rate: 0.25,
   source_limits: DEFAULT_SOURCE_LIMITS,
@@ -308,14 +310,31 @@ export function HomePage() {
                     <div style={css.sectionTitle}>Agent Count</div>
                     <div style={css.label}>
                       <span>Max agents per platform</span>
-                      <span style={css.value}>{config.max_agents}</span>
                     </div>
-                    <input type="range" min={5} max={150} step={5}
-                      value={config.max_agents}
-                      onChange={e => setConfig(c => ({ ...c, max_agents: +e.target.value }))}
-                      style={css.slider} />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {AGENT_OPTIONS.map(v => {
+                        const selected = config.max_agents === v
+                        return (
+                          <button
+                            key={v}
+                            onClick={() => setConfig(c => ({ ...c, max_agents: v }))}
+                            style={{
+                              borderRadius: 8,
+                              padding: '8px 20px',
+                              fontSize: 14,
+                              cursor: 'pointer',
+                              background: selected ? '#6366f1' : 'transparent',
+                              color: selected ? '#fff' : '#94a3b8',
+                              border: selected ? '1.5px solid #6366f1' : '1.5px solid #334155',
+                              fontWeight: selected ? 600 : 400,
+                            }}>
+                            {v}
+                          </button>
+                        )
+                      })}
+                    </div>
                     <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
-                      More agents = richer diversity, longer runtime.
+                      100 agents minimum for statistically significant results.
                     </p>
                   </div>
 

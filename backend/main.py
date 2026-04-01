@@ -161,7 +161,7 @@ class SimConfig(BaseModel):
     input_text: str
     language: str = "English"
     num_rounds: int = 8
-    max_agents: int = 30
+    max_agents: int = 150
     platforms: list[str] = ["hackernews", "producthunt", "indiehackers", "reddit_startups", "linkedin"]
     activation_rate: float = 0.25
     source_limits: dict[str, int] = {}
@@ -187,7 +187,7 @@ class SimConfig(BaseModel):
     @field_validator("max_agents")
     @classmethod
     def agents_valid(cls, v: int) -> int:
-        return max(1, min(v, 150))
+        return max(100, min(v, 200))
 
 
 @app.get("/health")
@@ -323,6 +323,7 @@ async def resume_simulation(sim_id: str):
         raise HTTPException(409, "Simulation state changed; try again")
 
     config = json.loads(sim["config_json"])
+    config["max_agents"] = max(100, min(config.get("max_agents", 150), 200))
     try:
         run_simulation_task.apply_async(args=[sim_id, config], task_id=sim_id)
     except Exception:
