@@ -53,9 +53,10 @@ def coerce_string_list(
     - *max_items* caps the result length.
     """
     if isinstance(value, str):
+        import re as _re
         raw_items = [
             part.strip()
-            for part in value.replace("\n", ",").replace(";", ",").split(",")
+            for part in _re.split(r"[,;\n|]+", value)
             if part.strip()
         ]
     elif isinstance(value, list):
