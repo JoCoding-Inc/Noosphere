@@ -308,6 +308,9 @@ Use this timing data to recommend when and in what order to launch on each platf
     if debate_highlights:
         debate_highlights_section = f"\n### Debate Turning Points\n{debate_highlights}\n"
 
+    _praise_section = "" if not praise_summary else f"\nStrengths / What resonated:\n{praise_summary}\n"
+    _top_posts_section = "" if not top_posts else _fmt_top_posts(top_posts)
+
     prompt = f"""Product idea: {input_text}
 {platform_reception}{peak_section}{segment_matrix_section}{interaction_section}{funnel_section}{concerns_section}{debate_highlights_section}
 Overall verdict: {verdict}
@@ -320,12 +323,9 @@ Top criticisms:
 
 Top improvement suggestions:
 {imp_summary}
-{"" if not praise_summary else f"""
-Strengths / What resonated:
-{praise_summary}
-"""}Competitive context (summary):
+{_praise_section}Competitive context (summary):
 {analysis_md[:1500]}
-{"" if not top_posts else _fmt_top_posts(top_posts)}
+{_top_posts_section}
 
 ---
 Generate a Go-to-Market strategy report with this EXACT structure:
