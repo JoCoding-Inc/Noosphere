@@ -730,14 +730,14 @@ async def run_simulation(
                     _dist = _distributions.get(_plat.name, {})
                     _pre_assigned_by_platform[_plat.name] = select_agents_for_platform(
                         platform=_plat.name,
-                        n=len(clusters),
+                        n=max_agents,
                         distribution=_dist,
                         pool=_agent_pool,
                         used_names=_used_names,
                     )
                 logger.info(
                     "Pool-based persona selection complete for %d platforms (%d agents each)",
-                    len(active_platforms), len(clusters),
+                    len(active_platforms), max_agents,
                 )
             except Exception as _pool_exc:
                 logger.warning(

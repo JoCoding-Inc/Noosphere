@@ -1409,9 +1409,10 @@ async def round_personas(
     # ── Fast path: use pre-assigned pool personas ─────────────────────────────
     if pre_assigned_personas is not None:
         from backend.simulation.persona_generator import persona_from_pool_entry
-        pool_count = len(pre_assigned_personas)
-        for i, cluster in enumerate(clusters):
-            pool_entry = pre_assigned_personas[i] if i < pool_count else pre_assigned_personas[pool_count - 1]
+        cluster_count = len(clusters)
+        for i, pool_entry in enumerate(pre_assigned_personas):
+            # Cycle through clusters so every agent gets a knowledge context
+            cluster = clusters[i % cluster_count] if cluster_count else {}
             try:
                 persona = persona_from_pool_entry(pool_entry, cluster, platform_name)
                 event = _build_sim_persona_event(persona, platform_name)
@@ -1419,8 +1420,8 @@ async def round_personas(
                 yield event
             except Exception as exc:
                 logger.warning(
-                    "Pool persona creation failed for cluster %s: %s",
-                    cluster.get("id", "?"), exc,
+                    "Pool persona creation failed for pool entry %d: %s",
+                    i, exc,
                 )
         return
 
