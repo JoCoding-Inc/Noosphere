@@ -254,13 +254,13 @@ export function SimulatePage() {
         <div style={{ margin: '0 0 24px 0', animation: 'fadeInUp 0.3s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>
             <span>Generating personas...</span>
-            <span>{sim.personaCount} / {sim.agentCount}</span>
+            <span>{sim.personaCount} generated</span>
           </div>
           <div style={{ height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 3,
               background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
-              width: `${personaPct}%`,
+              width: sim.personaCount > 0 ? '100%' : '0%',
               transition: 'width 0.4s ease',
               boxShadow: '0 0 8px rgba(139,92,246,0.5)',
             }} />
