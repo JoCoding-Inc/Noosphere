@@ -3,13 +3,14 @@ from typing import TYPE_CHECKING
 from backend.simulation.platforms.base import AbstractPlatform
 
 if TYPE_CHECKING:
-    from backend.simulation.models import Persona
+    from backend.simulation.models import Persona, PlatformState, SocialPost
 
 
 class ProductHunt(AbstractPlatform):
     name = "producthunt"
-    allowed_actions = ["review", "ask_question", "maker_response", "upvote"]
+    allowed_actions = ["review", "ask_question", "comment", "reply", "upvote"]
     no_content_actions = {"upvote"}
+    seed_controversy_hint = "Include a bold pricing or positioning statement that may polarize the maker community."
     system_prompt = (
         "You are a Product Hunt user or maker. Be enthusiastic but specific. "
         "Reviews should cover use case, UX, and differentiation. "
@@ -18,10 +19,7 @@ class ProductHunt(AbstractPlatform):
     )
 
     def get_allowed_actions(self, persona: "Persona") -> list[str]:
-        # maker_response only available to commercially-driven personas (commercial_focus >= 7)
-        if persona.commercial_focus >= 7:
-            return list(self.allowed_actions)
-        return [a for a in self.allowed_actions if a != "maker_response"]
+        return list(self.allowed_actions)
 
     def content_tool(self, action_type: str) -> dict:
         if action_type == "review":
@@ -57,7 +55,7 @@ class ProductHunt(AbstractPlatform):
                         },
                         "sentiment": {
                             "type": "string",
-                            "enum": ["positive", "neutral", "negative"],
+                            "enum": ["positive", "neutral", "negative", "constructive"],
                             "description": "Overall sentiment of this content toward the idea/product",
                         },
                     },
@@ -77,13 +75,54 @@ class ProductHunt(AbstractPlatform):
                         },
                         "sentiment": {
                             "type": "string",
-                            "enum": ["positive", "neutral", "negative"],
+                            "enum": ["positive", "neutral", "negative", "constructive"],
                             "description": "Overall sentiment of this content toward the idea/product",
                         },
                     },
                     "required": ["text", "sentiment"],
                 },
             }
+        if action_type == "comment":
+            return {
+                "name": "create_content",
+                "description": "Write a comment on a Product Hunt listing.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "A comment about the product — share your thoughts, feedback, or experience. 1-3 sentences.",
+                        },
+                        "sentiment": {
+                            "type": "string",
+                            "enum": ["positive", "neutral", "negative", "constructive"],
+                            "description": "Overall sentiment of this content toward the idea/product",
+                        },
+                    },
+                    "required": ["text", "sentiment"],
+                },
+            }
+        if action_type == "reply":
+            return {
+                "name": "create_content",
+                "description": "Write a direct reply to a comment or question on ProductHunt",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "Your reply (2-3 sentences, PH-style encouraging tone)",
+                        },
+                        "sentiment": {
+                            "type": "string",
+                            "enum": ["positive", "neutral", "negative", "constructive"],
+                            "description": "Overall sentiment of this content toward the idea/product",
+                        },
+                    },
+                    "required": ["text", "sentiment"],
+                },
+            }
+        # Backward compatibility: keep maker_response case for checkpoint restoration
         if action_type == "maker_response":
             return {
                 "name": "create_content",
@@ -101,7 +140,7 @@ class ProductHunt(AbstractPlatform):
                         },
                         "sentiment": {
                             "type": "string",
-                            "enum": ["positive", "neutral", "negative"],
+                            "enum": ["positive", "neutral", "negative", "constructive"],
                             "description": "Overall sentiment of this content toward the idea/product",
                         },
                     },
@@ -111,6 +150,39 @@ class ProductHunt(AbstractPlatform):
         # fallback
         return super().content_tool(action_type)
 
+    def update_vote_counts(
+        self,
+        state: "PlatformState",
+        target_post_id: str,
+        action_type: str,
+        round_num: int = 0,
+        voter_node_id: str = "",
+        seniority: str = "",
+        **kwargs,
+    ) -> "SocialPost | None":
+        """Override: rating-aware upvote scoring for ProductHunt.
+
+        High-rated reviews (>=4.0) get a weighted_score bonus on upvote,
+        while low-rated reviews (<=2.0) get a penalty to suppress spread.
+        """
+        post = super().update_vote_counts(
+            state, target_post_id, action_type, round_num, voter_node_id, seniority
+        )
+        if post is not None and action_type == "upvote":
+            rating = None
+            if post.structured_data:
+                rating = post.structured_data.get("rating")
+            if rating is not None:
+                try:
+                    r = float(rating)
+                    if r >= 4.0:
+                        post.weighted_score += 0.5
+                    elif r <= 2.0:
+                        post.weighted_score = max(0.0, post.weighted_score - 0.3)
+                except (ValueError, TypeError):
+                    pass
+        return post
+
     def seed_tool(self) -> dict:
         return {
             "name": "create_seed_post",
@@ -118,6 +190,10 @@ class ProductHunt(AbstractPlatform):
             "input_schema": {
                 "type": "object",
                 "properties": {
+                    "product_name": {
+                        "type": "string",
+                        "description": "Product name — clear, memorable, under 30 chars.",
+                    },
                     "tagline": {
                         "type": "string",
                         "description": "Catchy one-line tagline under 60 chars.",
@@ -126,12 +202,12 @@ class ProductHunt(AbstractPlatform):
                         "type": "string",
                         "description": "Product description covering what it does, who it's for, and why it's different. 2-3 sentences.",
                     },
-                    "makers_comment": {
+                    "maker_comment": {
                         "type": "string",
                         "description": "Personal note from the maker sharing the story behind the product.",
                     },
                 },
-                "required": ["tagline", "description", "makers_comment"],
+                "required": ["product_name", "tagline", "description", "maker_comment"],
             },
         }
 
@@ -152,8 +228,13 @@ class ProductHunt(AbstractPlatform):
         return text
 
     def extract_seed_content(self, structured_data: dict) -> str:
+        product_name = structured_data.get("product_name", "")
         tagline = structured_data.get("tagline", "")
         description = structured_data.get("description", "")
-        makers_comment = structured_data.get("makers_comment", "")
-        parts = [p for p in [tagline, description, makers_comment] if p]
-        return "\n\n".join(parts)
+        # Support both old ("makers_comment") and new ("maker_comment") field names
+        maker_comment = structured_data.get("maker_comment", "") or structured_data.get("makers_comment", "")
+        headline = f"{product_name} \u2013 {tagline}" if product_name and tagline else (product_name or tagline)
+        parts = [headline, description]
+        if maker_comment:
+            parts.append(f"Maker: {maker_comment}")
+        return "\n".join(p for p in parts if p)
