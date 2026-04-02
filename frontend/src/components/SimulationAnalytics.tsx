@@ -513,50 +513,56 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
             <span style={{ fontSize: 12, color: '#94a3b8' }}>total participants</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
 
             {/* Seniority */}
             {seniorityData.length > 0 && (
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', minHeight: 160 }}>
                 <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 8 }}>Seniority</p>
-                <ResponsiveContainer width="100%" height={seniorityData.length * 28}>
-                  <BarChart data={seniorityData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                    <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
-                    <Bar dataKey="count" fill="#8b5cf6" radius={[0, 3, 3, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={seniorityData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+                      <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
+                      <Bar dataKey="count" fill="#8b5cf6" radius={[0, 3, 3, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
 
             {/* MBTI */}
             {mbtiData.length > 0 && (
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', minHeight: 160 }}>
                 <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 8 }}>MBTI</p>
-                <ResponsiveContainer width="100%" height={mbtiData.length * 28}>
-                  <BarChart data={mbtiData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                    <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
-                    <Bar dataKey="count" fill="#06b6d4" radius={[0, 3, 3, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={mbtiData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+                      <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
+                      <Bar dataKey="count" fill="#06b6d4" radius={[0, 3, 3, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
 
             {/* Generation */}
             {generationData.length > 0 && (
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', minHeight: 160 }}>
                 <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 8 }}>Generation</p>
-                <ResponsiveContainer width="100%" height={generationData.length * 28}>
-                  <BarChart data={generationData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                    <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
-                    <Bar dataKey="count" fill="#f59e0b" radius={[0, 3, 3, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={generationData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+                      <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
+                      <Bar dataKey="count" fill="#f59e0b" radius={[0, 3, 3, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
 
