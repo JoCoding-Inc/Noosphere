@@ -1415,6 +1415,7 @@ async def round_personas(
             try:
                 persona = persona_from_pool_entry(pool_entry, cluster, platform_name)
                 event = _build_sim_persona_event(persona, platform_name)
+                event["_persona"] = persona
                 yield event
             except Exception as exc:
                 logger.warning(
