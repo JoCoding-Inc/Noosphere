@@ -235,37 +235,6 @@ export function ReportView({ report }: { report: ReportJSON | null | undefined }
         </div>
       )}
 
-      {report.qa_pairs && report.qa_pairs.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 12 }}>
-            Community Q&A
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {report.qa_pairs.slice(0, 5).map((qa, i) => (
-              <div key={i} style={{ background: '#1e293b', borderRadius: 6, padding: '10px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  <span style={{ fontSize: 10, background: '#334155', color: '#94a3b8', borderRadius: 4, padding: '2px 6px' }}>
-                    {qa.platform}
-                  </span>
-                  <span style={{ fontSize: 11, color: '#64748b' }}>{qa.author_name}</span>
-                </div>
-                <div style={{ fontSize: 12, color: '#cbd5e1', marginBottom: qa.answers.length > 0 ? 8 : 0 }}>
-                  Q: {qa.question_text}
-                </div>
-                {qa.answers.slice(0, 1).map((ans, j) => (
-                  <div key={j} style={{ fontSize: 11, color: '#94a3b8', borderLeft: '2px solid #334155', paddingLeft: 8 }}>
-                    A: {ans.text} <span style={{ color: '#64748b' }}>— {ans.author_name} {'👍'}{ans.upvotes}</span>
-                  </div>
-                ))}
-                {!qa.answered && (
-                  <div style={{ fontSize: 11, color: '#64748b', fontStyle: 'italic' }}>No answers yet</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Segment Reactions</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
         {(report.segments || []).map(seg => (
@@ -313,57 +282,6 @@ export function ReportView({ report }: { report: ReportJSON | null | undefined }
                     — "{ex}"
                   </p>
                 ))}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {report.platform_segments && Object.keys(report.platform_segments).length > 0 && (
-        <>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Platform Breakdown</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-            {Object.entries(report.platform_segments).map(([platform, segments]) => (
-              <div key={platform} style={{
-                padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff',
-                boxShadow: 'var(--shadow-card)',
-              }}>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 10, color: '#1e293b' }}>
-                  {platform.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {Object.entries(segments).map(([segName, counts]) => {
-                    const posPercent = counts.total > 0 ? Math.round((counts.positive / counts.total) * 100) : 0
-                    const neuPercent = counts.total > 0 ? Math.round((counts.neutral / counts.total) * 100) : 0
-                    const negPercent = counts.total > 0 ? Math.round((counts.negative / counts.total) * 100) : 0
-                    return (
-                      <div key={segName}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                          <span style={{ fontSize: 13, color: '#475569' }}>
-                            {segName.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                          </span>
-                          <span style={{ fontSize: 12, color: '#94a3b8' }}>{counts.total} responses</span>
-                        </div>
-                        <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', background: '#f1f5f9' }}>
-                          {posPercent > 0 && (
-                            <div style={{ width: `${posPercent}%`, background: '#22c55e' }} title={`Positive ${posPercent}%`} />
-                          )}
-                          {neuPercent > 0 && (
-                            <div style={{ width: `${neuPercent}%`, background: '#94a3b8' }} title={`Neutral ${neuPercent}%`} />
-                          )}
-                          {negPercent > 0 && (
-                            <div style={{ width: `${negPercent}%`, background: '#ef4444' }} title={`Negative ${negPercent}%`} />
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: 12, marginTop: 3 }}>
-                          <span style={{ fontSize: 11, color: '#22c55e' }}>{posPercent}% pos</span>
-                          <span style={{ fontSize: 11, color: '#94a3b8' }}>{neuPercent}% neu</span>
-                          <span style={{ fontSize: 11, color: '#ef4444' }}>{negPercent}% neg</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
               </div>
             ))}
           </div>

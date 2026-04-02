@@ -47,15 +47,6 @@ interface Props {
   segmentDistribution?: Record<string, number>
 }
 
-const REGION_COLORS: Record<string, string> = {
-  NA: '#3b82f6',
-  EU: '#10b981',
-  APAC: '#f59e0b',
-  LATAM: '#ef4444',
-  MENA: '#8b5cf6',
-  Global: '#6b7280',
-}
-
 const SEGMENT_COLORS: Record<string, string> = {
   developer: '#3b82f6',
   investor: '#10b981',
@@ -200,50 +191,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
   }, [report])
 
   // Engagement alert rounds
-  const engagementAlertRounds = useMemo(() => {
-    if (!report?.engagement_alerts || report.engagement_alerts.length === 0) return []
-    return report.engagement_alerts
-  }, [report])
-
-  // Activity over rounds data
-  const activityData = useMemo(() => {
-    if (!roundStats || roundStats.length < 2) return []
-    return roundStats.map(r => ({
-      round: r.round,
-      activeAgents: r.totalActiveAgents,
-      activity: r.totalNewPosts + r.totalNewComments,
-    }))
-  }, [roundStats])
-
-  // ── Segment distribution by round (stacked bar) ────────────────────────────
-  const segmentByRoundData = useMemo(() => {
-    // Prefer report.sentiment_timeline with segment_distribution
-    if (report?.sentiment_timeline) {
-      const withSegments = report.sentiment_timeline.filter(e => e.segment_distribution && Object.keys(e.segment_distribution).length > 0)
-      if (withSegments.length > 0) {
-        const allSegments = new Set<string>()
-        for (const entry of withSegments) {
-          for (const key of Object.keys(entry.segment_distribution!)) allSegments.add(key)
-        }
-        return {
-          chartData: withSegments.map(entry => ({
-            round: entry.round,
-            ...entry.segment_distribution,
-          })),
-          segments: Array.from(allSegments),
-        }
-      }
-    }
-    // Fallback to live segmentDistribution snapshot (single bar)
-    if (segmentDistribution && Object.keys(segmentDistribution).length > 0) {
-      return {
-        chartData: [{ round: 'Latest', ...segmentDistribution }],
-        segments: Object.keys(segmentDistribution),
-      }
-    }
-    return { chartData: [] as Array<Record<string, unknown>>, segments: [] as string[] }
-  }, [report, segmentDistribution])
-
   // Sentiment over rounds timeline
   const timelineData = useMemo(() => {
     if (!report?.sentiment_timeline) return []
@@ -278,47 +225,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
     })
 
     return { chartData, platforms }
-  }, [report])
-
-  // ── Action Type Distribution (aggregated across all rounds) ────────
-  const actionTypeData = useMemo(() => {
-    const totals: Record<string, number> = {};
-    (report?.sentiment_timeline ?? []).forEach(entry => {
-      const dist = entry.action_type_distribution;
-      if (dist) {
-        Object.entries(dist).forEach(([k, v]) => {
-          totals[k] = (totals[k] ?? 0) + v;
-        });
-      }
-    });
-    return Object.entries(totals)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [report])
-
-  // ── Echo Chamber Risk ───────────────────────────────────────────────
-  const highRiskPlatforms = useMemo(() => {
-    if (!report?.echo_chamber_risk) return []
-    return Object.entries(report.echo_chamber_risk)
-      .filter(([, v]) => v.risk === 'high')
-      .map(([name]) => (PLATFORM_SHORT_LABELS as Record<string, string>)[name] ?? name)
-  }, [report])
-
-  // ── Top Contributors ──────────────────────────────────────────────
-  const topContributorsData = useMemo(() => {
-    if (!report?.top_contributors) return []
-    return [...report.top_contributors]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10)
-      .map(c => ({
-        name: formatNameWithSegment(
-          c.name.length > 18 ? c.name.slice(0, 16) + '\u2026' : c.name,
-          c.segment,
-        ),
-        fullName: formatNameWithSegment(c.name, c.segment),
-        score: c.score,
-        influence_score: c.influence_score ?? 0,
-      }))
   }, [report])
 
   // ── Debate Map ─────────────────────────────────────────────────────
@@ -370,68 +276,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
         shifted_pct: s.count > 0 ? Math.round(s.shifted_count / s.count * 100) : 0,
       }))
       .sort((a, b) => Math.abs(b.avg_delta ?? 0) - Math.abs(a.avg_delta ?? 0))
-  }, [report])
-
-  // ── Attitude Journey (Top 5) ────────────────────────────────────────
-  const ATTITUDE_JOURNEY_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
-
-  const attitudeJourneyData = useMemo(() => {
-    if (!report?.attitude_shifts) return { chartData: [] as Array<Record<string, number>>, names: [] as string[] }
-
-    // Filter personas with history length >= 2, pick top 5 by history length
-    const eligible = report.attitude_shifts
-      .filter(a => a.history && a.history.length >= 2)
-    if (eligible.length < 2) return { chartData: [] as Array<Record<string, number>>, names: [] as string[] }
-
-    const top5 = [...eligible]
-      .sort((a, b) => b.history.length - a.history.length)
-      .slice(0, 5)
-
-    // Determine full round range
-    let minRound = Infinity
-    let maxRound = -Infinity
-    for (const persona of top5) {
-      for (const h of persona.history) {
-        if (h.round < minRound) minRound = h.round
-        if (h.round > maxRound) maxRound = h.round
-      }
-    }
-    if (minRound > maxRound) return { chartData: [] as Array<Record<string, number>>, names: [] as string[] }
-
-    // Build cumulative shift per persona, then forward-fill
-    const names = top5.map(p => p.name)
-    const chartData: Array<Record<string, number>> = []
-
-    // Pre-compute cumulative values per persona per round
-    const cumulativeByPersona: Record<string, Record<number, number>> = {}
-    for (const persona of top5) {
-      const byRound: Record<number, number> = {}
-      let cumulative = 0
-      // Sort history by round just in case
-      const sorted = [...persona.history].sort((a, b) => a.round - b.round)
-      for (const h of sorted) {
-        cumulative += h.delta
-        byRound[h.round] = cumulative
-      }
-      cumulativeByPersona[persona.name] = byRound
-    }
-
-    // Forward-fill across all rounds
-    const prevValues: Record<string, number> = {}
-    for (const name of names) prevValues[name] = 0
-
-    for (let round = minRound; round <= maxRound; round++) {
-      const row: Record<string, number> = { round }
-      for (const name of names) {
-        if (cumulativeByPersona[name][round] !== undefined) {
-          prevValues[name] = cumulativeByPersona[name][round]
-        }
-        row[name] = Math.round(prevValues[name] * 100) / 100
-      }
-      chartData.push(row)
-    }
-
-    return { chartData, names }
   }, [report])
 
   // ── Segment Sentiment Journey (line chart) ──────────────────────────
@@ -501,38 +345,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
       })
     })
     return { rounds, segments: segList, matrix }
-  }, [report])
-
-  // ── Region Distribution ──────────────────────────────────────────────
-  const regionData = useMemo(() => {
-    if (!personas) return []
-    const all = Object.values(personas).flatMap(list => list ?? [])
-    if (all.length === 0) return []
-    const counts: Record<string, number> = {}
-    for (const p of all) {
-      const region = p.region || 'Global'
-      counts[region] = (counts[region] ?? 0) + 1
-    }
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, value]) => ({ name, value, color: REGION_COLORS[name] ?? '#6b7280' }))
-  }, [personas])
-
-  // ── Region Sentiment (stacked bar) ──────────────────────────────────
-  const regionSentimentData = useMemo(() => {
-    if (!report?.region_sentiment) return []
-    return Object.entries(report.region_sentiment)
-      .filter(([, d]) => d.total >= 2)
-      .map(([region, d]) => ({
-        region: region.length > 10 ? region.slice(0, 10) + '\u2026' : region,
-        positive: d.positive,
-        neutral: d.neutral,
-        negative: d.negative,
-        constructive: d.constructive ?? 0,
-        total: d.total,
-      }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 8)
   }, [report])
 
   // ── Archetype Narratives ──────────────────────────────────────────────
@@ -663,45 +475,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
     }
   }, [allPersonas])
 
-  // ── Interaction Flow (role-to-role reply counts) ────────────────────────────
-  const interactionFlowData = useMemo(() => {
-    if (allPosts.length === 0 || !personas) return []
-
-    // Build lookups: node_id -> role, post_id -> author_node_id
-    const nodeToRole = new Map<string, string>()
-    for (const list of Object.values(personas)) {
-      for (const p of list ?? []) {
-        nodeToRole.set(p.node_id, p.role || 'unknown')
-      }
-    }
-    const postToAuthor = new Map<string, string>()
-    for (const p of allPosts) {
-      postToAuthor.set(p.id, p.author_node_id)
-    }
-
-    // Count role-to-role interactions via parent_id
-    const pairCounts = new Map<string, number>()
-    for (const post of allPosts) {
-      if (!post.parent_id) continue
-      const parentAuthorId = postToAuthor.get(post.parent_id)
-      if (!parentAuthorId) continue
-      const replierRole = nodeToRole.get(post.author_node_id) ?? 'unknown'
-      const targetRole = nodeToRole.get(parentAuthorId) ?? 'unknown'
-      if (replierRole === 'unknown' && targetRole === 'unknown') continue
-      const key = `${replierRole} \u2192 ${targetRole}`
-      pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1)
-    }
-
-    return Array.from(pairCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([name, count]) => ({
-        name: name.length > 30 ? name.slice(0, 28) + '\u2026' : name,
-        fullName: name,
-        count,
-      }))
-  }, [allPosts, personas])
-
   const hasPersonaData = allPersonas.length > 0
 
   // ── Influence Flow ────────────────────────────────────────────────
@@ -800,13 +573,12 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
   }, [report])
 
   const hasData = sentimentData.length > 0 || criticismData.length > 0 || platformDepthData.length > 0
-    || praiseData.length > 0 || platformReceptionData.length > 0 || timelineData.length > 0 || activityData.length > 0
-    || platformSentTimelineData.chartData.length > 0 || hasPersonaData || interactionFlowData.length > 0
-    || highRiskPlatforms.length > 0 || topContributorsData.length > 0 || segmentByRoundData.chartData.length > 0
-    || actionTypeData.length > 0 || segmentAttitudeData.length > 0 || regionData.length > 0
+    || praiseData.length > 0 || platformReceptionData.length > 0 || timelineData.length > 0
+    || platformSentTimelineData.chartData.length > 0 || hasPersonaData
+    || segmentAttitudeData.length > 0
     || platformSegmentsData.length > 0 || segmentJourneyData.chartData.length > 0
     || platformSegmentActivityData.length > 0 || influenceFlowData.length > 0
-    || conversionFunnelData.length > 0 || regionSentimentData.length > 0
+    || conversionFunnelData.length > 0
     || archetypeNarrativeItems.length > 0
     || unaddressedConcernsData.length > 0
     || qaAnalysisData !== null
@@ -1401,49 +1173,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
           </div>
         )}
 
-        {/* Attitude Journey (Top 5) */}
-        {attitudeJourneyData.chartData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Attitude Journey (Top 5)
-            </p>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={attitudeJourneyData.chartData} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="round" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  domain={[-1.5, 1.5]}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1)}
-                />
-                <ReferenceLine y={0} strokeDasharray="3 3" stroke="#cbd5e1" />
-                <Tooltip
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  formatter={(v: any, name: any) => [
-                    `${Number(v) > 0 ? '+' : ''}${Number(v).toFixed(2)}`,
-                    String(name),
-                  ]}
-                  labelFormatter={(label) => `Round ${label}`}
-                />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {attitudeJourneyData.names.map((name, idx) => (
-                  <Line
-                    key={name}
-                    type="monotone"
-                    dataKey={name}
-                    stroke={ATTITUDE_JOURNEY_COLORS[idx % ATTITUDE_JOURNEY_COLORS.length]}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
         {/* Segment Attitude Heatmap */}
         {segmentHeatmapData && (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', gridColumn: '1 / -1' }}>
@@ -1568,115 +1297,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                   />
                 </Bar>
                 <Bar dataKey="resistance_rate" name="Resistant" fill="#ef4444" radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Echo Chamber Risk */}
-        {report?.echo_chamber_risk && Object.keys(report.echo_chamber_risk).length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', gridColumn: '1 / -1' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Echo Chamber Risk
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              {Object.entries(report.echo_chamber_risk).map(([platform, ecData]) => {
-                const label = (PLATFORM_SHORT_LABELS as Record<string, string>)[platform] ?? platform
-                const riskColor = ecData.risk === 'high' ? '#ef4444' : ecData.risk === 'medium' ? '#f59e0b' : '#22c55e'
-                const riskBg = ecData.risk === 'high' ? '#fef2f2' : ecData.risk === 'medium' ? '#fffbeb' : '#f0fdf4'
-                return (
-                  <div key={platform} style={{ flex: '1 1 180px', minWidth: 160, background: '#f8fafc', borderRadius: 8, padding: '10px 12px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{label}</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: riskColor, background: riskBg, borderRadius: 4, padding: '1px 6px' }}>
-                        {ecData.risk.toUpperCase()}
-                      </span>
-                    </div>
-                    {ecData.sentiment_homogeneity != null && (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                        <span style={{ fontSize: 10, color: ecData.sentiment_homogeneity > 0.7 ? '#ef4444' : ecData.sentiment_homogeneity > 0.4 ? '#f59e0b' : '#64748b' }}>
-                          Homogeneity <b>{(ecData.sentiment_homogeneity * 100).toFixed(0)}%</b>
-                        </span>
-                        {ecData.opinion_diversity != null && (
-                          <span style={{ fontSize: 10, color: ecData.opinion_diversity > 0.5 ? '#22c55e' : ecData.opinion_diversity > 0.3 ? '#f59e0b' : '#ef4444' }}>
-                            Diversity <b>{(ecData.opinion_diversity * 100).toFixed(0)}%</b>
-                          </span>
-                        )}
-                        {ecData.cross_reply_polarity != null && (
-                          <span style={{ fontSize: 10, color: '#94a3b8' }}>
-                            Cross-polarity <b>{(ecData.cross_reply_polarity * 100).toFixed(0)}%</b>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {ecData.dominant_sentiment && (
-                      <span style={{ fontSize: 10, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-                        Dominant: {ecData.dominant_sentiment}
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Action Type Distribution (horizontal bar chart) */}
-        {actionTypeData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Action Type Distribution
-            </p>
-            <ResponsiveContainer width="100%" height={Math.max(120, actionTypeData.length * 36)}>
-              <BarChart data={actionTypeData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={120}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: '#eef2ff' }}
-                  formatter={(v) => [v, 'count']}
-                />
-                <Bar dataKey="count" fill="#6366f1" radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Top Contributors (horizontal bar chart) */}
-        {topContributorsData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Top Contributors
-            </p>
-            <ResponsiveContainer width="100%" height={Math.max(120, topContributorsData.length * 36)}>
-              <BarChart data={topContributorsData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={120}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: '#f5f3ff' }}
-                  labelFormatter={(label) => {
-                    const item = topContributorsData.find(c => c.name === label)
-                    return item?.fullName ?? label
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="score" fill="#8b5cf6" name="Engagement Score" radius={[0, 3, 3, 0]} />
-                <Bar dataKey="influence_score" fill="#f59e0b" name="Influence Score" radius={[0, 3, 3, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1909,232 +1529,6 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Activity Over Rounds (line chart) */}
-        {activityData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Activity Over Rounds
-            </p>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={activityData} margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="round" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} label={{ value: 'Round', position: 'insideBottomRight', offset: -5, style: { fontSize: 10, fill: '#94a3b8' } }} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip formatter={(v, name) => [v, name === 'activeAgents' ? 'Active Agents' : 'Posts + Comments']} />
-                <Legend
-                  formatter={(value) => value === 'activeAgents' ? 'Active Agents' : 'Posts + Comments'}
-                  wrapperStyle={{ fontSize: 11 }}
-                />
-                <Line type="monotone" dataKey="activeAgents" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="activity" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-                {engagementAlertRounds.map(alert => (
-                  <ReferenceLine
-                    key={`alert-${alert.round}`}
-                    x={alert.round}
-                    stroke="#ef4444"
-                    strokeDasharray="4 4"
-                    label={{ value: `\u25BC${alert.drop_pct}%`, position: 'top', fontSize: 10, fill: '#ef4444' }}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-            {engagementAlertRounds.length > 0 && (
-              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {engagementAlertRounds.map(alert => (
-                  <div key={alert.round} style={{ fontSize: 11, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 600 }}>Round {alert.round}:</span>
-                    <span>Engagement dropped {alert.drop_pct}% ({alert.prev_engagement} → {alert.curr_engagement} interactions)</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Active Segments by Round (stacked bar chart) */}
-        {segmentByRoundData.chartData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Active Segments by Round
-            </p>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={segmentByRoundData.chartData} margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="round" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip formatter={(v, name) => [v, SEGMENT_LABELS[name as string] ?? name]} />
-                <Legend
-                  formatter={(value) => SEGMENT_LABELS[value as string] ?? value}
-                  wrapperStyle={{ fontSize: 11 }}
-                />
-                {segmentByRoundData.segments.map(seg => (
-                  <Bar key={seg} dataKey={seg} stackId="seg" fill={SEGMENT_COLORS[seg] ?? '#94a3b8'} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Interaction Flow (role-to-role replies) */}
-        {interactionFlowData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Interaction Flow
-            </p>
-            <p style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 10 }}>Top role-to-role reply pairs</p>
-            <ResponsiveContainer width="100%" height={Math.max(120, interactionFlowData.length * 36)}>
-              <BarChart data={interactionFlowData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={160}
-                  tick={{ fontSize: 10, fill: '#64748b' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: '#f8fafc' }}
-                  formatter={(v) => [v, 'replies']}
-                  labelFormatter={(label) => {
-                    const item = interactionFlowData.find(c => c.name === label)
-                    return item?.fullName ?? label
-                  }}
-                />
-                <Bar dataKey="count" fill="#8b5cf6" radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Top Interactions (interaction_network table) */}
-        {(() => {
-          const network = report?.interaction_network
-          if (!network || network.length === 0) return null
-          const sorted = [...network].sort((a, b) => b.count - a.count).slice(0, 10)
-          return (
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-                Top Interactions
-              </p>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <th style={{ textAlign: 'left', padding: '6px 8px', color: '#64748b', fontWeight: 600 }}>From → To</th>
-                    <th style={{ textAlign: 'right', padding: '6px 8px', color: '#64748b', fontWeight: 600 }}>Interactions</th>
-                    <th style={{ textAlign: 'right', padding: '6px 8px', color: '#64748b', fontWeight: 600 }}>Agree / Disagree</th>
-                    <th style={{ textAlign: 'center', padding: '6px 8px', color: '#64748b', fontWeight: 600 }}>Pattern</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((edge, idx) => {
-                    const fromLabel = formatNameWithSegment(edge.from_name || edge.from, edge.from_segment)
-                    const toLabel = formatNameWithSegment(edge.to_name || edge.to, edge.to_segment)
-                    const hasRatio = edge.agree_count != null && edge.disagree_count != null
-                    const total = hasRatio ? (edge.agree_count! + edge.disagree_count!) : 0
-                    const ratio = total > 0 ? edge.agree_count! / total : 0.5
-                    const ratioColor = !hasRatio || total === 0 ? '#94a3b8' : ratio > 0.6 ? '#22c55e' : ratio < 0.4 ? '#ef4444' : '#94a3b8'
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '6px 8px', color: '#334155' }}>
-                          {fromLabel} <span style={{ color: '#94a3b8' }}> → </span> {toLabel}
-                        </td>
-                        <td style={{ textAlign: 'right', padding: '6px 8px', color: '#475569', fontWeight: 600 }}>
-                          {edge.count}
-                        </td>
-                        <td style={{ textAlign: 'right', padding: '6px 8px' }}>
-                          {hasRatio && total > 0 ? (
-                            <span style={{ color: ratioColor, fontWeight: 600 }}>
-                              {edge.agree_count} / {edge.disagree_count}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#cbd5e1' }}>--</span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '6px 8px' }}>
-                          {edge.sentiment_pattern && edge.sentiment_pattern !== 'neutral' ? (
-                            <span style={{
-                              display: 'inline-block',
-                              padding: '1px 6px',
-                              borderRadius: 4,
-                              fontSize: 10,
-                              fontWeight: 600,
-                              color: edge.sentiment_pattern === 'debate' ? '#dc2626' : edge.sentiment_pattern === 'aligned' ? '#16a34a' : '#ca8a04',
-                              background: edge.sentiment_pattern === 'debate' ? '#fef2f2' : edge.sentiment_pattern === 'aligned' ? '#f0fdf4' : '#fefce8',
-                            }}>
-                              {edge.sentiment_pattern === 'debate' ? 'Debate' : edge.sentiment_pattern === 'aligned' ? 'Aligned' : 'Mixed'}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#cbd5e1' }}>-</span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )
-        })()}
-
-        {/* Region Distribution (pie chart) */}
-        {regionData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Region Distribution
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 110, height: 110, flexShrink: 0 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={regionData} cx="50%" cy="50%" innerRadius={28} outerRadius={48} dataKey="value" strokeWidth={0}>
-                      {regionData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v, name) => [v, name]} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {regionData.map(d => {
-                  const total = regionData.reduce((s, r) => s + r.value, 0)
-                  const pct = total > 0 ? Math.round(d.value / total * 100) : 0
-                  return (
-                    <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 2, background: d.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, minWidth: 50 }}>{d.name}</span>
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>{d.value} ({pct}%)</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Region Sentiment (stacked bar) */}
-        {regionSentimentData.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Sentiment by Region
-            </p>
-            <ResponsiveContainer width="100%" height={Math.max(160, regionSentimentData.length * 32)}>
-              <BarChart data={regionSentimentData} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 9 }} />
-                <YAxis type="category" dataKey="region" tick={{ fontSize: 10 }} width={72} />
-                <Tooltip contentStyle={{ fontSize: 11 }} />
-                <Bar dataKey="positive" stackId="s" fill="#22c55e" name="Positive" />
-                <Bar dataKey="constructive" stackId="s" fill="#3b82f6" name="Constructive" />
-                <Bar dataKey="neutral" stackId="s" fill="#94a3b8" name="Neutral" />
-                <Bar dataKey="negative" stackId="s" fill="#ef4444" name="Negative" />
-              </BarChart>
-            </ResponsiveContainer>
           </div>
         )}
 
