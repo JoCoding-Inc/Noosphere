@@ -93,6 +93,11 @@ for _plat_key, _plat_desc in _PLATFORM_AUDIENCE.items():
         _archs = [a.strip().rstrip(".") for a in _raw.split(",") if a.strip()]
         _PLATFORM_ARCHETYPES[_plat_key] = _archs
 
+_DEFAULT_ARCHETYPES: list[str] = [
+    "early adopter", "skeptic", "domain expert", "founder",
+    "investor", "operator", "researcher", "product manager",
+]
+
 
 _PERSONA_TOOL = {
     "type": "function",
@@ -198,12 +203,17 @@ _PERSONA_TOOL = {
                     "type": "string",
                     "description": "Emotional context when this persona encounters this product idea (1 short phrase). Examples: 'cautiously optimistic', 'skeptical but FOMO-aware', 'excited but budget-constrained', 'burned before by hype cycles'.",
                 },
+                "region": {
+                    "type": "string",
+                    "enum": ["NA", "EU", "APAC", "LATAM", "MENA", "Global"],
+                    "description": "Geographic region representing this persona's primary market perspective",
+                },
             },
             "required": [
                 "name", "role", "age", "seniority", "affiliation", "company",
                 "mbti", "interests", "skepticism", "commercial_focus", "innovation_openness",
                 "domain_type", "tech_area", "market", "problem_domain",
-                "jtbd", "cognitive_pattern", "emotional_state",
+                "jtbd", "cognitive_pattern", "emotional_state", "region",
             ],
         },
     },
@@ -224,7 +234,8 @@ Guidelines:
 - Vary MBTI type across personas. Do NOT cluster on INTJ. Choose from the full 16 types; prefer less common types for variety.
 - For jtbd: think about what specific outcome this person is trying to achieve in their professional life that makes this idea relevant (or irrelevant) to them. Ground it in their role, seniority, and platform context.
 - For cognitive_pattern: pick the ONE dominant mental model this type of person uses first when evaluating new tools or products. Make it specific, not generic.
-- For emotional_state: capture the underlying feeling that colors how they approach new product ideas, given their career stage and past experiences."""
+- For emotional_state: capture the underlying feeling that colors how they approach new product ideas, given their career stage and past experiences.
+- Include geographic diversity - each persona should reflect their region's specific regulatory environment, market maturity, and pricing expectations."""
 
 
 _NAME_POOL = [
@@ -279,11 +290,143 @@ def sample_persona_names(n: int) -> list[str]:
         result.extend(pool)
     return result[:n]
 _FALLBACK_MBTIS = ["INTJ", "INTP", "ENTP", "ENFP", "ISTJ", "ESTJ", "ISTP", "INFJ"]
+_FALLBACK_REGIONS = ["NA", "EU", "APAC", "LATAM", "MENA", "Global"]
+
+
+import random as _random
+
+
+def _validate_persona_distribution(personas: list[Persona]) -> list[Persona]:
+    """Post-process a batch of personas to ensure skepticism/region/MBTI diversity.
+
+    Mutates personas in-place and returns the same list.
+    """
+    if not personas:
+        return personas
+
+    # 1. skepticism 극단값 보장 (1-3: 최소 15%, 7-10: 최소 20%)
+    low_skept = [p for p in personas if p.skepticism and p.skepticism <= 3]
+    high_skept = [p for p in personas if p.skepticism and p.skepticism >= 7]
+    mid_skept = [p for p in personas if p.skepticism and 4 <= p.skepticism <= 6]
+    n = len(personas)
+
+    target_low = max(1, int(n * 0.15))
+    target_high = max(1, int(n * 0.20))
+
+    # mid가 너무 많으면 일부를 극단으로 재배정
+    while len(low_skept) < target_low and mid_skept:
+        p = mid_skept.pop()
+        p.skepticism = _random.randint(1, 3)
+        low_skept.append(p)
+    while len(high_skept) < target_high and mid_skept:
+        p = mid_skept.pop()
+        p.skepticism = _random.randint(7, 10)
+        high_skept.append(p)
+
+    # 2. region 다양성 보장 (최소 3개 지역)
+    regions = [p.region for p in personas if p.region]
+    unique_regions = set(regions)
+    # 방어: region이 모두 비어있으면 순환 배정
+    if not unique_regions and len(personas) >= 5:
+        _all_regions_pool = ["NA", "EU", "APAC", "LATAM", "MENA"]
+        for i, p in enumerate(personas):
+            p.region = _all_regions_pool[i % len(_all_regions_pool)]
+        regions = [p.region for p in personas]
+        unique_regions = set(regions)
+    if len(unique_regions) < 3 and len(personas) >= 5:
+        all_regions = ["NA", "EU", "APAC", "LATAM", "MENA"]
+        missing = [r for r in all_regions if r not in unique_regions]
+        dominant = max(unique_regions, key=lambda r: regions.count(r)) if unique_regions else "NA"
+        dominant_personas = [p for p in personas if p.region == dominant]
+        for i, region in enumerate(missing[:2]):  # 최대 2개 지역 추가
+            if i < len(dominant_personas):
+                dominant_personas[i].region = region
+
+    # 3. Role diversity check: dominant keyword > 40% of count -> warning log
+    if len(personas) >= 5:
+        role_words: list[str] = []
+        for p in personas:
+            words = (p.role or "").lower().split()
+            role_words.extend(words[:2])  # first 2 words only
+        from collections import Counter
+        role_counter = Counter(role_words)
+        if role_counter:
+            most_common_word, most_common_count = role_counter.most_common(1)[0]
+            if most_common_count / len(personas) > 0.4:
+                logger.warning(
+                    "Role diversity low: '%s' appears in %d/%d personas",
+                    most_common_word, most_common_count, len(personas),
+                )
+
+    # 4. MBTI 다양성 보장 (최소 4종)
+    mbtis = [p.mbti for p in personas if p.mbti]
+    unique_mbtis = set(mbtis)
+    if len(unique_mbtis) < 4 and len(personas) >= 6:
+        all_mbtis = ["INTJ", "ENTJ", "INFP", "ENFP", "ISTJ", "ESTJ", "INTP", "ENTP", "ISFJ", "ESFJ"]
+        missing_mbtis = [m for m in all_mbtis if m not in unique_mbtis]
+        dominant_mbti = max(unique_mbtis, key=lambda m: mbtis.count(m)) if unique_mbtis else "INTJ"
+        dominant_ps = [p for p in personas if p.mbti == dominant_mbti]
+        for i, mbti in enumerate(missing_mbtis[:2]):
+            if i < len(dominant_ps) // 2:  # 과반수는 유지
+                dominant_ps[i].mbti = mbti
+
+    return personas
+
+
+def _validate_age_seniority(persona: Persona) -> Persona:
+    """Post-process persona to ensure age/seniority consistency."""
+    role_lower = (persona.role or "").lower()
+
+    # Senior roles: c-suite, vp, director → age >= 35
+    senior_keywords = ("c-suite", "ceo", "cto", "cfo", "chief", "vp", "vice president", "director")
+    if any(kw in role_lower for kw in senior_keywords):
+        if persona.age < 35:
+            persona.age = 35
+
+    # Junior roles: intern, junior, entry → age <= 40
+    junior_keywords = ("intern", "junior", "entry")
+    if any(kw in role_lower for kw in junior_keywords):
+        if persona.age > 40:
+            persona.age = 40
+
+    # Seniority 기반 최소/최대 나이 보정 (role 키워드 검증 외에 추가)
+    _seniority_age_constraints: dict[str, tuple[str, int]] = {
+        "c_suite": ("min", 38),
+        "vp": ("min", 38),
+        "director": ("min", 33),
+        "principal": ("min", 33),
+        "lead": ("min", 28),
+        "senior": ("min", 28),
+        "intern": ("max", 28),
+    }
+    seniority = getattr(persona, "seniority", None)
+    if seniority and seniority in _seniority_age_constraints:
+        constraint_type, constraint_age = _seniority_age_constraints[seniority]
+        if constraint_type == "min":
+            persona.age = max(persona.age, constraint_age)
+        else:
+            persona.age = min(persona.age, constraint_age)
+
+    # Global clamp: 22-65
+    persona.age = max(22, min(65, persona.age))
+
+    return persona
 
 
 def _fallback_persona(cluster: dict, platform_name: str) -> Persona:
     rep = cluster.get("representative") or {}
-    return Persona(
+
+    # Extract taxonomy from cluster's representative structured fields
+    domain_type = coerce_enum(rep.get("_domain_type"), DOMAIN_TYPES) or "general"
+    tech_area = coerce_string_list(rep.get("_tech_area"), allowed=TECH_AREAS, max_items=2)
+    market = coerce_string_list(rep.get("_market"), allowed=MARKETS, max_items=2)
+    problem_domain = coerce_string_list(rep.get("_problem_domain"), allowed=PROBLEM_DOMAINS, max_items=2)
+
+    # Build a contextual jtbd from the domain
+    domain_label = domain_type if domain_type != "general" else "technology"
+    jtbd = f"Exploring solutions to {domain_label} challenges"
+
+    persona = Persona(
         node_id=cluster.get("id", "unknown"),
         name=random.choice(_FALLBACK_NAMES),
         role="Software Engineer",
@@ -297,11 +440,16 @@ def _fallback_persona(cluster: dict, platform_name: str) -> Persona:
         commercial_focus=5,
         innovation_openness=5,
         source_title=rep.get("title", ""),
-        domain_type="",
-        tech_area=[],
-        market=[],
-        problem_domain=[],
+        domain_type=domain_type,
+        tech_area=tech_area,
+        market=market,
+        problem_domain=problem_domain,
+        jtbd=jtbd,
+        cognitive_pattern="analytical",
+        emotional_state="curious",
+        region=random.choice(_FALLBACK_REGIONS),
     )
+    return _validate_age_seniority(persona)
 
 
 def _normalize_cluster_input(cluster_or_node: dict) -> dict:
@@ -322,6 +470,9 @@ async def generate_persona(
     platform_name: str = "",
     ontology: dict | None = None,
     assigned_name: str | None = None,
+    domain_info: str = "",
+    competitor_context: str = "",
+    forced_archetype: str = "",
 ) -> Persona:
     cluster = _normalize_cluster_input(cluster)
     cluster_id = cluster.get("id", "unknown")
@@ -356,16 +507,28 @@ async def generate_persona(
 
     # Python-controlled archetype selection to prevent LLM bias toward "software engineer"
     archetypes = _PLATFORM_ARCHETYPES.get(platform_name, [])
-    if archetypes:
+    if forced_archetype:
+        selected_archetype = forced_archetype
+    elif archetypes:
         selected_archetype = random.choice(archetypes)
+    else:
+        selected_archetype = ""
+    if selected_archetype:
         # Replace "Pick ONE ... at random" instruction with a deterministic directive
-        platform_context = _re.sub(
+        new_ctx = _re.sub(
             r"Pick ONE (?:of these archetypes|at random)[^.]*\.",
             f"You MUST generate a persona of archetype: {selected_archetype}.",
             platform_context,
         )
+        if new_ctx == platform_context:
+            # No regex match (e.g. platform not in _PLATFORM_AUDIENCE) — append directive
+            platform_context += f" You MUST generate a persona of archetype: {selected_archetype}."
+        else:
+            platform_context = new_ctx
 
-    system = _SYSTEM_TMPL.format(platform_context=platform_context)
+    domain_context = f"\nDomain context: {domain_info}" if domain_info else ""
+    competitor_ctx = f"\nKey entities in this space: {competitor_context}. Reflect awareness of these alternatives in jtbd and cognitive_pattern." if competitor_context else ""
+    system = _SYSTEM_TMPL.format(platform_context=platform_context) + domain_context + competitor_ctx
 
     try:
         response = await llm.complete(
@@ -406,11 +569,11 @@ async def generate_persona(
     market = coerce_string_list(data.get("market"), allowed=MARKETS, max_items=2)
     problem_domain = coerce_string_list(data.get("problem_domain"), allowed=PROBLEM_DOMAINS, max_items=2)
 
-    return Persona(
+    persona = Persona(
         node_id=cluster_id,
         name=assigned_name or data.get("name", "Unknown"),
         role=data.get("role", "Professional"),
-        age=int(data.get("age", 30)),
+        age=int(data.get("age") or 30),
         seniority=data.get("seniority", "mid"),
         affiliation=data.get("affiliation", "individual"),
         company=data.get("company", ""),
@@ -427,4 +590,6 @@ async def generate_persona(
         jtbd=data.get("jtbd", ""),
         cognitive_pattern=data.get("cognitive_pattern", ""),
         emotional_state=data.get("emotional_state", ""),
+        region=data.get("region", ""),
     )
+    return _validate_age_seniority(persona)
