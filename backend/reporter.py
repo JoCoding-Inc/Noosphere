@@ -447,7 +447,7 @@ async def generate_final_report(
 
     key_debates = report_json.get("key_debates")
     if key_debates and isinstance(key_debates, list):
-        debate_titles = [d.get("title", d) if isinstance(d, dict) else str(d) for d in key_debates[:5]]
+        debate_titles = [d.get("title", "") if isinstance(d, dict) else str(d) for d in key_debates[:5]]
         key_metrics_lines.append(f"- Key debates: {', '.join(debate_titles)}")
 
     segments = report_json.get("segments")

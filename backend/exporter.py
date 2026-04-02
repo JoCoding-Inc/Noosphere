@@ -536,6 +536,10 @@ def _build_typst(
 
     personas_section = _build_personas_section(personas)
 
+    _personas_block = "" if not personas_section else f"#pagebreak()\n\n// ── 참여자 프로필 ──────────────────────────────────────\n{personas_section}\n"
+    _report_json_block = "" if not report_json_section else f"#pagebreak()\n\n// ── 시뮬레이션 데이터 요약 ──────────────────────────────\n= Simulation Data Summary\n\n{report_json_section}\n"
+    _sentiment_block = "" if not sentiment_timeline_section else f"#pagebreak()\n\n// ── 감성 타임라인 ──────────────────────────────────────\n= Sentiment Timeline\n\n{sentiment_timeline_section}\n"
+
     report_title_upper = labels["report_title"].upper()
 
     return f"""#set document(title: "Noosphere — {title_escaped}", date: auto)
@@ -647,23 +651,7 @@ def _build_typst(
 // ── 시뮬레이션 파라미터 ──────────────────────────────────
 {params_section}
 
-{"" if not personas_section else f"""#pagebreak()
-
-// ── 참여자 프로필 ──────────────────────────────────────
-{personas_section}
-"""}{"" if not report_json_section else f"""#pagebreak()
-
-// ── 시뮬레이션 데이터 요약 ──────────────────────────────
-= Simulation Data Summary
-
-{report_json_section}
-"""}{"" if not sentiment_timeline_section else f"""#pagebreak()
-
-// ── 감성 타임라인 ──────────────────────────────────────
-= Sentiment Timeline
-
-{sentiment_timeline_section}
-"""}#pagebreak()
+{_personas_block}{_report_json_block}{_sentiment_block}#pagebreak()
 
 // ── 분석 보고서 ──────────────────────────────────────────
 = {labels["section_analysis"]}
