@@ -261,6 +261,7 @@ The simulation of 127 interactions across 5 platforms reveals a product with str
 1. **Publish methodology** — transparency document for technical audiences
 2. **Add confidence indicators** — help users calibrate reliance on results
 3. **Reframe "simulate" → "predict"** — reduces friction with skeptical communities`,
+  gtm_md: '',
 }
 
 // ── Demo config constants ─────────────────────────────────────────────────────
@@ -318,7 +319,7 @@ function HomePhase({ displayText, runClicked }: { displayText: string; runClicke
               background: '#1e293b', color: '#fff', fontWeight: 600,
               boxShadow: '0 2px 8px rgba(30,41,59,0.25)',
             }}>
-              <span>{p.icon}</span> {p.label}
+              {p.label}
             </span>
           ))}
         </div>

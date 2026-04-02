@@ -100,10 +100,14 @@ def _extract_openai_response(response, tool_choice: str | None) -> LLMResponse:
         pass
     if tool_calls:
         tc = tool_calls[0]
+        try:
+            tool_args = json.loads(tc.function.arguments)
+        except (json.JSONDecodeError, ValueError):
+            tool_args = {}
         return LLMResponse(
             content=message.content,
             tool_name=tc.function.name,
-            tool_args=json.loads(tc.function.arguments),
+            tool_args=tool_args,
             tokens_used=tokens_used,
         )
     if tool_choice is not None:
@@ -130,6 +134,7 @@ async def _complete_openai(
 
     reservation_id = await acquire_tpm_slot("openai", max_tokens)
 
+    conn_attempts = 0  # track timeout/connection retries separately
     for attempt in range(4):
         await acquire_api_slot("openai")
         try:
@@ -150,6 +155,15 @@ async def _complete_openai(
             wait = 5 * (2 ** attempt)
             logger.warning("OpenAI rate limit, retrying in %ds", wait)
             await asyncio.sleep(wait)
+        except (asyncio.TimeoutError, openai.APIConnectionError) as exc:
+            conn_attempts += 1
+            if conn_attempts >= 2:
+                await record_token_usage("openai", actual_tokens=0, reservation_id=reservation_id)
+                raise
+            backoff = 5 * conn_attempts  # 5s first, 10s second
+            logger.warning("OpenAI %s, retrying in %ds (attempt %d/2)",
+                           type(exc).__name__, backoff, conn_attempts)
+            await asyncio.sleep(backoff)
         except Exception:
             await record_token_usage("openai", actual_tokens=0, reservation_id=reservation_id)
             raise

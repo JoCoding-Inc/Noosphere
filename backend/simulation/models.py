@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import dataclasses
 
 
@@ -24,6 +25,14 @@ class Persona:
     jtbd: str = ""                # Job-to-be-Done: what this persona is trying to accomplish
     cognitive_pattern: str = ""   # Dominant thinking pattern (e.g., "Munger inversion")
     emotional_state: str = ""     # Emotional context when encountering this product
+    region: str = ""               # Geographic region: "NA" | "EU" | "APAC" | "LATAM" | "MENA" | "Global" | ""
+    initial_emotional_state: str = ""  # Snapshot of emotional_state at round 1 (for restoration when shift is near 0)
+    attitude_shift: float = 0.0   # Accumulated attitude shift from social interactions (±1.0 range)
+    attitude_history: list = dataclasses.field(default_factory=list)  # [{"round": int, "delta": float, "trigger_post_id": str}]
+    interaction_ledger: dict = dataclasses.field(default_factory=dict)
+    # 구조: {counterpart_node_id: {"exchanges": int, "my_last_sentiment": str, "their_last_sentiment": str, "last_round": int, "agreed_count": int, "disagreed_count": int}}
+    persuasion_memory: list = dataclasses.field(default_factory=list)
+    # 최대 3개의 설득된 논거 snippet (content[:80]) 저장
 
     @property
     def generation(self) -> str:
@@ -83,7 +92,13 @@ class SocialPost:
     upvotes: int = 0
     downvotes: int = 0
     parent_id: str | None = None   # None = 최상위; 댓글/답글은 부모 post id
+    sentiment: str = ""            # "positive" | "neutral" | "negative" | ""
+    reply_count: int = 0
     structured_data: dict = dataclasses.field(default_factory=dict)  # platform-specific structured fields
+    weighted_score: float = 0.0  # seniority-weighted vote score
+    vote_rounds: list = dataclasses.field(default_factory=list)  # round numbers when votes were cast on this post
+    voters: list = dataclasses.field(default_factory=list)  # node_ids of agents who voted on this post (for dedup)
+    endorsed_by: list = dataclasses.field(default_factory=list)  # node_ids of senior (director/vp/c_suite) voters who upvoted/reacted
 
 
 @dataclasses.dataclass
@@ -93,28 +108,34 @@ class PlatformState:
     round_num: int = 0
     recent_speakers: dict[str, int] = dataclasses.field(default_factory=dict)
     # node_id → 마지막 콘텐츠(comment/reply) 생성 round_num. vote/react는 기록 안 함.
+    mentioned_agents: dict[str, list[str]] = dataclasses.field(default_factory=dict)
+    # node_id → list of post_ids where this agent was @mentioned (for priority activation next round)
 
     def __post_init__(self) -> None:
-        # post_index는 dataclass 필드가 아닌 일반 속성으로 관리하여
+        # post_index와 _write_lock은 dataclass 필드가 아닌 일반 속성으로 관리하여
         # dataclasses.asdict() 직렬화에서 자동 제외됩니다.
         self.rebuild_post_index()
+        self._rebuild_count: int = 0
+        self._write_lock: asyncio.Lock = asyncio.Lock()
 
     def rebuild_post_index(self) -> None:
         self.post_index: dict[str, SocialPost] = {post.id: post for post in self.posts}
+        self._rebuild_count = getattr(self, '_rebuild_count', 0) + 1
+        if self._rebuild_count >= 3:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "Excessive post_index rebuilds: %d", self._rebuild_count
+            )
 
     def add_post(self, post: SocialPost) -> None:
         self.posts.append(post)
         self.post_index[post.id] = post
 
     def get_post(self, post_id: str) -> SocialPost | None:
-        post_index = getattr(self, "post_index", None)
-        if not isinstance(post_index, dict) or len(post_index) != len(self.posts):
-            self.rebuild_post_index()
-            post_index = self.post_index
-
-        post = post_index.get(post_id)
-        if post is None and self.posts:
-            # Repair stale caches caused by out-of-band list mutation before giving up.
-            self.rebuild_post_index()
-            post = self.post_index.get(post_id)
+        post = self.post_index.get(post_id)
+        if post is None and post_id:
+            # Cache miss: rebuild index once and retry (cap at 3 to prevent infinite loops)
+            if getattr(self, '_rebuild_count', 0) < 3:
+                self.rebuild_post_index()
+                post = self.post_index.get(post_id)
         return post

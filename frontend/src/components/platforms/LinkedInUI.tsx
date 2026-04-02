@@ -1,14 +1,15 @@
 import type { SocialPost } from '../../types'
 import { getThreadedPosts } from './threadUtils'
+import { ThreadCollapseButton, type ThreadCollapseProps } from './ThreadCollapseButton'
 
-interface Props { posts: SocialPost[] }
+interface Props extends ThreadCollapseProps { posts: SocialPost[] }
 
 const REACTIONS = ['👍', '❤️', '🙌', '💡', '🤔']
 const HASHTAG_POOL = ['#AI', '#Founders', '#ProductValidation', '#StartupLife', '#BuildInPublic', '#GTM', '#IndieHackers', '#MVP', '#ProductDevelopment']
 
 function liGradient(name: string, mul: number, offset: number, l1: number, l2: number) {
-  const h1 = (name.charCodeAt(0) * mul) % 360
-  const h2 = (name.charCodeAt(0) * mul + offset) % 360
+  const h1 = ((name.charCodeAt(0) || 65) * mul) % 360
+  const h2 = ((name.charCodeAt(0) || 65) * mul + offset) % 360
   return `linear-gradient(135deg, hsl(${h1}, 55%, ${l1}%), hsl(${h2}, 55%, ${l2}%))`
 }
 
@@ -24,7 +25,7 @@ function getHashtags(content: string): string[] {
   return tags.slice(0, 3)
 }
 
-export function LinkedInUI({ posts }: Props) {
+export function LinkedInUI({ posts, collapsibleThreads, expandedThreads, onToggleThread }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
   // LinkedIn: fully flat comments — all replies at same level, no indentation, @mention for context
@@ -52,7 +53,7 @@ export function LinkedInUI({ posts }: Props) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 12, fontWeight: 700, color: '#fff',
               }}>
-                {reply.author_name[0].toUpperCase()}
+                {(reply.author_name?.[0] ?? '?').toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ background: '#f2f2f2', borderRadius: '0 8px 8px 8px', padding: '8px 12px' }}>
@@ -102,7 +103,7 @@ export function LinkedInUI({ posts }: Props) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 18, fontWeight: 700, color: '#fff',
                 }}>
-                  {post.author_name[0].toUpperCase()}
+                  {(post.author_name?.[0] ?? '?').toUpperCase()}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, color: 'rgba(0,0,0,0.9)' }}>{post.author_name}</div>
@@ -150,6 +151,16 @@ export function LinkedInUI({ posts }: Props) {
                     {action}
                   </button>
                 ))}
+              </div>
+
+              {/* Thread collapse/expand */}
+              <div style={{ padding: '0 16px' }}>
+                <ThreadCollapseButton
+                  postId={post.id}
+                  collapsibleThreads={collapsibleThreads}
+                  expandedThreads={expandedThreads}
+                  onToggleThread={onToggleThread}
+                />
               </div>
 
               {/* Flat @mention comment section */}

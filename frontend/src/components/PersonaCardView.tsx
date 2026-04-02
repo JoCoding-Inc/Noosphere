@@ -1,4 +1,5 @@
-import type { Persona, Platform } from '../types'
+import { useMemo } from 'react'
+import type { Persona, Platform, SocialPost } from '../types'
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   hackernews: 'HN',
@@ -23,12 +24,65 @@ const BIAS_COLORS: Record<string, string> = {
   evangelist: '#ec4899',
 }
 
+const SENIORITY_LABELS: Record<string, string> = {
+  intern: 'Intern',
+  junior: 'Junior',
+  mid: 'Mid',
+  senior: 'Senior',
+  lead: 'Lead',
+  principal: 'Principal',
+  director: 'Director',
+  vp: 'VP',
+  c_suite: 'C-Suite',
+}
+
+function MiniBar({ value, max = 10, color }: { value: number; max?: number; color: string }) {
+  const pct = Math.round((value / max) * 100)
+  return (
+    <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#e2e8f0' }}>
+      <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, background: color }} />
+    </div>
+  )
+}
+
 type PersonaWithPlatform = Persona & { platform: Platform }
 
-export function PersonaCardView({ personas }: { personas: Partial<Record<Platform, Persona[]>> | null | undefined }) {
+interface PersonaCardViewProps {
+  personas: Partial<Record<Platform, Persona[]>> | null | undefined
+  allPosts?: SocialPost[]
+}
+
+export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
   const allPersonas: PersonaWithPlatform[] = Object.entries(personas ?? {}).flatMap(([platform, list]) =>
     (list ?? []).map(p => ({ ...p, platform: platform as Platform }))
   )
+
+  // Compute influence scores: upvotes + (replies received * 2)
+  const influenceScores = useMemo(() => {
+    if (!allPosts || allPosts.length === 0) return new Map<string, number>()
+    const scores = new Map<string, number>()
+    // Index posts by id for parent lookup
+    const postIdSet = new Map<string, string>() // post.id -> author_node_id
+    for (const post of allPosts) {
+      postIdSet.set(post.id, post.author_node_id)
+    }
+    // Aggregate upvotes per author
+    for (const post of allPosts) {
+      const prev = scores.get(post.author_node_id) ?? 0
+      scores.set(post.author_node_id, prev + (post.upvotes ?? 0))
+    }
+    // Count replies received (parent_id -> parent author gets +2)
+    for (const post of allPosts) {
+      if (post.parent_id) {
+        const parentAuthor = postIdSet.get(post.parent_id)
+        if (parentAuthor) {
+          const prev = scores.get(parentAuthor) ?? 0
+          scores.set(parentAuthor, prev + 2)
+        }
+      }
+    }
+    return scores
+  }, [allPosts])
 
   if (allPersonas.length === 0) {
     return (
@@ -47,7 +101,7 @@ export function PersonaCardView({ personas }: { personas: Partial<Record<Platfor
     }}>
       {allPersonas.map((p, i) => {
         const platformColor = PLATFORM_COLORS[p.platform] || '#64748b'
-        const biasColor = BIAS_COLORS[p.bias] || '#64748b'
+        const biasColor = (p.bias ? BIAS_COLORS[p.bias] : undefined) || '#64748b'
         const biasBg = biasColor + '15'
         const biasBorder = '1px solid ' + biasColor + '30'
         return (
@@ -69,7 +123,7 @@ export function PersonaCardView({ personas }: { personas: Partial<Record<Platfor
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 14, fontWeight: 700, color: platformColor, flexShrink: 0,
                 }}>
-                  {p.name[0].toUpperCase()}
+                  {(p.name?.[0] ?? '?').toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -81,20 +135,84 @@ export function PersonaCardView({ personas }: { personas: Partial<Record<Platfor
                       {PLATFORM_LABELS[p.platform] || p.platform}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{p.mbti}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>{p.mbti}</span>
+                    {p.region && (
+                      <span style={{
+                        background: '#e2e8f0', borderRadius: 4,
+                        padding: '2px 6px', fontSize: 11, color: '#475569',
+                        fontWeight: 600,
+                      }}>{p.region}</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Role */}
-              <p style={{ margin: '0 0 8px', fontSize: 12, color: '#475569' }}>{p.role}</p>
+              {/* Role + seniority/company */}
+              <p style={{ margin: '0 0 4px', fontSize: 12, color: '#475569' }}>{p.role}</p>
+              {(p.seniority || p.company || p.age) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 8px' }}>
+                  <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                    {[
+                      p.seniority ? SENIORITY_LABELS[p.seniority] || p.seniority : null,
+                      p.company || null,
+                      p.age ? `${p.age}y` : null,
+                    ].filter(Boolean).join(' · ')}
+                  </span>
+                  {p.generation && (
+                    <span style={{
+                      display: 'inline-block',
+                      fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                      background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
+                      whiteSpace: 'nowrap',
+                    }}>{p.generation}</span>
+                  )}
+                </div>
+              )}
 
-              {/* Bias tag */}
-              <span style={{
-                display: 'inline-block',
-                fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
-                background: biasBg, color: biasColor, border: biasBorder,
-                textTransform: 'capitalize',
-              }}>{p.bias}</span>
+              {/* Bias tag (legacy) or affiliation tag */}
+              {p.bias ? (
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
+                  background: biasBg, color: biasColor, border: biasBorder,
+                  textTransform: 'capitalize',
+                }}>{p.bias}</span>
+              ) : p.affiliation ? (
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
+                  background: '#6366f115', color: '#6366f1', border: '1px solid #6366f130',
+                  textTransform: 'capitalize',
+                }}>{p.affiliation.replace('_', ' ')}</span>
+              ) : null}
+
+              {/* Dimension bars: skepticism, commercial_focus, innovation_openness */}
+              {(p.skepticism != null || p.commercial_focus != null || p.innovation_openness != null) && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {p.skepticism != null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 9, color: '#94a3b8', width: 52, flexShrink: 0 }}>Skepticism</span>
+                      <MiniBar value={p.skepticism} color="#f59e0b" />
+                      <span style={{ fontSize: 9, color: '#64748b', width: 14, textAlign: 'right' }}>{p.skepticism}</span>
+                    </div>
+                  )}
+                  {p.commercial_focus != null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 9, color: '#94a3b8', width: 52, flexShrink: 0 }}>Commercial</span>
+                      <MiniBar value={p.commercial_focus} color="#22c55e" />
+                      <span style={{ fontSize: 9, color: '#64748b', width: 14, textAlign: 'right' }}>{p.commercial_focus}</span>
+                    </div>
+                  )}
+                  {p.innovation_openness != null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 9, color: '#94a3b8', width: 52, flexShrink: 0 }}>Innovation</span>
+                      <MiniBar value={p.innovation_openness} color="#6366f1" />
+                      <span style={{ fontSize: 9, color: '#64748b', width: 14, textAlign: 'right' }}>{p.innovation_openness}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Interests */}
               {p.interests.slice(0, 3).map((interest, j) => (
@@ -104,6 +222,72 @@ export function PersonaCardView({ personas }: { personas: Partial<Record<Platfor
                   margin: '4px 2px 0',
                 }}>{interest}</span>
               ))}
+
+              {/* JTBD */}
+              {p.jtbd && (
+                <p style={{ margin: '6px 0 0', fontSize: 10, color: '#64748b', lineHeight: 1.4, fontStyle: 'italic' }}>
+                  JTBD: {p.jtbd}
+                </p>
+              )}
+
+              {/* Cognitive pattern */}
+              {p.cognitive_pattern && (
+                <span style={{
+                  display: 'inline-block', fontSize: 9, color: '#475569',
+                  background: '#e2e8f0', borderRadius: 4, padding: '2px 6px',
+                  marginTop: 6,
+                }}>{p.cognitive_pattern.length > 50 ? p.cognitive_pattern.slice(0, 47) + '...' : p.cognitive_pattern}</span>
+              )}
+
+              {/* Emotional state */}
+              {p.emotional_state && (
+                <span style={{
+                  display: 'inline-block', fontSize: 9, color: '#ec4899',
+                  background: '#ec489910', borderRadius: 4, padding: '2px 5px',
+                  marginTop: 4,
+                }}>{p.emotional_state}</span>
+              )}
+
+              {/* Influence score */}
+              {(() => {
+                const score = influenceScores.get(p.node_id) ?? 0
+                if (score <= 0) return null
+                return (
+                  <div style={{
+                    marginTop: 8, display: 'inline-block',
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px',
+                    borderRadius: 10, background: '#fef3c7', color: '#b45309',
+                    border: '1px solid #fde68a',
+                  }}>
+                    Influence: {score}
+                  </div>
+                )
+              })()}
+
+              {/* Attitude shift indicator */}
+              {(() => {
+                const shift = p.attitude_shift
+                if (shift == null || Math.abs(shift) < 0.1) return null
+                const isPositive = shift > 0
+                const arrow = isPositive ? '▲' : '▼'
+                const color = isPositive ? '#16a34a' : '#dc2626'
+                const displayVal = isPositive ? `+${shift.toFixed(1)}` : shift.toFixed(1)
+                const tooltip = p.attitude_history && p.attitude_history.length > 0
+                  ? p.attitude_history.map(h => `Round ${h.round}: ${h.delta >= 0 ? '+' : ''}${h.delta.toFixed(1)}`).join('\n')
+                  : undefined
+                return (
+                  <div
+                    style={{
+                      marginTop: 6, fontSize: 10, fontWeight: 600,
+                      color, display: 'inline-flex', alignItems: 'center', gap: 3,
+                    }}
+                    title={tooltip}
+                  >
+                    <span>{arrow}</span>
+                    <span>Attitude {displayVal}</span>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         )

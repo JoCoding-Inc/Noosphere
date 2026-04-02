@@ -23,19 +23,19 @@ export const PLATFORM_COLORS: Record<Platform, string> = {
   linkedin:        '#2563eb',
 }
 
-export const PLATFORM_OPTIONS: Array<{ id: Platform; label: string; icon: string }> = [
-  { id: 'hackernews',      label: 'Hacker News',       icon: '🟠' },
-  { id: 'producthunt',     label: 'Product Hunt',      icon: '🔴' },
-  { id: 'indiehackers',    label: 'Indie Hackers',     icon: '🟣' },
-  { id: 'reddit_startups', label: 'Reddit r/startups',  icon: '🟤' },
-  { id: 'linkedin',        label: 'LinkedIn',           icon: '🔵' },
+export const PLATFORM_OPTIONS: Array<{ id: Platform; label: string }> = [
+  { id: 'hackernews',      label: 'Hacker News' },
+  { id: 'producthunt',     label: 'Product Hunt' },
+  { id: 'indiehackers',    label: 'Indie Hackers' },
+  { id: 'reddit_startups', label: 'Reddit r/startups' },
+  { id: 'linkedin',        label: 'LinkedIn' },
 ]
 
-type VerdictConfig = { color: string; label: string; emoji: string }
+type VerdictConfig = { color: string; label: string; icon: string }
 
 export const VERDICT_CONFIG: Record<ReportJSON['verdict'], VerdictConfig> = {
-  positive:  { color: '#22c55e', label: 'Positive',  emoji: '✅' },
-  mixed:     { color: '#f59e0b', label: 'Mixed',     emoji: '⚖️' },
-  skeptical: { color: '#f97316', label: 'Skeptical', emoji: '🤔' },
-  negative:  { color: '#ef4444', label: 'Negative',  emoji: '❌' },
+  positive:  { color: '#22c55e', label: 'Positive',  icon: '<path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' },
+  mixed:     { color: '#f59e0b', label: 'Mixed',     icon: '<path d="M5 12h14M5 8h14M5 16h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
+  skeptical: { color: '#f97316', label: 'Skeptical', icon: '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' },
+  negative:  { color: '#ef4444', label: 'Negative',  icon: '<path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' },
 }

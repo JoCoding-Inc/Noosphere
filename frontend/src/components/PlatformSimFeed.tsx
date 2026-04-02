@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import type { Platform, SocialPost } from '../types'
 import { HackerNewsUI } from './platforms/HackerNewsUI'
 import { ProductHuntUI } from './platforms/ProductHuntUI'
@@ -12,6 +12,8 @@ interface Props {
   forcedTab?: Platform
 }
 
+const COLLAPSE_THRESHOLD = 3
+
 const PLATFORM_META: Record<Platform, { label: string; icon: string; color: string }> = {
   hackernews:      { label: 'Hacker News',      icon: '🟠', color: '#ff6600' },
   producthunt:     { label: 'Product Hunt',      icon: '🔴', color: '#da552f' },
@@ -20,17 +22,77 @@ const PLATFORM_META: Record<Platform, { label: string; icon: string; color: stri
   linkedin:        { label: 'LinkedIn',           icon: '🔵', color: '#0a66c2' },
 }
 
+/**
+ * Filters posts so that collapsed threads only show the first COLLAPSE_THRESHOLD replies.
+ * expandedThreads is a Set of parent post IDs whose replies are fully expanded.
+ */
+function filterPostsByThreadState(posts: SocialPost[], expandedThreads: Set<string>): SocialPost[] {
+  // Group replies by parent_id
+  const repliesByParent = new Map<string, SocialPost[]>()
+  for (const p of posts) {
+    if (p.parent_id) {
+      const arr = repliesByParent.get(p.parent_id)
+      if (arr) arr.push(p)
+      else repliesByParent.set(p.parent_id, [p])
+    }
+  }
+
+  // Build set of post IDs to exclude (collapsed replies beyond threshold)
+  const excludeIds = new Set<string>()
+  for (const [parentId, replies] of repliesByParent) {
+    if (replies.length > COLLAPSE_THRESHOLD && !expandedThreads.has(parentId)) {
+      for (let i = COLLAPSE_THRESHOLD; i < replies.length; i++) {
+        excludeIds.add(replies[i].id)
+      }
+    }
+  }
+
+  return posts.filter(p => !excludeIds.has(p.id))
+}
+
+/** Returns info about collapsible threads for a given post list */
+function getCollapsibleThreads(posts: SocialPost[]): Map<string, number> {
+  const replyCounts = new Map<string, number>()
+  for (const p of posts) {
+    if (p.parent_id) {
+      replyCounts.set(p.parent_id, (replyCounts.get(p.parent_id) ?? 0) + 1)
+    }
+  }
+  // Only return threads that exceed the threshold
+  const result = new Map<string, number>()
+  for (const [parentId, count] of replyCounts) {
+    if (count > COLLAPSE_THRESHOLD) result.set(parentId, count)
+  }
+  return result
+}
+
 export function PlatformSimFeed({ postsByPlatform, ideaText = '', forcedTab }: Props) {
   const activePlatforms = Object.keys(postsByPlatform).filter(
     k => (postsByPlatform[k as Platform]?.length ?? 0) > 0
   ) as Platform[]
 
   const [activeTab, setActiveTab] = useState<Platform | null>(null)
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
+
+  const toggleThread = useCallback((parentId: string) => {
+    setExpandedThreads(prev => {
+      const next = new Set(prev)
+      if (next.has(parentId)) next.delete(parentId)
+      else next.add(parentId)
+      return next
+    })
+  }, [])
 
   // If activeTab is no longer in the visible platforms (e.g. round filter changed),
   // fall back to the first available platform so content isn't blank
   const tab = forcedTab ?? (activeTab && activePlatforms.includes(activeTab) ? activeTab : null) ?? activePlatforms[0] ?? null
-  const posts = tab ? (postsByPlatform[tab] ?? []) : []
+  const rawPosts = tab ? (postsByPlatform[tab] ?? []) : []
+
+  const collapsibleThreads = useMemo(() => getCollapsibleThreads(rawPosts), [rawPosts])
+  const posts = useMemo(
+    () => filterPostsByThreadState(rawPosts, expandedThreads),
+    [rawPosts, expandedThreads]
+  )
 
   if (activePlatforms.length === 0) {
     return (
@@ -81,11 +143,11 @@ export function PlatformSimFeed({ postsByPlatform, ideaText = '', forcedTab }: P
       {/* 플랫폼별 UI */}
       {tab && (
         <div key={tab} className="tab-content">
-          {tab === 'hackernews'      && <HackerNewsUI posts={posts} />}
-          {tab === 'producthunt'     && <ProductHuntUI posts={posts} idea={ideaText} />}
-          {tab === 'reddit_startups' && <RedditUI posts={posts} />}
-          {tab === 'linkedin'        && <LinkedInUI posts={posts} />}
-          {tab === 'indiehackers'    && <IndieHackersUI posts={posts} />}
+          {tab === 'hackernews'      && <HackerNewsUI posts={posts} collapsibleThreads={collapsibleThreads} expandedThreads={expandedThreads} onToggleThread={toggleThread} />}
+          {tab === 'producthunt'     && <ProductHuntUI posts={posts} idea={ideaText} collapsibleThreads={collapsibleThreads} expandedThreads={expandedThreads} onToggleThread={toggleThread} />}
+          {tab === 'reddit_startups' && <RedditUI posts={posts} collapsibleThreads={collapsibleThreads} expandedThreads={expandedThreads} onToggleThread={toggleThread} />}
+          {tab === 'linkedin'        && <LinkedInUI posts={posts} collapsibleThreads={collapsibleThreads} expandedThreads={expandedThreads} onToggleThread={toggleThread} />}
+          {tab === 'indiehackers'    && <IndieHackersUI posts={posts} collapsibleThreads={collapsibleThreads} expandedThreads={expandedThreads} onToggleThread={toggleThread} />}
         </div>
       )}
     </div>

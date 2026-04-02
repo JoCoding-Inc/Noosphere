@@ -1,9 +1,10 @@
 import type { SocialPost } from '../../types'
 import { getThreadedPosts } from './threadUtils'
+import { ThreadCollapseButton, type ThreadCollapseProps } from './ThreadCollapseButton'
 
-interface Props { posts: SocialPost[] }
+interface Props extends ThreadCollapseProps { posts: SocialPost[] }
 
-export function IndieHackersUI({ posts }: Props) {
+export function IndieHackersUI({ posts, collapsibleThreads, expandedThreads, onToggleThread }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
   function renderReplies(parentId: string, depth: number, baseDelay: number) {
@@ -24,7 +25,7 @@ export function IndieHackersUI({ posts }: Props) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
           }}>
-            {reply.author_name[0].toUpperCase()}
+            {(reply.author_name?.[0] ?? '?').toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
             <span style={{ fontWeight: 600, fontSize: 13, color: '#1f2d3d' }}>{reply.author_name}</span>
@@ -76,11 +77,11 @@ export function IndieHackersUI({ posts }: Props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <div style={{
                     width: 36, height: 36, borderRadius: '50%',
-                    background: `hsl(${(post.author_name.charCodeAt(0) * 41) % 360}, 55%, 60%)`,
+                    background: `hsl(${((post.author_name?.[0]?.charCodeAt(0) ?? 65) * 41) % 360}, 55%, 60%)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0,
                   }}>
-                    {post.author_name[0].toUpperCase()}
+                    {(post.author_name?.[0] ?? '?').toUpperCase()}
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14, color: '#1f2d3d' }}>{post.author_name}</div>
@@ -103,6 +104,16 @@ export function IndieHackersUI({ posts }: Props) {
                   <span style={{ cursor: 'pointer' }}>💬 {replies.length} replies</span>
                   <span style={{ cursor: 'pointer' }}>Share</span>
                 </div>
+              </div>
+
+              {/* Thread collapse/expand */}
+              <div style={{ padding: '0 16px 4px' }}>
+                <ThreadCollapseButton
+                  postId={post.id}
+                  collapsibleThreads={collapsibleThreads}
+                  expandedThreads={expandedThreads}
+                  onToggleThread={onToggleThread}
+                />
               </div>
 
               {/* 댓글 (재귀) */}

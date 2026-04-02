@@ -31,7 +31,7 @@ def _inline_md(text: str) -> str:
     # Process Markdown links first, protect them from bracket escaping
     _links: list[str] = []
     def _replace_link(m: re.Match) -> str:
-        _links.append(f'#link("{m.group(2)}")[{m.group(1)}]')
+        _links.append(f'#link("{m.group(2).replace(chr(34), chr(92)+chr(34))}")[{m.group(1)}]')
         return f"\x00LNK{len(_links) - 1}\x00"
     text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _replace_link, text)
     # Escape bare square brackets (common in LLM output, break Typst content blocks)
@@ -334,6 +334,163 @@ _LANG_SETTINGS: dict[str, tuple[str, str, dict[str, str]]] = {
 }
 
 
+def _build_report_json_section(report_json: dict | None, labels: dict[str, str]) -> str:
+    """Build Typst markup for verdict, segments, and criticism_clusters from report_json."""
+    if not report_json:
+        return ""
+    parts: list[str] = []
+
+    verdict = report_json.get("verdict")
+    if verdict:
+        parts.append(f'== Verdict\n\n*{_escape_typst_markup(str(verdict))}*')
+
+    segments = report_json.get("segments", [])
+    if segments:
+        seg_lines = ["== Segments\n"]
+        for seg in segments:
+            name = _escape_typst_markup(seg.get("name", ""))
+            desc = _escape_typst_markup(seg.get("summary", seg.get("description", ""))[:200])
+            seg_lines.append(f"- *{name}*: {desc}")
+        parts.append("\n".join(seg_lines))
+
+    praises = report_json.get("praise_clusters", [])
+    if praises:
+        praise_lines = ["== Praise Clusters\n"]
+        for p in praises:
+            theme = _escape_typst_markup(p.get("theme", ""))
+            count = p.get("count", 0)
+            praise_lines.append(f"- *{theme}* ({count} mentions)")
+        parts.append("\n".join(praise_lines))
+
+    criticisms = report_json.get("criticism_clusters", [])
+    if criticisms:
+        crit_lines = ["== Criticism Clusters\n"]
+        for c in criticisms:
+            theme = _escape_typst_markup(c.get("theme", ""))
+            count = c.get("count", 0)
+            crit_lines.append(f"- *{theme}* ({count} mentions)")
+        parts.append("\n".join(crit_lines))
+
+    improvements = report_json.get("improvements", [])
+    if improvements:
+        imp_lines = ["== Improvements\n"]
+        for imp in improvements:
+            suggestion = _escape_typst_markup(imp.get("suggestion", ""))
+            frequency = imp.get("frequency", 0)
+            imp_lines.append(f"- *{suggestion}* ({frequency} mentions)")
+        parts.append("\n".join(imp_lines))
+
+    if not parts:
+        return ""
+    return "\n\n".join(parts)
+
+
+def _build_personas_section(personas: dict | None) -> str:
+    """Build Typst markup for participant demographics from personas dict."""
+    if not personas:
+        return ""
+    # Flatten all personas across platforms
+    all_personas: list[dict] = []
+    for platform_personas in personas.values():
+        if isinstance(platform_personas, list):
+            all_personas.extend(platform_personas)
+        elif isinstance(platform_personas, dict):
+            # handle dict-of-dicts
+            for p in platform_personas.values():
+                if isinstance(p, dict):
+                    all_personas.append(p)
+    if not all_personas:
+        return ""
+
+    total = len(all_personas)
+
+    # seniority 분포
+    seniority_counts: dict[str, int] = {}
+    for p in all_personas:
+        level = p.get("seniority") or p.get("level") or "unknown"
+        if isinstance(level, str) and level.strip():
+            key = level.strip().capitalize()
+            seniority_counts[key] = seniority_counts.get(key, 0) + 1
+
+    # affiliation 분포
+    affiliation_counts: dict[str, int] = {}
+    for p in all_personas:
+        aff = p.get("affiliation") or p.get("org_type") or p.get("company_type") or "unknown"
+        if isinstance(aff, str) and aff.strip():
+            key = aff.strip().capitalize()
+            affiliation_counts[key] = affiliation_counts.get(key, 0) + 1
+
+    parts: list[str] = [
+        "= Participant Profile\n",
+        f"Total participants: *{total}*\n",
+    ]
+
+    if seniority_counts:
+        parts.append("== Seniority Distribution\n")
+        for level, count in sorted(seniority_counts.items(), key=lambda x: -x[1]):
+            pct = round(count / total * 100)
+            parts.append(f"- *{_escape_typst_markup(level)}*: {count} ({pct}%)")
+
+    if affiliation_counts:
+        parts.append("\n== Affiliation Distribution\n")
+        for aff, count in sorted(affiliation_counts.items(), key=lambda x: -x[1]):
+            pct = round(count / total * 100)
+            parts.append(f"- *{_escape_typst_markup(aff)}*: {count} ({pct}%)")
+
+    return "\n".join(parts)
+
+
+def _build_sentiment_timeline_section(report_json: dict | None) -> str:
+    """Build Typst markup for sentiment_timeline and platform_sentiment_timeline tables."""
+    if not report_json:
+        return ""
+    parts: list[str] = []
+
+    # Overall sentiment timeline
+    timeline = report_json.get("sentiment_timeline", [])
+    if isinstance(timeline, list) and len(timeline) >= 2:
+        rows: list[str] = []
+        rows.append("#table(")
+        rows.append("  columns: (1fr, 1fr, 1fr, 1fr),")
+        rows.append("  stroke: 0.5pt + luma(200),")
+        rows.append("  fill: (_, y) => if y == 0 { luma(235) } else { white },")
+        rows.append("  [*Round*], [*Positive*], [*Neutral*], [*Negative*],")
+        for entry in timeline:
+            rnd = entry.get("round", "")
+            pos = entry.get("positive", 0)
+            neu = entry.get("neutral", 0)
+            neg = entry.get("negative", 0)
+            rows.append(f"  [{rnd}], [{pos}], [{neu}], [{neg}],")
+        rows.append(")")
+        parts.append("== Sentiment Timeline\n\n" + "\n".join(rows))
+
+    # Platform-specific sentiment timeline
+    platform_timeline = report_json.get("platform_sentiment_timeline", {})
+    if isinstance(platform_timeline, dict):
+        for platform_name, p_timeline in platform_timeline.items():
+            if not isinstance(p_timeline, list) or len(p_timeline) < 2:
+                continue
+            rows = []
+            rows.append("#table(")
+            rows.append("  columns: (1fr, 1fr, 1fr, 1fr),")
+            rows.append("  stroke: 0.5pt + luma(200),")
+            rows.append("  fill: (_, y) => if y == 0 { luma(235) } else { white },")
+            escaped_name = _escape_typst_markup(platform_name)
+            rows.append(f"  [*Round*], [*Positive*], [*Neutral*], [*Negative*],")
+            for entry in p_timeline:
+                rnd = entry.get("round", "")
+                pos = entry.get("positive", 0)
+                neu = entry.get("neutral", 0)
+                neg = entry.get("negative", 0)
+                rows.append(f"  [{rnd}], [{pos}], [{neu}], [{neg}],")
+            rows.append(")")
+            parts.append(f"== {escaped_name} Sentiment Timeline\n\n" + "\n".join(rows))
+
+    if not parts:
+        return ""
+    return "\n\n".join(parts)
+
+
 def _build_typst(
     domain: str,
     idea_text: str,
@@ -344,6 +501,8 @@ def _build_typst(
     final_report_md: str | None = None,
     idea_title: str = "",
     gtm_md: str | None = None,
+    report_json: dict | None = None,
+    personas: dict | None = None,
 ) -> str:
     lang_code, fonts, labels = _LANG_SETTINGS.get(language, _LANG_SETTINGS["English"])
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -356,6 +515,8 @@ def _build_typst(
     sim_body = _md_to_typst(_sim_md) if _sim_md else labels["no_simulation"]
     final_body = _md_to_typst(final_report_md) if final_report_md else labels["no_final_report"]
     gtm_body = _md_to_typst(gtm_md) if gtm_md else labels.get("no_gtm", "_No launch strategy available._")
+    report_json_section = _build_report_json_section(report_json, labels)
+    sentiment_timeline_section = _build_sentiment_timeline_section(report_json)
 
     params = sim_params or {}
     platforms_str = _escape_typst_markup(", ".join(params.get("platforms", [])) or "—")
@@ -372,6 +533,8 @@ def _build_typst(
   [*{labels["param_platforms"]}*],[{platforms_str}],
   [*{labels["param_date"]}*],     [{date_str}],
 )"""
+
+    personas_section = _build_personas_section(personas)
 
     report_title_upper = labels["report_title"].upper()
 
@@ -484,7 +647,23 @@ def _build_typst(
 // ── 시뮬레이션 파라미터 ──────────────────────────────────
 {params_section}
 
-#pagebreak()
+{"" if not personas_section else f"""#pagebreak()
+
+// ── 참여자 프로필 ──────────────────────────────────────
+{personas_section}
+"""}{"" if not report_json_section else f"""#pagebreak()
+
+// ── 시뮬레이션 데이터 요약 ──────────────────────────────
+= Simulation Data Summary
+
+{report_json_section}
+"""}{"" if not sentiment_timeline_section else f"""#pagebreak()
+
+// ── 감성 타임라인 ──────────────────────────────────────
+= Sentiment Timeline
+
+{sentiment_timeline_section}
+"""}#pagebreak()
 
 // ── 분석 보고서 ──────────────────────────────────────────
 = {labels["section_analysis"]}
@@ -525,6 +704,8 @@ async def build_pdf(
     final_report_md: str | None = None,
     idea_title: str = "",
     gtm_md: str | None = None,
+    report_json: dict | None = None,
+    personas: dict | None = None,
 ) -> bytes:
     typ_content = _build_typst(
         domain=domain or input_text[:60],
@@ -536,6 +717,8 @@ async def build_pdf(
         final_report_md=final_report_md,
         idea_title=idea_title,
         gtm_md=gtm_md,
+        report_json=report_json,
+        personas=personas,
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:

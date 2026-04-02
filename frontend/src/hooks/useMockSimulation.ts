@@ -74,9 +74,15 @@ export function useMockSimulation(): SimState {
     sourceTimeline: [],
     graphData: null,
     isSourcing: false,
+    streamingPersonas: {},
+    roundStats: [],
     lastRound: 0,
     backendStatus: null,
     canResume: false,
+    warnings: [],
+    liveSentiment: { positive: 0, neutral: 0, negative: 0 },
+    earlyStop: null,
+    personaGenPhase: false,
   })
 
   useEffect(() => {

@@ -10,7 +10,7 @@ from pathlib import Path
 DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "noosphere.db")))
 
 ACTIVE_SIMULATION_STATUS = "running"
-TERMINAL_SIMULATION_STATUSES = {"completed", "failed"}
+TERMINAL_SIMULATION_STATUSES = {"completed", "failed", "partial"}
 logger = logging.getLogger(__name__)
 
 
@@ -111,6 +111,7 @@ def init_db(path: str | Path = DB_PATH) -> None:
             "analysis_md": "TEXT NOT NULL DEFAULT ''",
             "raw_items_json": "TEXT NOT NULL DEFAULT '[]'",
             "saved_at": "TEXT NOT NULL DEFAULT ''",
+            "runner_state_json": "TEXT NOT NULL DEFAULT '{}'",
         })
         _drop_column_if_exists(conn, "sim_checkpoints", "ontology_json")
         conn.commit()
@@ -348,11 +349,12 @@ def get_sim_results(path: str | Path, sim_id: str) -> dict | None:
     if not row:
         return None
     d = dict(row)
-    d["posts_json"] = json.loads(d["posts_json"])
-    d["personas_json"] = json.loads(d["personas_json"])
-    d["report_json"] = json.loads(d["report_json"])
+    d["posts_json"] = json.loads(d.get("posts_json") or "{}")
+    d["personas_json"] = json.loads(d.get("personas_json") or "{}")
+    d["report_json"] = json.loads(d.get("report_json") or "null")
     d["sources_json"] = json.loads(d.get("sources_json") or "[]")
     d["context_nodes_json"] = json.loads(d.get("context_nodes_json") or "[]")
+    d["gtm_md"] = d.get("gtm_md") or ""
     return d
 
 
@@ -366,6 +368,7 @@ def save_checkpoint(
     domain: str,
     analysis_md: str,
     raw_items: list,
+    runner_state: dict | None = None,
 ) -> None:
     now = _utc_now_iso()
     with _conn(path) as conn:
@@ -373,8 +376,8 @@ def save_checkpoint(
             """
             INSERT OR REPLACE INTO sim_checkpoints
             (sim_id, last_round, platform_states_json, personas_json, context_nodes_json,
-             domain, analysis_md, raw_items_json, saved_at)
-            VALUES (?,?,?,?,?,?,?,?,?)
+             domain, analysis_md, raw_items_json, saved_at, runner_state_json)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 sim_id,
@@ -386,6 +389,7 @@ def save_checkpoint(
                 analysis_md,
                 json.dumps(raw_items, ensure_ascii=False),
                 now,
+                json.dumps(runner_state or {}, ensure_ascii=False),
             ),
         )
 
@@ -403,6 +407,7 @@ def get_checkpoint(path: str | Path, sim_id: str) -> dict | None:
         d["personas"] = json.loads(d.pop("personas_json"))
         d["context_nodes"] = json.loads(d.pop("context_nodes_json"))
         d["raw_items"] = json.loads(d.pop("raw_items_json"))
+        d["runner_state"] = json.loads(d.pop("runner_state_json", "{}") or "{}")
     except (TypeError, json.JSONDecodeError) as exc:
         logger.warning("Checkpoint %s is corrupted and will be ignored: %s", sim_id, exc)
         return None
@@ -418,15 +423,56 @@ def delete_checkpoint(path: str | Path, sim_id: str) -> None:
 def list_history(path: str | Path = DB_PATH, limit: int = 50) -> list[dict]:
     with _conn(path) as conn:
         rows = conn.execute(
-            """SELECT id, created_at, input_text, language, config_json, status, domain
-               FROM simulations ORDER BY created_at DESC LIMIT ?""",
+            """SELECT s.id, s.created_at, s.input_text, s.language, s.config_json,
+                      s.status, s.domain, s.started_at, s.finished_at,
+                      r.report_json AS _report_json
+               FROM simulations s
+               LEFT JOIN sim_results r ON s.id = r.sim_id
+               ORDER BY s.created_at DESC LIMIT ?""",
             (limit,),
         ).fetchall()
     result = []
     for row in rows:
         d = dict(row)
         d["input_text_snippet"] = d["input_text"][:60]
-        d["config"] = json.loads(d.pop("config_json"))
+        config = json.loads(d.pop("config_json")) if d.get("config_json") else {}
+        d["config"] = config
+        d["max_agents"] = config.get("max_agents")
+        d["num_rounds"] = config.get("num_rounds")
+
+        # duration_seconds: finished_at - started_at (Python 계산)
+        started_at = d.pop("started_at", None)
+        finished_at = d.pop("finished_at", None)
+        duration_seconds = None
+        if started_at and finished_at:
+            try:
+                dt_start = datetime.fromisoformat(started_at)
+                dt_end = datetime.fromisoformat(finished_at)
+                duration_seconds = int((dt_end - dt_start).total_seconds())
+                if duration_seconds < 0:
+                    duration_seconds = None
+            except (ValueError, TypeError):
+                pass
+        d["duration_seconds"] = duration_seconds
+
+        # Extract verdict, evidence_count, adoption_score from report_json if available
+        raw_report = d.pop("_report_json", None)
+        verdict = None
+        evidence_count = None
+        adoption_score = None
+        if raw_report:
+            try:
+                report = json.loads(raw_report)
+                if isinstance(report, dict):
+                    verdict = report.get("verdict")
+                    evidence_count = report.get("evidence_count")
+                    adoption_score = report.get("adoption_score")
+            except (TypeError, json.JSONDecodeError):
+                pass
+        d["verdict"] = verdict
+        d["evidence_count"] = evidence_count
+        d["adoption_score"] = adoption_score
+
         result.append(d)
     return result
 

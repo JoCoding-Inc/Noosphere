@@ -61,14 +61,21 @@ const DEFAULT_SOURCE_LIMITS: Record<string, number> = Object.fromEntries(
   SOURCE_GROUPS.flatMap(g => g.sources.map(s => [s.key, s.defaultVal]))
 )
 
+const AGENT_OPTIONS = [100, 150, 200] as const
+
+const SIMULATION_PRESETS = [
+  { label: 'Quick',    num_rounds: 4,  max_agents: 100, activation_rate: 0.3, description: 'Fast \u00b7 100 agents \u00b7 4 rounds' },
+  { label: 'Standard', num_rounds: 8,  max_agents: 150, activation_rate: 0.4, description: 'Balanced \u00b7 150 agents \u00b7 8 rounds' },
+  { label: 'Deep',     num_rounds: 12, max_agents: 200, activation_rate: 0.5, description: 'Thorough \u00b7 200 agents \u00b7 12 rounds' },
+] as const
+
 const DEFAULT_CONFIG: Omit<SimConfig, 'input_text'> = {
   language: 'English',
   num_rounds: 8,
-  max_agents: 30,
+  max_agents: 150,
   platforms: ['hackernews', 'producthunt', 'indiehackers', 'reddit_startups', 'linkedin'],
   activation_rate: 0.25,
   source_limits: DEFAULT_SOURCE_LIMITS,
-  provider: 'openai',
 }
 
 type OptionsTab = 'simulation' | 'research'
@@ -80,6 +87,7 @@ const css = {
     borderRadius: 12,
     padding: '20px 24px',
     marginBottom: 12,
+    boxShadow: 'var(--shadow-card)',
   } as React.CSSProperties,
   sectionTitle: {
     fontSize: 11,
@@ -115,7 +123,7 @@ const css = {
     cursor: 'pointer',
     border: 'none',
     borderRadius: 8,
-    background: active ? '#1e293b' : 'transparent',
+    background: active ? 'var(--primary)' : 'transparent',
     color: active ? '#fff' : '#64748b',
     transition: 'all 0.15s',
   }),
@@ -129,6 +137,7 @@ export function HomePage() {
   const [optionsTab, setOptionsTab] = useState<OptionsTab>('simulation')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [activePreset, setActivePreset] = useState<string>('Standard')
 
   const togglePlatform = (id: Platform) => {
     setConfig(c => ({
@@ -190,8 +199,8 @@ export function HomePage() {
             animation: 'fadeInUp 0.45s ease both',
           }}
           onFocus={e => {
-            e.target.style.borderColor = '#8b5cf6'
-            e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.12)'
+            e.target.style.borderColor = '#6366f1'
+            e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'
           }}
           onBlur={e => {
             e.target.style.borderColor = '#e2e8f0'
@@ -217,14 +226,14 @@ export function HomePage() {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '7px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
                   border: '1.5px solid',
-                  background: active ? '#1e293b' : '#fff',
+                  background: active ? 'var(--primary)' : '#fff',
                   color: active ? '#fff' : '#475569',
-                  borderColor: active ? '#1e293b' : '#e2e8f0',
+                  borderColor: active ? 'var(--primary)' : '#e2e8f0',
                   fontWeight: active ? 600 : 400,
-                  boxShadow: active ? '0 2px 8px rgba(30,41,59,0.25)' : 'none',
+                  boxShadow: active ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
                   animation: `fadeInUp 0.${50 + i * 5}s ease both`,
                 }}>
-                <span>{p.icon}</span> {p.label}
+                {p.label}
               </button>
             )
           })}
@@ -243,7 +252,7 @@ export function HomePage() {
             Advanced options
             <span style={{
               fontSize: 11, padding: '2px 8px', borderRadius: 10,
-              background: '#f1f5f9', color: '#94a3b8', marginLeft: 4,
+              background: 'var(--primary-light)', color: '#6366f1', marginLeft: 4,
             }}>
               {config.language} · {config.num_rounds}r · {config.max_agents}a · ~{totalSources} sources
             </span>
@@ -265,6 +274,48 @@ export function HomePage() {
               </div>
 
               {optionsTab === 'simulation' && (
+                <div>
+                {/* Preset buttons */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  {SIMULATION_PRESETS.map(preset => {
+                    const isActive = activePreset === preset.label
+                    return (
+                      <button
+                        key={preset.label}
+                        onClick={() => {
+                          setActivePreset(preset.label)
+                          setConfig(c => ({
+                            ...c,
+                            num_rounds: preset.num_rounds,
+                            max_agents: preset.max_agents,
+                            activation_rate: preset.activation_rate,
+                          }))
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          border: isActive ? '1.5px solid #6366f1' : '1.5px solid #e2e8f0',
+                          background: isActive ? '#6366f108' : '#fff',
+                          textAlign: 'left',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 13, fontWeight: 600,
+                          color: isActive ? '#6366f1' : '#1e293b',
+                          marginBottom: 2,
+                        }}>
+                          {preset.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                          {preset.description}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
                 <div className="options-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {/* Language */}
                   <div style={css.card}>
@@ -295,7 +346,7 @@ export function HomePage() {
                     </div>
                     <input type="range" min={1} max={30} step={1}
                       value={config.num_rounds}
-                      onChange={e => setConfig(c => ({ ...c, num_rounds: +e.target.value }))}
+                      onChange={e => { setActivePreset(''); setConfig(c => ({ ...c, num_rounds: +e.target.value })) }}
                       style={css.slider} />
                     <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
                       Each round = one wave of agent interactions.
@@ -307,14 +358,31 @@ export function HomePage() {
                     <div style={css.sectionTitle}>Agent Count</div>
                     <div style={css.label}>
                       <span>Max agents per platform</span>
-                      <span style={css.value}>{config.max_agents}</span>
                     </div>
-                    <input type="range" min={5} max={150} step={5}
-                      value={config.max_agents}
-                      onChange={e => setConfig(c => ({ ...c, max_agents: +e.target.value }))}
-                      style={css.slider} />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {AGENT_OPTIONS.map(v => {
+                        const selected = config.max_agents === v
+                        return (
+                          <button
+                            key={v}
+                            onClick={() => { setActivePreset(''); setConfig(c => ({ ...c, max_agents: v })) }}
+                            style={{
+                              borderRadius: 8,
+                              padding: '8px 20px',
+                              fontSize: 14,
+                              cursor: 'pointer',
+                              background: selected ? '#6366f1' : 'transparent',
+                              color: selected ? '#fff' : '#94a3b8',
+                              border: selected ? '1.5px solid #6366f1' : '1.5px solid #334155',
+                              fontWeight: selected ? 600 : 400,
+                            }}>
+                            {v}
+                          </button>
+                        )
+                      })}
+                    </div>
                     <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
-                      More agents = richer diversity, longer runtime.
+                      100 agents minimum for statistically significant results.
                     </p>
                   </div>
 
@@ -327,12 +395,13 @@ export function HomePage() {
                     </div>
                     <input type="range" min={0.1} max={1.0} step={0.05}
                       value={config.activation_rate}
-                      onChange={e => setConfig(c => ({ ...c, activation_rate: +e.target.value }))}
+                      onChange={e => { setActivePreset(''); setConfig(c => ({ ...c, activation_rate: +e.target.value })) }}
                       style={css.slider} />
                     <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
                       Higher = more chaotic, faster-moving discussions.
                     </p>
                   </div>
+                </div>
                 </div>
               )}
 
@@ -379,7 +448,7 @@ export function HomePage() {
         </div>
 
         {error && (
-          <p style={{ color: '#ef4444', fontSize: 14, marginTop: 12, marginBottom: 0 }}>{error}</p>
+          <p role="alert" style={{ color: '#ef4444', fontSize: 14, marginTop: 12, marginBottom: 0 }}>{error}</p>
         )}
 
         <button
@@ -388,7 +457,7 @@ export function HomePage() {
           className={loading ? '' : 'run-btn'}
           style={{
             marginTop: 24, padding: '14px 36px', fontSize: 15, fontWeight: 700,
-            background: loading ? '#94a3b8' : '#1e293b', color: '#fff',
+            background: loading ? '#94a3b8' : 'var(--primary)', color: '#fff',
             border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer',
             letterSpacing: '-0.01em', display: 'inline-flex', alignItems: 'center',
             animation: 'fadeInUp 0.6s ease both',
@@ -399,7 +468,7 @@ export function HomePage() {
 
         {import.meta.env.VITE_CLERK_PUBLISHABLE_KEY && (
           <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span>📧</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
             <span>로그인 상태에서 시뮬레이션을 실행하면 완료 시 이메일로 보고서를 보내드립니다.</span>
           </div>
         )}

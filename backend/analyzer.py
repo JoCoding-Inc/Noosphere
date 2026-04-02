@@ -86,12 +86,11 @@ async def analyze(
     domain_type: str = extraction.get("domain_type", "general")
     lim = {**PROD_LIMITS, **(limits or {})}
 
-    # Build tasks for non-GDELT sources
+    # Build tasks for all sources (including GDELT)
     source_coroutines: list[Coroutine[Any, Any, list[Any]]] = []
     source_names_ordered: list[str] = []
 
     news_queries = query_bundles.get("news", [])
-    gdelt_coro = None
 
     for category, source_names in CATEGORY_SOURCES.items():
         queries = query_bundles.get(category, [])
@@ -99,7 +98,7 @@ async def analyze(
             continue
         for source_name in source_names:
             if source_name == "gdelt":
-                # Handle separately with custom timeout
+                # GDELT with custom timeout, but run in parallel with other sources
                 try:
                     mod = _import_source("gdelt")
                 except Exception as exc:
@@ -110,6 +109,8 @@ async def analyze(
                     mod.search(news_queries, limit=lim["gdelt"]),
                     timeout=timeout_secs,
                 )
+                source_names_ordered.append("gdelt")
+                source_coroutines.append(gdelt_coro)
                 continue
             source_names_ordered.append(source_name)
             source_coroutines.append(
@@ -121,14 +122,19 @@ async def analyze(
                 )
             )
 
-    # Run non-GDELT sources in parallel
+    # Run all sources in parallel (including GDELT)
     results_raw: list[Any] = []
     if source_coroutines:
         # Wrap each coroutine to fire the progress callback when it completes
-        wrapped: list[Coroutine[Any, Any, list[Any]]] = []
-
         async def _wrap(coro: Coroutine, name: str) -> list[Any]:
-            result = await coro
+            try:
+                result = await coro
+            except asyncio.TimeoutError:
+                logger.warning("%s timed out", name)
+                return []
+            except Exception as exc:
+                logger.warning("%s failed: %s", name, exc)
+                return []
             if on_source_done is not None:
                 dicts = [r.to_dict() if isinstance(r, RawItem) else r for r in result]
                 on_source_done(name, dicts)
@@ -139,16 +145,19 @@ async def analyze(
         for result in gathered:
             results_raw.extend(result)
 
-    # Run GDELT with its own timeout
-    if gdelt_coro is not None:
-        try:
-            gdelt_results = await gdelt_coro
-            results_raw.extend(gdelt_results)
-        except asyncio.TimeoutError:
-            logger.warning("GDELT timed out")
-        except Exception as exc:
-            logger.warning("GDELT failed: %s", exc)
-
     items = [item.to_dict() if isinstance(item, RawItem) else item for item in results_raw]
+
+    # URL 기반 중복 제거 (소스 간)
+    seen_urls: set[str] = set()
+    deduplicated: list[dict[str, Any]] = []
+    for item in items:
+        url = item.get("url", "").strip().lower().rstrip("/")
+        if url and url in seen_urls:
+            continue
+        if url:
+            seen_urls.add(url)
+        deduplicated.append(item)
+    items = deduplicated
+
     set_cache(input_text, items)
     return items

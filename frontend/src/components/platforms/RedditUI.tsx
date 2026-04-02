@@ -1,11 +1,12 @@
 import type { SocialPost } from '../../types'
 import { getThreadedPosts } from './threadUtils'
+import { ThreadCollapseButton, type ThreadCollapseProps } from './ThreadCollapseButton'
 
 const REDDIT_THREAD_COLORS = ['#0045ac', '#00a500', '#e57f00', '#ca0000', '#9400d3', '#007d7d']
 
-interface Props { posts: SocialPost[] }
+interface Props extends ThreadCollapseProps { posts: SocialPost[] }
 
-export function RedditUI({ posts }: Props) {
+export function RedditUI({ posts, collapsibleThreads, expandedThreads, onToggleThread }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
   function renderReplies(parentId: string, depth: number, baseDelay: number) {
@@ -21,7 +22,7 @@ export function RedditUI({ posts }: Props) {
       }}>
         <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 3 }}>
           <span style={{ fontWeight: 700, color: '#1c1c1c' }}>
-            u/{reply.author_name.toLowerCase().replace(/\s/g, '_')}
+            u/{(reply.author_name ?? '').toLowerCase().replace(/\s/g, '_')}
           </span>
           {' · '}{reply.upvotes} points
         </div>
@@ -87,7 +88,7 @@ export function RedditUI({ posts }: Props) {
                   <div style={{ padding: '8px 8px 8px 8px', flex: 1 }}>
                     <div style={{ fontSize: 11, color: '#878a8c', marginBottom: 4 }}>
                       Posted by{' '}
-                      <span style={{ color: '#0079d3', cursor: 'pointer' }}>u/{post.author_name.toLowerCase().replace(/\s/g, '_')}</span>
+                      <span style={{ color: '#0079d3', cursor: 'pointer' }}>u/{(post.author_name ?? '').toLowerCase().replace(/\s/g, '_')}</span>
                     </div>
                     <p style={{ margin: '0 0 8px', fontSize: 14, color: '#1c1c1c', lineHeight: 1.5, fontWeight: 400 }}>
                       {post.content}
@@ -104,6 +105,16 @@ export function RedditUI({ posts }: Props) {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                {/* Thread collapse/expand */}
+                <div style={{ padding: '4px 8px 0 44px' }}>
+                  <ThreadCollapseButton
+                    postId={post.id}
+                    collapsibleThreads={collapsibleThreads}
+                    expandedThreads={expandedThreads}
+                    onToggleThread={onToggleThread}
+                  />
                 </div>
 
                 {/* 댓글 스레드 (재귀) */}

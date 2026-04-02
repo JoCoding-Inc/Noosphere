@@ -140,6 +140,7 @@ def build_clusters(
 
     # 고립 노드를 가장 유사한 클러스터에 배정
     # 매칭되는 클러스터가 없으면 독립 클러스터로 유지
+    # 성능 최적화: 클러스터 크기 > 5이면 degree centrality 최고 representative만 비교
     unmatched: list[str] = []
     for iso_id in isolated_ids:
         iso_node = id_to_node.get(iso_id)
@@ -147,12 +148,18 @@ def build_clusters(
             continue
         best_score, best_idx = 0, -1
         for idx, cluster in enumerate(clusters):
-            for member in cluster["nodes"]:
-                s = _node_affinity(iso_node, member)
+            if len(cluster["nodes"]) > 5:
+                # 대형 클러스터: representative(degree centrality 최고)만 비교
+                s = _node_affinity(iso_node, cluster["representative"])
                 if s > best_score:
                     best_score, best_idx = s, idx
-                    break  # 해당 클러스터에서 첫 매칭만 확인 (성능)
-        if best_idx >= 0:
+            else:
+                # 소형 클러스터: 모든 멤버와 비교하여 max affinity 산출
+                for member in cluster["nodes"]:
+                    s = _node_affinity(iso_node, member)
+                    if s > best_score:
+                        best_score, best_idx = s, idx
+        if best_idx >= 0 and best_score >= 2:
             clusters[best_idx]["nodes"].append(iso_node)
         else:
             unmatched.append(iso_id)

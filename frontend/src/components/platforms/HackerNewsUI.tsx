@@ -1,9 +1,10 @@
 import type { SocialPost } from '../../types'
 import { getThreadedPosts } from './threadUtils'
+import { ThreadCollapseButton, type ThreadCollapseProps } from './ThreadCollapseButton'
 
-interface Props { posts: SocialPost[] }
+interface Props extends ThreadCollapseProps { posts: SocialPost[] }
 
-export function HackerNewsUI({ posts }: Props) {
+export function HackerNewsUI({ posts, collapsibleThreads, expandedThreads, onToggleThread }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
   function renderReplies(parentId: string, depth: number, baseDelay: number) {
@@ -63,6 +64,14 @@ export function HackerNewsUI({ posts }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* Thread collapse/expand */}
+              <ThreadCollapseButton
+                postId={post.id}
+                collapsibleThreads={collapsibleThreads}
+                expandedThreads={expandedThreads}
+                onToggleThread={onToggleThread}
+              />
 
               {/* 댓글 (재귀) */}
               <div style={{ marginLeft: 16 }}>

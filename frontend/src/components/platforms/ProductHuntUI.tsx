@@ -1,9 +1,10 @@
 import type { SocialPost } from '../../types'
 import { getThreadedPosts } from './threadUtils'
+import { ThreadCollapseButton, type ThreadCollapseProps } from './ThreadCollapseButton'
 
-interface Props { posts: SocialPost[]; idea?: string }
+interface Props extends ThreadCollapseProps { posts: SocialPost[]; idea?: string }
 
-export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
+export function ProductHuntUI({ posts, idea = 'New Product', collapsibleThreads, expandedThreads, onToggleThread }: Props) {
   const { topLevel, getReplies } = getThreadedPosts(posts)
 
   // PH replies are flat (1 level only) — deeper replies appear at same indent
@@ -33,7 +34,7 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0,
           }}>
-            {reply.author_name[0].toUpperCase()}
+            {(reply.author_name?.[0] ?? '?').toUpperCase()}
           </div>
           <span style={{ fontWeight: 600, fontSize: 12, color: '#1a1a1a' }}>{reply.author_name}</span>
         </div>
@@ -42,7 +43,7 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
     ))
   }
 
-  const totalUpvotes = posts.reduce((s, p) => s + p.upvotes, 0) + 128
+  const totalUpvotes = topLevel.reduce((s, p) => s + (p.upvotes ?? 0), 0)
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
@@ -94,8 +95,6 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
           </div>
         )}
         {topLevel.map((post, i) => {
-          const replies = getReplies(post.id)
-
           return (
             <div key={post.id} className="post-item" style={{ animationDelay: `${i * 60}ms` }}>
               <div style={{
@@ -106,11 +105,11 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <div style={{
                     width: 30, height: 30, borderRadius: '50%',
-                    background: `hsl(${(post.author_name.charCodeAt(0) * 37) % 360}, 60%, 65%)`,
+                    background: `hsl(${((post.author_name?.[0]?.charCodeAt(0) ?? 65) * 37) % 360}, 60%, 65%)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0,
                   }}>
-                    {post.author_name[0].toUpperCase()}
+                    {(post.author_name?.[0] ?? '?').toUpperCase()}
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1a1a' }}>{post.author_name}</div>
@@ -130,6 +129,14 @@ export function ProductHuntUI({ posts, idea = 'New Product' }: Props) {
                   </button>
                 </div>
               </div>
+
+              {/* Thread collapse/expand */}
+              <ThreadCollapseButton
+                postId={post.id}
+                collapsibleThreads={collapsibleThreads}
+                expandedThreads={expandedThreads}
+                onToggleThread={onToggleThread}
+              />
 
               {/* 답글 (재귀) */}
               {renderReplies(post.id, 1, i * 60)}

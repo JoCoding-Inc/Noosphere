@@ -51,7 +51,7 @@ async def _fetch(query: str, limit: int) -> list[RawItem]:
         title = article.get("title", "")
         seendate = article.get("seendate") or ""
         domain = article.get("domain") or ""
-        text = f"{seendate} {domain}".strip()
+        text = title if title else f"{seendate} {domain}".strip()
         date = article.get("seendate", "")
         language = article.get("language", "")
         items.append(

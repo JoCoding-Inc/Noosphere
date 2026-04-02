@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -61,8 +62,16 @@ def _ensure_initialized(path: Path = DB_PATH) -> Path:
     return normalized_path
 
 
+def _normalize_input(text: str) -> str:
+    """Normalize input text for cache key: lowercase, strip punctuation, collapse whitespace."""
+    text = text.lower().strip()
+    text = re.sub(r'[^\w\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text
+
+
 def _hash(input_text: str) -> str:
-    return hashlib.sha256(input_text.strip().lower().encode()).hexdigest()
+    return hashlib.sha256(_normalize_input(input_text).encode()).hexdigest()
 
 
 def get_cached(input_text: str, path: Path = DB_PATH) -> list[dict[str, Any]] | None:

@@ -161,7 +161,7 @@ class SimConfig(BaseModel):
     input_text: str
     language: str = "English"
     num_rounds: int = 8
-    max_agents: int = 30
+    max_agents: int = 150
     platforms: list[str] = ["hackernews", "producthunt", "indiehackers", "reddit_startups", "linkedin"]
     activation_rate: float = 0.25
     source_limits: dict[str, int] = {}
@@ -187,7 +187,7 @@ class SimConfig(BaseModel):
     @field_validator("max_agents")
     @classmethod
     def agents_valid(cls, v: int) -> int:
-        return max(1, min(v, 150))
+        return max(100, min(v, 200))
 
 
 @app.get("/health")
@@ -254,7 +254,9 @@ async def simulate_stream(sim_id: str, request: Request, last_id: str | None = N
                         yield f"id: {msg_id}\ndata: {raw}\n\n"
                         if json.loads(raw).get("type") == "sim_done":
                             return
-        except Exception:
+        except Exception as exc:
+            logger.error("SSE stream error for %s: %s", sim_id, exc)
+            yield f'data: {json.dumps({"type": "sim_error", "message": "Stream connection error"})}\n\n'
             return
         finally:
             await r.aclose()
@@ -323,6 +325,7 @@ async def resume_simulation(sim_id: str):
         raise HTTPException(409, "Simulation state changed; try again")
 
     config = json.loads(sim["config_json"])
+    config["max_agents"] = max(100, min(config.get("max_agents", 150), 200))
     try:
         run_simulation_task.apply_async(args=[sim_id, config], task_id=sim_id)
     except Exception:
@@ -370,6 +373,19 @@ async def cancel_simulation(sim_id: str):
 
 
 
+@app.get("/export/{sim_id}/json")
+async def export_json(sim_id: str):
+    """Export simulation results as a downloadable JSON file."""
+    from fastapi.responses import JSONResponse
+    results = get_sim_results(DB_PATH, sim_id)
+    if not results:
+        raise HTTPException(404, "Results not found")
+    return JSONResponse(
+        content=results,
+        headers={"Content-Disposition": f'attachment; filename="noosphere_{sim_id}.json"'},
+    )
+
+
 @app.get("/export/{sim_id}")
 async def export_pdf(sim_id: str):
     """Generate and return PDF report."""
@@ -384,6 +400,7 @@ async def export_pdf(sim_id: str):
     context_nodes = results.get("context_nodes_json") or []
     idea_node = next((n for n in context_nodes if isinstance(n, dict) and n.get("id") == "idea"), None)
     idea_title = idea_node.get("title", "") if idea_node else ""
+    report_json = results.get("report_json") or None
     pdf_bytes = await build_pdf(
         report_md=results["report_md"],
         input_text=sim["input_text"] if sim else "",
@@ -395,6 +412,8 @@ async def export_pdf(sim_id: str):
         final_report_md=results.get("final_report_md"),
         idea_title=idea_title,
         gtm_md=results.get("gtm_md"),
+        report_json=report_json,
+        personas=results.get("personas_json"),
     )
     return StreamingResponse(
         iter([pdf_bytes]),
