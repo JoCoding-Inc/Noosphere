@@ -1932,8 +1932,14 @@ async def platform_round(
                             current_depth -= 1
                         action.target_post_id = current_target.id if current_target else action.target_post_id
 
-                # Auto-assign target_post_id for share actions with no target
-                if action.action_type == "share" and action.target_post_id is None:
+                # Auto-assign target_post_id for actions that should thread under seed
+                # (share, article, ask_hn, share_experience, ask_advice, milestone, review, ask_question)
+                _THREAD_UNDER_SEED = {
+                    "share", "article", "ask_hn",
+                    "share_experience", "ask_advice", "milestone",
+                    "review", "ask_question",
+                }
+                if action.action_type in _THREAD_UNDER_SEED and action.target_post_id is None:
                     action.target_post_id = seed_id
 
                 events: list[dict] = []
