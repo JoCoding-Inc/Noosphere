@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import signal
+import time
 from collections.abc import Callable
 
 import redis as _redis_sync
@@ -22,6 +23,14 @@ from backend.db import (
     get_checkpoint,
     delete_checkpoint,
 )
+from backend.simulation.taxonomy import (
+    DOMAIN_TYPES as _DOMAIN_TYPES,
+    TECH_AREAS as _TECH_AREAS,
+    MARKETS as _MARKETS,
+    PROBLEM_DOMAINS as _PROBLEM_DOMAINS,
+    coerce_enum as _coerce_enum,
+    coerce_string_list as _coerce_string_list,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,64 +46,12 @@ _STOPWORDS = {
     'one', 'two', 'three', 'large', 'high', 'low', 'via', 'into', 'over',
 }
 
-_DOMAIN_TYPES = {"tech", "research", "consumer", "business", "healthcare", "general"}
-_TECH_AREAS = {"AI/ML", "cloud", "security", "data", "mobile", "web", "hardware", "other"}
-_MARKETS = {"B2B", "B2C", "enterprise", "developer", "consumer", "academic"}
-_PROBLEM_DOMAINS = {
-    "automation", "analytics", "communication", "productivity",
-    "infrastructure", "security", "UX", "compliance",
-}
-
 # entities에서 제거할 플랫폼/소스 이름 (노드 간 의미없는 연결 방지)
 _ENTITY_BLOCKLIST = {
     "reddit", "hackernews", "hacker news", "github", "producthunt", "product hunt",
     "indiehackers", "indie hackers", "linkedin", "twitter", "youtube",
     "google", "apple", "amazon", "microsoft",
 }
-
-
-def _coerce_enum(value: object, allowed: set[str]) -> str:
-    if not isinstance(value, str):
-        return ""
-    text = value.strip()
-    if text in allowed:
-        return text
-    lowered = text.lower()
-    for option in allowed:
-        if option.lower() == lowered:
-            return option
-    return ""
-
-
-def _coerce_string_list(
-    value: object,
-    *,
-    allowed: set[str] | None = None,
-    max_items: int | None = None,
-) -> list[str]:
-    if isinstance(value, str):
-        raw_items = [part.strip() for part in _re.split(r"[,;\n|]+", value) if part.strip()]
-    elif isinstance(value, list):
-        raw_items = [str(part).strip() for part in value if str(part).strip()]
-    else:
-        raw_items = []
-
-    seen: set[str] = set()
-    items: list[str] = []
-    for item in raw_items:
-        normalized = item
-        if allowed is not None:
-            normalized = _coerce_enum(item, allowed)
-            if not normalized:
-                continue
-        dedupe_key = normalized.lower()
-        if dedupe_key in seen:
-            continue
-        seen.add(dedupe_key)
-        items.append(normalized)
-        if max_items is not None and len(items) >= max_items:
-            break
-    return items
 
 
 def _normalize_structured_payload(payload: object, fallback_summary: str) -> dict:
@@ -146,37 +103,50 @@ def _build_structured_edges(nodes: list[dict], min_score: int = 8) -> list[dict]
     """구조화 필드 기반 가중 엣지 빌딩."""
     edges: list[dict] = []
     node_list = [n for n in nodes if n.get("id")]
+
+    # 이중 루프 진입 전에 모든 노드의 필드를 미리 계산하여 dict에 저장
+    _cache_entities: dict[str, set[str]] = {}
+    _cache_keywords: dict[str, set[str]] = {}
+    _cache_domain: dict[str, str | None] = {}
+    _cache_tech_area: dict[str, set[str]] = {}
+    _cache_market: dict[str, set[str]] = {}
+    _cache_problem_domain: dict[str, set[str]] = {}
+    for n in node_list:
+        nid = n["id"]
+        _cache_entities[nid] = _normalized_token_set(n.get("_entities"))
+        _cache_keywords[nid] = _normalized_token_set(n.get("_keywords"))
+        _cache_domain[nid] = _coerce_enum(n.get("_domain_type"), _DOMAIN_TYPES)
+        _cache_tech_area[nid] = set(_coerce_string_list(n.get("_tech_area"), allowed=_TECH_AREAS))
+        _cache_market[nid] = set(_coerce_string_list(n.get("_market"), allowed=_MARKETS))
+        _cache_problem_domain[nid] = set(_coerce_string_list(n.get("_problem_domain"), allowed=_PROBLEM_DOMAINS))
+
     for i, src in enumerate(node_list):
+        sid = src["id"]
+        src_entities = _cache_entities[sid]
+        src_kw = _cache_keywords[sid]
+        src_domain = _cache_domain[sid]
+        src_tech = _cache_tech_area[sid]
+        src_market = _cache_market[sid]
+        src_prob = _cache_problem_domain[sid]
         for tgt in node_list[i + 1:]:
+            tid = tgt["id"]
+            tgt_entities = _cache_entities[tid]
+            tgt_kw = _cache_keywords[tid]
             score = 0
             # entities × 3
-            src_entities = _normalized_token_set(src.get("_entities"))
-            tgt_entities = _normalized_token_set(tgt.get("_entities"))
             score += len(src_entities & tgt_entities) * 3
             # keywords × 2
-            src_kw = _normalized_token_set(src.get("_keywords"))
-            tgt_kw = _normalized_token_set(tgt.get("_keywords"))
             score += len(src_kw & tgt_kw) * 2
             # domain_type × 1
-            src_domain = _coerce_enum(src.get("_domain_type"), _DOMAIN_TYPES)
-            tgt_domain = _coerce_enum(tgt.get("_domain_type"), _DOMAIN_TYPES)
+            tgt_domain = _cache_domain[tid]
             if src_domain and src_domain == tgt_domain:
                 score += 1
             # tech_area × 1
-            score += len(
-                set(_coerce_string_list(src.get("_tech_area"), allowed=_TECH_AREAS))
-                & set(_coerce_string_list(tgt.get("_tech_area"), allowed=_TECH_AREAS))
-            )
+            score += len(src_tech & _cache_tech_area[tid])
             # market × 1
-            score += len(
-                set(_coerce_string_list(src.get("_market"), allowed=_MARKETS))
-                & set(_coerce_string_list(tgt.get("_market"), allowed=_MARKETS))
-            )
+            score += len(src_market & _cache_market[tid])
             # problem_domain × 1
-            score += len(
-                set(_coerce_string_list(src.get("_problem_domain"), allowed=_PROBLEM_DOMAINS))
-                & set(_coerce_string_list(tgt.get("_problem_domain"), allowed=_PROBLEM_DOMAINS))
-            )
+            score += len(src_prob & _cache_problem_domain[tid])
 
             if score >= min_score:
                 # label: most meaningful shared field
@@ -189,13 +159,13 @@ def _build_structured_edges(nodes: list[dict], min_score: int = 8) -> list[dict]
                         label = " · ".join(sorted(shared_kws)[:2])
                     else:
                         tax_overlaps = []
-                        if src.get("_domain_type") and src.get("_domain_type") == tgt.get("_domain_type"):
-                            tax_overlaps.append(src["_domain_type"])
-                        tax_overlaps += list(set(src.get("_tech_area") or []) & set(tgt.get("_tech_area") or []))
-                        tax_overlaps += list(set(src.get("_market") or []) & set(tgt.get("_market") or []))
-                        tax_overlaps += list(set(src.get("_problem_domain") or []) & set(tgt.get("_problem_domain") or []))
+                        if src_domain and src_domain == tgt_domain:
+                            tax_overlaps.append(src_domain)
+                        tax_overlaps += list(src_tech & _cache_tech_area[tid])
+                        tax_overlaps += list(src_market & _cache_market[tid])
+                        tax_overlaps += list(src_prob & _cache_problem_domain[tid])
                         label = " · ".join(tax_overlaps[:2])
-                edges.append({"source": src["id"], "target": tgt["id"], "weight": score, "label": label})
+                edges.append({"source": sid, "target": tid, "weight": score, "label": label})
     return edges
 
 
@@ -242,14 +212,14 @@ def _calc_edges_for_node(new_node: dict, existing_nodes: list[dict], min_score: 
         return []
     edges: list[dict] = []
     src = new_node
-    src_entities = set(src.get("_entities") or [])
-    src_kw = set(src.get("_keywords") or [])
+    src_entities = _normalized_token_set(src.get("_entities"))
+    src_kw = _normalized_token_set(src.get("_keywords"))
     for tgt in existing_nodes:
         if not tgt.get("id"):
             continue
         score = 0
-        tgt_entities = set(tgt.get("_entities") or [])
-        tgt_kw = set(tgt.get("_keywords") or [])
+        tgt_entities = _normalized_token_set(tgt.get("_entities"))
+        tgt_kw = _normalized_token_set(tgt.get("_keywords"))
         score += len(src_entities & tgt_entities) * 3
         score += len(src_kw & tgt_kw) * 2
         if src.get("_domain_type") and src.get("_domain_type") == tgt.get("_domain_type"):
@@ -489,12 +459,14 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
         heartbeat_task: asyncio.Task | None = None
         analysis_md = ""
         raw_items: list = []
+        context_nodes: list = []
         posts_by_platform: dict = {}
         personas_by_platform: dict = {}
         report_json: dict = {}
         report_md: str = ""
         final_report_md: str = ""
         gtm_md: str = ""
+        domain_str: str = ""
         _sim_done_published = False
 
         try:
@@ -624,11 +596,18 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                     "type": "sim_progress",
                     "message": f"Domain: {domain_str}. Generating analysis report...",
                 })
+                # Select top-3 competitor nodes by relevance to the idea
+                _competitor_candidates = [n for n in context_nodes if n.get("id") != "idea"]
+                _ranked_competitors = _rank_nodes_by_relevance(_competitor_candidates, config["input_text"])
+                _top_competitors = _ranked_competitors[:3]
+
                 analysis_md = await generate_analysis_report(
                     raw_items=raw_items,
                     domain=domain_str,
                     input_text=idea_node["abstract"],
                     language=config["language"],
+                    idea_title=idea_node["title"],
+                    top_competitors=_top_competitors,
                 )
                 await checkpoint()
                 publish({"type": "sim_analysis", "data": {"markdown": analysis_md}})
@@ -644,6 +623,8 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 "message": f"Starting simulation with {len(context_nodes)} context nodes...",
             })
 
+            sim_start_time = time.time()
+            rounds_start_time: float | None = None
             async for event in run_simulation(
                 input_text=idea_summary,
                 seed_text=config["input_text"],
@@ -671,6 +652,7 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                         event["domain"] or domain_str,
                         analysis_md,
                         raw_items,
+                        event.get("runner_state"),
                     )
                     continue  # do NOT publish to Redis
                 if event["type"] == "sim_done":
@@ -682,16 +664,91 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                     report_json = data.get("report_json", {})
                     report_md = data.get("markdown", "")
                 publish(event)
+                # Emit ETA after each round summary
+                if event.get("type") == "sim_round_summary":
+                    total_rounds = config["num_rounds"]
+                    elapsed_sec = time.time() - sim_start_time
+                    completed_rounds = event.get("round_num", 1)
+                    remaining_rounds = total_rounds - completed_rounds
+                    # Record timestamp after round 1 completes so persona
+                    # generation time is excluded from the per-round average.
+                    if completed_rounds == 1:
+                        rounds_start_time = time.time()
+                    if completed_rounds > 0:
+                        if completed_rounds >= 2 and rounds_start_time:
+                            avg_sec_per_round = (time.time() - rounds_start_time) / (completed_rounds - 1)
+                        else:
+                            avg_sec_per_round = elapsed_sec / completed_rounds
+                        eta_sec = avg_sec_per_round * remaining_rounds
+                        publish({
+                            "type": "sim_eta",
+                            "eta_seconds": round(eta_sec),
+                            "elapsed_seconds": round(elapsed_sec),
+                            "completed_rounds": completed_rounds,
+                            "total_rounds": total_rounds,
+                        })
 
             await checkpoint()
             publish({"type": "sim_progress", "message": "Generating launch strategy..."})
             try:
                 from backend.reporter import generate_gtm_report
+                # Extract top posts per platform for GTM report context
+                top_posts_for_gtm: list[dict] = []
+                for _platform_name, _platform_posts in posts_by_platform.items():
+                    if not isinstance(_platform_posts, list):
+                        continue
+                    _non_seed = [p for p in _platform_posts if isinstance(p, dict) and not str(p.get("id", "")).startswith("__seed__")]
+                    _top_3 = sorted(_non_seed, key=lambda p: p.get("upvotes", 0) - p.get("downvotes", 0), reverse=True)[:3]
+                    top_posts_for_gtm.extend(_top_3)
+                # interaction_network에서 상위 5개 페어 요약
+                interaction_summary = ""
+                if report_json and report_json.get("interaction_network"):
+                    pairs = sorted(
+                        report_json["interaction_network"],
+                        key=lambda x: x.get("count", 0),
+                        reverse=True
+                    )[:5]
+                    lines = []
+                    for p in pairs:
+                        fs = p.get("from_segment", p.get("from_name", "?"))
+                        ts = p.get("to_segment", p.get("to_name", "?"))
+                        pattern = p.get("sentiment_pattern", "mixed")
+                        lines.append(f"- {fs} -> {ts}: {pattern} ({p.get('count', 0)} exchanges)")
+                    interaction_summary = "Segment interaction patterns:\n" + "\n".join(lines)
+
+                # debate_timeline에서 turning_points 있는 상위 3개 추출
+                debate_tl = (report_json or {}).get("debate_timeline") or []
+                dh_lines: list[str] = []
+                debates_with_tp = [d for d in debate_tl if d.get("turning_points")]
+                debates_with_tp.sort(
+                    key=lambda d: abs(d["turning_points"][0].get("delta_pct") or 0),
+                    reverse=True,
+                )
+                for debate in debates_with_tp[:3]:
+                    tps = debate.get("turning_points") or []
+                    tp = tps[0]  # 가장 큰 turning point
+                    snippet = debate.get("root_content_snippet", "")[:60]
+                    direction = tp.get("direction", "")
+                    round_n = tp.get("round", "?")
+                    delta = tp.get("delta_pct") or 0
+                    trigger = tp.get("trigger_snippet", "")[:50]
+                    dh_lines.append(
+                        f"- \"{snippet}\" \u2192 R{round_n} {direction} shift ({delta:.0f}%) "
+                        + (f"triggered by: \"{trigger}\"" if trigger else "")
+                    )
+                debate_highlights = "\n".join(dh_lines)
+
                 gtm_md = await generate_gtm_report(
                     report_json=report_json,
                     analysis_md=analysis_md,
                     input_text=idea_summary,
                     language=config["language"],
+                    platform_summaries=report_json.get("platform_summaries"),
+                    top_posts=top_posts_for_gtm if top_posts_for_gtm else None,
+                    interaction_summary=interaction_summary,
+                    conversion_funnel=report_json.get("segment_conversion_funnel"),
+                    unaddressed_concerns=report_json.get("unaddressed_concerns"),
+                    debate_highlights=debate_highlights,
                 )
                 publish({"type": "sim_gtm_report", "data": {"markdown": gtm_md}})
             except Exception as _e:
@@ -699,12 +756,20 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
                 gtm_md = "## Launch Strategy\n\n_Generation failed._"
             publish({"type": "sim_progress", "message": "Generating final report..."})
             try:
+                # Build sentiment distribution from segments for confidence assessment
+                _sentiment_dist: dict[str, int] = {}
+                for _seg in report_json.get("segments", []):
+                    _s = _seg.get("sentiment", "neutral")
+                    _sentiment_dist[_s] = _sentiment_dist.get(_s, 0) + 1
                 final_report_md = await generate_final_report(
                     analysis_md=analysis_md,
                     report_json=report_json,
                     input_text=idea_summary,
                     language=config["language"],
                     gtm_md=gtm_md,
+                    agent_count=config["max_agents"],
+                    round_count=config["num_rounds"],
+                    sentiment_distribution=_sentiment_dist,
                 )
                 publish({"type": "sim_final_report", "data": {"markdown": final_report_md}})
             except Exception as _e:
@@ -753,14 +818,45 @@ def run_simulation_task(self, sim_id: str, config: dict) -> None:
             )
         except Exception as exc:
             logger.error("Simulation %s failed: %s", sim_id, exc, exc_info=True)
-            publish({"type": "sim_error", "message": str(exc)})
-            await asyncio.to_thread(
-                update_simulation_status,
-                DB_PATH,
-                sim_id,
-                "failed",
-                allowed_current_statuses={"running"},
-            )
+            _has_partial = posts_by_platform and any(posts_by_platform.values())
+            if _has_partial:
+                try:
+                    save_sim_results(
+                        DB_PATH,
+                        sim_id,
+                        posts_by_platform,
+                        personas_by_platform,
+                        report_json,
+                        report_md,
+                        analysis_md=analysis_md,
+                        raw_items=raw_items,
+                        context_nodes=context_nodes,
+                        gtm_md=gtm_md,
+                        final_report_md=final_report_md,
+                    )
+                    await asyncio.to_thread(
+                        update_simulation_status,
+                        DB_PATH,
+                        sim_id,
+                        "partial",
+                        allowed_current_statuses={"running"},
+                    )
+                    logger.info("Simulation %s: partial results saved", sim_id)
+                except Exception:
+                    logger.warning("Simulation %s: failed to save partial results", sim_id, exc_info=True)
+            publish({
+                "type": "sim_error",
+                "message": str(exc),
+                "partial_saved": _has_partial,
+            })
+            if not _has_partial:
+                await asyncio.to_thread(
+                    update_simulation_status,
+                    DB_PATH,
+                    sim_id,
+                    "failed",
+                    allowed_current_statuses={"running"},
+                )
         finally:
             for task in (watcher_task, heartbeat_task):
                 if task is not None:

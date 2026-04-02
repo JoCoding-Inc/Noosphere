@@ -84,7 +84,10 @@ async def test_upvote_action_also_generates_comment():
         new=AsyncMock(return_value=AgentAction(action_type="upvote", target_post_id="seed-1")),
     ), patch(
         "backend.simulation.social_rounds.generate_content",
-        new=AsyncMock(return_value=("Great idea!", {})),
+        new=AsyncMock(return_value=("Great idea! This is a really compelling and well-thought-out concept.", {})),
+    ), patch(
+        "backend.simulation.social_rounds.random.random",
+        return_value=0.0,  # 항상 threshold 미만 → 콘텐츠 생성 강제
     ):
         events = [e async for e in platform_round(
             platform, state, [persona],
@@ -138,7 +141,7 @@ async def test_comment_action_only_generates_post():
         new=AsyncMock(return_value=AgentAction(action_type="comment", target_post_id="seed-1")),
     ), patch(
         "backend.simulation.social_rounds.generate_content",
-        new=AsyncMock(return_value=("Interesting concept!", {})),
+        new=AsyncMock(return_value=("Interesting concept! This approach seems very promising and worth exploring further.", {})),
     ):
         events = [e async for e in platform_round(
             platform, state, [persona],

@@ -1,7 +1,6 @@
 from __future__ import annotations
 import json
 import logging
-import re
 from typing import Any
 
 from backend import llm
@@ -69,11 +68,11 @@ Return ONLY the JSON object."""
             ],
             tier="mid",
             max_tokens=8192,
+            response_format={"type": "json_object"},
         )
         raw = (response.content or "").strip()
         if not raw:
             raise ValueError("Extractor returned empty message.content")
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
         result = json.loads(raw)
         if not isinstance(result, dict):
             raise ValueError("Extractor response JSON must be an object")
@@ -120,6 +119,41 @@ Return ONLY the JSON object."""
             if query_targets.get(category, 0) > 0:
                 fallback_bundles[category] = result["search_queries"]
         normalized_query_bundles = fallback_bundles or {"discussion": result["search_queries"]}
+
+    # Domain-type cross-validation: healthcare keyword detection
+    concepts = result.get("concepts", [])
+    healthcare_kw = {"medical", "patient", "clinical", "health", "hospital", "diagnosis", "treatment", "pharma", "drug", "physician"}
+    if sum(1 for c in concepts if any(k in c.lower() for k in healthcare_kw)) >= 2:
+        if domain_type != "healthcare":
+            logger.info("Domain type corrected from %r to 'healthcare' based on concept keywords", domain_type)
+            domain_type = "healthcare"
+            result["domain_type"] = domain_type
+            query_targets = DOMAIN_QUERY_COUNTS["healthcare"]
+
+    # Validate query relevance against extracted concepts
+    normalized_query_bundles = _validate_query_relevance(concepts, normalized_query_bundles)
+
     result["query_bundles"] = normalized_query_bundles
 
     return result
+
+
+def _validate_query_relevance(concepts: list[str], query_bundles: dict[str, list[str]]) -> dict[str, list[str]]:
+    """concepts의 핵심 키워드가 query_bundles에 반영되었는지 검증하고 보완"""
+    if not concepts or not query_bundles:
+        return query_bundles
+    query_bundles = dict(query_bundles)
+
+    # 핵심 키워드 추출 (3자 이상, stopwords 제외)
+    stopwords = {"the", "and", "for", "with", "that", "this", "from", "are", "how", "what", "use"}
+    core_kw = {w.lower() for c in concepts[:5] for w in c.split() if len(w) >= 3 and w.lower() not in stopwords}
+
+    # 각 카테고리에 핵심 키워드가 포함된 쿼리가 없으면 보완
+    for category, queries in query_bundles.items():
+        covered = any(any(kw in q.lower() for kw in core_kw) for q in queries)
+        if not covered and core_kw and queries:
+            top_kw = list(core_kw)[:2]
+            new_query = f"{' '.join(top_kw)} {category.replace('_', ' ')}"
+            query_bundles[category] = [new_query] + (queries[:-1] if len(queries) > 1 else queries)
+
+    return query_bundles
