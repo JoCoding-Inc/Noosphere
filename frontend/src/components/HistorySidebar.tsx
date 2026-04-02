@@ -1,12 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getHistory, cancelSimulation, deleteSimulation } from '../api'
 import type { HistoryItem } from '../types'
+
+function getVerdictStyle(verdict: string): { background: string; color: string } {
+  const v = verdict.toLowerCase()
+  if (v === 'positive') return { background: '#dcfce7', color: '#15803d' }
+  if (v === 'mixed') return { background: '#fef3c7', color: '#b45309' }
+  if (v === 'skeptical') return { background: '#ffedd5', color: '#c2410c' }
+  if (v === 'negative') return { background: '#fee2e2', color: '#b91c1c' }
+  return { background: '#f1f5f9', color: '#475569' }
+}
 
 const STATUS_CONFIG = {
   completed: { color: '#22c55e', label: 'Done' },
   running:   { color: '#f59e0b', label: 'Running' },
   failed:    { color: '#ef4444', label: 'Failed' },
+  partial:   { color: '#f97316', label: 'Partial' },
 }
 
 interface Props {
@@ -21,6 +31,16 @@ export function HistorySidebar({ open, onClose }: Props) {
   const [cancellingIds, setCancellingIds] = useState<Record<string, boolean>>({})
   const [cancelErrors, setCancelErrors] = useState<Record<string, string>>({})
   const [deletingIds, setDeletingIds] = useState<Record<string, boolean>>({})
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredItems = useMemo(() => {
+    if (!searchQuery) return items
+    const q = searchQuery.toLowerCase()
+    return items.filter(item =>
+      item.input_text_snippet.toLowerCase().includes(q) ||
+      item.domain?.toLowerCase().includes(q)
+    )
+  }, [items, searchQuery])
 
   useEffect(() => {
     if (!open) return
@@ -111,13 +131,33 @@ export function HistorySidebar({ open, onClose }: Props) {
 
         {/* Content */}
         <div style={{ padding: '16px 20px', flex: 1 }}>
+          {/* Search */}
+          <div style={{ marginBottom: 12 }}>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%', padding: '6px 10px', fontSize: 12, borderRadius: 6,
+                border: '1px solid #e2e8f0', background: '#f8fafc', color: '#1e293b',
+                outline: 'none', boxSizing: 'border-box',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#6366f1')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+            />
+          </div>
+
           {loading && <p style={{ color: '#94a3b8', fontSize: 13 }}>Loading...</p>}
           {!loading && items.length === 0 && (
             <p style={{ color: '#94a3b8', fontSize: 13 }}>No simulations yet.</p>
           )}
+          {!loading && items.length > 0 && filteredItems.length === 0 && (
+            <p style={{ color: '#94a3b8', fontSize: 12 }}>No matching results.</p>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {items.map(item => {
+            {filteredItems.map(item => {
               const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.failed
               const date = new Date(item.created_at).toLocaleDateString()
 
@@ -125,7 +165,7 @@ export function HistorySidebar({ open, onClose }: Props) {
                 <div
                   key={item.id}
                   onClick={() => {
-                    if (item.status === 'completed') {
+                    if (item.status === 'completed' || item.status === 'partial') {
                       onClose()
                       navigate(`/result/${item.id}`)
                     }
@@ -133,11 +173,11 @@ export function HistorySidebar({ open, onClose }: Props) {
                   style={{
                     padding: '12px 14px', borderRadius: 8,
                     border: '1px solid #e2e8f0', background: '#fff',
-                    cursor: item.status === 'completed' ? 'pointer' : 'default',
+                    cursor: item.status === 'completed' || item.status === 'partial' ? 'pointer' : 'default',
                     transition: 'border-color 0.15s',
                   }}
                   onMouseEnter={e => {
-                    if (item.status === 'completed')
+                    if (item.status === 'completed' || item.status === 'partial')
                       (e.currentTarget as HTMLDivElement).style.borderColor = '#1e293b'
                   }}
                   onMouseLeave={e => {
@@ -197,10 +237,58 @@ export function HistorySidebar({ open, onClose }: Props) {
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#94a3b8' }}>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: '#94a3b8', alignItems: 'center' }}>
                     <span>{date}</span>
                     <span>{item.language}</span>
-                    {item.domain && <span>{item.domain}</span>}
+                    {item.domain && (
+                      <span style={{
+                        fontSize: 10, padding: '1px 7px', borderRadius: 8,
+                        background: '#ede9fe', color: '#7c3aed', fontWeight: 600,
+                      }}>
+                        {item.domain}
+                      </span>
+                    )}
+                    {item.verdict && (() => {
+                      const vs = getVerdictStyle(item.verdict)
+                      return (
+                        <span style={{
+                          fontSize: 10, padding: '1px 6px', borderRadius: 8,
+                          background: vs.background, color: vs.color, fontWeight: 600,
+                        }}>
+                          {item.verdict}
+                        </span>
+                      )
+                    })()}
+                    {item.evidence_count != null && (
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                        {item.evidence_count} evidence
+                      </span>
+                    )}
+                    {item.adoption_score != null && (
+                      <span style={{
+                        fontSize: 10, padding: '1px 6px', borderRadius: 8,
+                        background: item.adoption_score >= 70 ? '#dcfce7' : item.adoption_score >= 40 ? '#fef3c7' : '#fee2e2',
+                        color: item.adoption_score >= 70 ? '#15803d' : item.adoption_score >= 40 ? '#b45309' : '#b91c1c',
+                        fontWeight: 600,
+                      }}>
+                        {item.adoption_score} pts
+                      </span>
+                    )}
+                    {item.max_agents != null && (
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                        {item.max_agents} agents
+                      </span>
+                    )}
+                    {item.num_rounds != null && (
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                        {item.num_rounds}R
+                      </span>
+                    )}
+                    {item.duration_seconds != null && (
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                        {Math.floor(item.duration_seconds / 60)}m {Math.floor(item.duration_seconds % 60)}s
+                      </span>
+                    )}
                   </div>
                 </div>
               )

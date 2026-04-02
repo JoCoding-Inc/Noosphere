@@ -63,6 +63,12 @@ const DEFAULT_SOURCE_LIMITS: Record<string, number> = Object.fromEntries(
 
 const AGENT_OPTIONS = [100, 150, 200] as const
 
+const SIMULATION_PRESETS = [
+  { label: 'Quick',    num_rounds: 4,  max_agents: 100, activation_rate: 0.3, description: 'Fast \u00b7 100 agents \u00b7 4 rounds' },
+  { label: 'Standard', num_rounds: 8,  max_agents: 150, activation_rate: 0.4, description: 'Balanced \u00b7 150 agents \u00b7 8 rounds' },
+  { label: 'Deep',     num_rounds: 12, max_agents: 200, activation_rate: 0.5, description: 'Thorough \u00b7 200 agents \u00b7 12 rounds' },
+] as const
+
 const DEFAULT_CONFIG: Omit<SimConfig, 'input_text'> = {
   language: 'English',
   num_rounds: 8,
@@ -70,7 +76,6 @@ const DEFAULT_CONFIG: Omit<SimConfig, 'input_text'> = {
   platforms: ['hackernews', 'producthunt', 'indiehackers', 'reddit_startups', 'linkedin'],
   activation_rate: 0.25,
   source_limits: DEFAULT_SOURCE_LIMITS,
-  provider: 'openai',
 }
 
 type OptionsTab = 'simulation' | 'research'
@@ -132,6 +137,7 @@ export function HomePage() {
   const [optionsTab, setOptionsTab] = useState<OptionsTab>('simulation')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [activePreset, setActivePreset] = useState<string>('Standard')
 
   const togglePlatform = (id: Platform) => {
     setConfig(c => ({
@@ -268,6 +274,48 @@ export function HomePage() {
               </div>
 
               {optionsTab === 'simulation' && (
+                <div>
+                {/* Preset buttons */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  {SIMULATION_PRESETS.map(preset => {
+                    const isActive = activePreset === preset.label
+                    return (
+                      <button
+                        key={preset.label}
+                        onClick={() => {
+                          setActivePreset(preset.label)
+                          setConfig(c => ({
+                            ...c,
+                            num_rounds: preset.num_rounds,
+                            max_agents: preset.max_agents,
+                            activation_rate: preset.activation_rate,
+                          }))
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          border: isActive ? '1.5px solid #6366f1' : '1.5px solid #e2e8f0',
+                          background: isActive ? '#6366f108' : '#fff',
+                          textAlign: 'left',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 13, fontWeight: 600,
+                          color: isActive ? '#6366f1' : '#1e293b',
+                          marginBottom: 2,
+                        }}>
+                          {preset.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                          {preset.description}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
                 <div className="options-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {/* Language */}
                   <div style={css.card}>
@@ -298,7 +346,7 @@ export function HomePage() {
                     </div>
                     <input type="range" min={1} max={30} step={1}
                       value={config.num_rounds}
-                      onChange={e => setConfig(c => ({ ...c, num_rounds: +e.target.value }))}
+                      onChange={e => { setActivePreset(''); setConfig(c => ({ ...c, num_rounds: +e.target.value })) }}
                       style={css.slider} />
                     <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
                       Each round = one wave of agent interactions.
@@ -317,7 +365,7 @@ export function HomePage() {
                         return (
                           <button
                             key={v}
-                            onClick={() => setConfig(c => ({ ...c, max_agents: v }))}
+                            onClick={() => { setActivePreset(''); setConfig(c => ({ ...c, max_agents: v })) }}
                             style={{
                               borderRadius: 8,
                               padding: '8px 20px',
@@ -347,12 +395,13 @@ export function HomePage() {
                     </div>
                     <input type="range" min={0.1} max={1.0} step={0.05}
                       value={config.activation_rate}
-                      onChange={e => setConfig(c => ({ ...c, activation_rate: +e.target.value }))}
+                      onChange={e => { setActivePreset(''); setConfig(c => ({ ...c, activation_rate: +e.target.value })) }}
                       style={css.slider} />
                     <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
                       Higher = more chaotic, faster-moving discussions.
                     </p>
                   </div>
+                </div>
                 </div>
               )}
 
