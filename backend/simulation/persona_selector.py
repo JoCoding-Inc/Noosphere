@@ -214,8 +214,10 @@ def select_agents_for_platform(
         if shortfall > 0:
             # Try adjacent archetypes to fill shortfall
             for fallback_arch, fallback_agents in arch_pool.items():
-                if fallback_arch == arch or shortfall <= 0:
+                if shortfall <= 0:
                     break
+                if fallback_arch == arch:
+                    continue
                 remaining_in_fallback = [a for a in fallback_agents if a["name"] not in used_names]
                 take_fallback = min(shortfall, len(remaining_in_fallback))
                 batch = remaining_in_fallback[:take_fallback]
@@ -233,6 +235,13 @@ def select_agents_for_platform(
         selected.extend(extra)
         for agent in extra:
             used_names.add(agent["name"])
+
+    # Warn if pool was exhausted before reaching target count
+    if len(selected) < n:
+        logger.warning(
+            "select_agents_for_platform(%s): pool exhausted — requested %d, got %d",
+            platform, n, len(selected),
+        )
 
     # Shuffle so archetypes are interleaved, not grouped
     random.shuffle(selected)

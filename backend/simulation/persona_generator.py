@@ -630,8 +630,10 @@ def persona_from_pool_entry(entry: dict, cluster: dict, platform_name: str) -> "
     rep = cluster.get("representative") or cluster.get("representative_node") or {}
     source_title = rep.get("title", "") if isinstance(rep, dict) else ""
 
+    # Use agent name as node_id to guarantee uniqueness when multiple agents share a cluster.
+    # cluster.get("id") would collide when max_agents > len(clusters) (round-robin reuse).
     return Persona(
-        node_id=cluster.get("id", ""),
+        node_id=entry["name"],
         name=entry["name"],
         role=entry["role"],
         age=entry["age"],
