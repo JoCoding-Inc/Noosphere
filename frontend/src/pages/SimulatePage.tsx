@@ -7,6 +7,7 @@ import { PlatformSimFeed } from '../components/PlatformSimFeed'
 import { ContextGraph } from '../components/OntologyGraph'
 import { SOURCE_COLORS, PLATFORM_COLORS } from '../constants'
 import { resumeSimulation, cancelSimulation } from '../api'
+import { t } from '../tokens'
 import type { Platform, SocialPost } from '../types'
 
 export function SimulatePage() {
@@ -121,17 +122,17 @@ export function SimulatePage() {
   const feedPanel = (
     <>
       {/* 상태 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: t.space[3], marginBottom: t.space[2] }}>
         {sim.status !== 'error' && (
           <span style={{
             display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-            background: '#22c55e', flexShrink: 0,
+            background: t.color.success, flexShrink: 0,
             animation: 'pulse 1.5s infinite',
           }} />
         )}
         <h2
           className={phase !== 'error' ? 'cursor-blink' : undefined}
-          style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', flex: 1 }}
+          style={{ margin: 0, fontSize: t.font.size['2xl'], fontWeight: t.font.weight.bold, letterSpacing: '-0.02em', flex: 1 }}
         >
           {phaseLabel[phase]}
         </h2>
@@ -141,10 +142,10 @@ export function SimulatePage() {
             disabled={isCancelling}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '6px 14px', fontSize: 13, fontWeight: 600,
-              borderRadius: 8, border: '1px solid #fca5a5',
-              background: isCancelling ? '#fef2f2' : '#fff',
-              color: '#ef4444', cursor: isCancelling ? 'not-allowed' : 'pointer',
+              padding: `${t.space[1]}px ${t.space[3]}px`, fontSize: t.font.size.md, fontWeight: t.font.weight.semibold,
+              borderRadius: t.radius.md, border: `1px solid #fca5a5`,
+              background: isCancelling ? '#fef2f2' : t.color.textInverse,
+              color: t.color.danger, cursor: isCancelling ? 'not-allowed' : 'pointer',
               opacity: isCancelling ? 0.6 : 1,
               transition: 'all 0.15s',
               flexShrink: 0,
@@ -155,21 +156,21 @@ export function SimulatePage() {
         )}
       </div>
       {cancelError && (
-        <p role="alert" style={{ color: '#ef4444', fontSize: 13, margin: '0 0 8px' }}>{cancelError}</p>
+        <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.md, margin: `0 0 ${t.space[2]}px` }}>{cancelError}</p>
       )}
 
       {/* Warning 배너 */}
       {sim.warnings.length > 0 && (
         <div style={{
           display: 'flex', flexDirection: 'column', gap: 6,
-          margin: '0 0 16px 0',
+          margin: `0 0 ${t.space[4]}px 0`,
         }}>
           {sim.warnings.map((w, i) => (
             <div key={i} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8,
+              display: 'flex', alignItems: 'flex-start', gap: t.space[2],
               background: '#fffbeb', color: '#b45309',
               border: '1px solid #fde68a', borderRadius: 7,
-              fontSize: 12, padding: '8px 14px',
+              fontSize: t.font.size.sm, padding: `${t.space[2]}px ${t.space[3]}px`,
               animation: 'fadeIn 0.3s ease',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
@@ -186,7 +187,7 @@ export function SimulatePage() {
       {/* 현재 진행 메시지 */}
       {lastProgress && (
         <p key={lastProgress} style={{
-          color: '#64748b', fontSize: 13, margin: '0 0 20px 22px',
+          color: t.color.textSecondary, fontSize: t.font.size.md, margin: `0 0 ${t.space[5]}px 22px`,
           animation: 'fadeIn 0.3s ease',
         }}>
           {lastProgress}
@@ -197,11 +198,11 @@ export function SimulatePage() {
       {(sim.status === 'running' || sim.status === 'connecting') &&
         import.meta.env.VITE_CLERK_PUBLISHABLE_KEY && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', gap: t.space[2],
           background: '#f0f9ff', color: '#0284c7',
           border: '1px solid #bae6fd', borderRadius: 7,
-          fontSize: 12, padding: '8px 14px',
-          margin: '0 0 20px 0',
+          fontSize: t.font.size.sm, padding: `${t.space[2]}px ${t.space[3]}px`,
+          margin: `0 0 ${t.space[5]}px 0`,
           animation: 'fadeIn 0.4s ease',
         }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
@@ -216,20 +217,20 @@ export function SimulatePage() {
       )}
 
       {sim.status === 'error' && (
-        <div style={{ margin: '8px 0 20px' }}>
-          <p role="alert" style={{ color: '#ef4444', fontSize: 14, margin: '0 0 12px' }}>{sim.errorMsg}</p>
+        <div style={{ margin: `${t.space[2]}px 0 ${t.space[5]}px` }}>
+          <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.lg, margin: `0 0 ${t.space[3]}px` }}>{sim.errorMsg}</p>
           {sim.canResume && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: t.space[3] }}>
+              <p style={{ fontSize: t.font.size.md, color: t.color.textSecondary, margin: 0 }}>
                 Saved up to round {sim.lastRound}
               </p>
               <button
                 onClick={handleResume}
                 disabled={isResuming}
                 style={{
-                  padding: '8px 18px', borderRadius: 8, border: 'none',
-                  background: '#6366f1', color: '#fff', fontWeight: 600,
-                  fontSize: 14, cursor: isResuming ? 'not-allowed' : 'pointer',
+                  padding: `${t.space[2]}px ${t.space[4]}px`, borderRadius: t.radius.md, border: 'none',
+                  background: t.color.primary, color: t.color.textInverse, fontWeight: t.font.weight.semibold,
+                  fontSize: t.font.size.lg, cursor: isResuming ? 'not-allowed' : 'pointer',
                   opacity: isResuming ? 0.7 : 1,
                 }}
               >
@@ -238,20 +239,20 @@ export function SimulatePage() {
             </div>
           )}
           {!sim.canResume && sim.backendStatus === 'running' && (
-            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: t.font.size.md, color: t.color.textSecondary, margin: 0 }}>
               Connection lost, but the simulation may still be running.
             </p>
           )}
           {resumeError && (
-            <p role="alert" style={{ color: '#ef4444', fontSize: 13, margin: '8px 0 0' }}>{resumeError}</p>
+            <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.md, margin: `${t.space[2]}px 0 0` }}>{resumeError}</p>
           )}
           {phase === 'error' && totalPosts > 0 && (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
+              display: 'flex', alignItems: 'center', gap: t.space[2],
               background: '#f0f9ff', color: '#0369a1',
               border: '1px solid #bae6fd', borderRadius: 7,
-              fontSize: 13, padding: '8px 14px',
-              marginTop: 12,
+              fontSize: t.font.size.md, padding: `${t.space[2]}px ${t.space[3]}px`,
+              marginTop: t.space[3],
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
                 <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
@@ -265,10 +266,10 @@ export function SimulatePage() {
 
       {/* 플랫폼별 포스트 카운터 */}
       {totalPosts > 0 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: t.space[2], flexWrap: 'wrap', marginBottom: t.space[5] }}>
           {(Object.entries(sim.postsByPlatform) as [Platform, SocialPost[]][]).map(([platform, posts]) => (
             <span key={platform} style={{
-              fontSize: 12, padding: '4px 10px', borderRadius: 20,
+              fontSize: t.font.size.sm, padding: `${t.space[1]}px ${t.space[2]}px`, borderRadius: t.radius.pill,
               background: '#fafbff', color: '#475569',
               border: '1px solid #e8eaf6',
               display: 'flex', alignItems: 'center', gap: 5,
@@ -286,8 +287,8 @@ export function SimulatePage() {
 
       {/* 소스 수집 타임라인 */}
       {sim.sourceTimeline.length > 0 && phase === 'sourcing' && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ marginBottom: t.space[5] }}>
+          <div style={{ fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: t.space[2], fontVariantNumeric: 'tabular-nums' }}>
             {sim.sourceTimeline.length} items collected
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -296,28 +297,28 @@ export function SimulatePage() {
                 key={`${item.source}-${i}`}
                 className="source-item"
                 style={{
-                  padding: '8px 12px', borderRadius: 8,
-                  background: '#fff', border: '1px solid #e2e8f0',
+                  padding: `${t.space[2]}px ${t.space[3]}px`, borderRadius: t.radius.md,
+                  background: t.color.textInverse, border: `1px solid ${t.color.border}`,
                   boxShadow: 'var(--shadow-card)',
-                  borderLeft: `3px solid ${SOURCE_COLORS[item.source] || '#94a3b8'}`,
+                  borderLeft: `3px solid ${SOURCE_COLORS[item.source] || t.color.textMuted}`,
                   animationDelay: i === 0 ? '0ms' : undefined,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
-                    background: SOURCE_COLORS[item.source] ? `${SOURCE_COLORS[item.source]}18` : '#f1f5f9',
-                    color: SOURCE_COLORS[item.source] || '#64748b',
+                    fontSize: 10, fontWeight: t.font.weight.bold, padding: `${t.space[1]}px ${t.space[1]}px`, borderRadius: t.radius.md,
+                    background: SOURCE_COLORS[item.source] ? `${SOURCE_COLORS[item.source]}18` : t.color.bgSubtle,
+                    color: SOURCE_COLORS[item.source] || t.color.textSecondary,
                     textTransform: 'uppercase', letterSpacing: '0.04em',
                   }}>
                     {item.source}
                   </span>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.4 }}>
+                <div style={{ fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, color: t.color.textPrimary, lineHeight: 1.4 }}>
                   {item.title}
                 </div>
                 {item.snippet && (
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 3, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: t.font.size.sm, color: t.color.textSecondary, marginTop: 3, lineHeight: 1.5 }}>
                     {item.snippet}
                   </div>
                 )}
@@ -329,8 +330,8 @@ export function SimulatePage() {
 
       {/* 라운드 필터 */}
       {totalPosts > 0 && sim.roundNum > 0 && roundOptions.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <label htmlFor="round-filter" style={{ fontSize: 12, color: '#64748b', fontWeight: 600, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: t.space[2], marginBottom: t.space[3] }}>
+          <label htmlFor="round-filter" style={{ fontSize: t.font.size.sm, color: t.color.textSecondary, fontWeight: t.font.weight.semibold, flexShrink: 0 }}>
             Round:
           </label>
           <select
@@ -338,8 +339,8 @@ export function SimulatePage() {
             value={selectedRound}
             onChange={e => setSelectedRound(Number(e.target.value))}
             style={{
-              fontSize: 12, padding: '4px 8px', borderRadius: 6,
-              border: '1px solid #e2e8f0', background: '#fff', color: '#1e293b',
+              fontSize: t.font.size.sm, padding: `${t.space[1]}px ${t.space[2]}px`, borderRadius: t.radius.sm,
+              border: `1px solid ${t.color.border}`, background: t.color.textInverse, color: t.color.textPrimary,
               cursor: 'pointer',
             }}
           >
@@ -360,27 +361,27 @@ export function SimulatePage() {
         const nPct = Math.round((neutral / total) * 100)
         const gPct = Math.round((negative / total) * 100)
         return (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
+          <div style={{ marginBottom: t.space[4] }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: 4 }}>
               <span>Live Sentiment</span>
               <span>{total} posts analyzed</span>
             </div>
-            <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', background: '#e2e8f0' }}>
-              {pPct > 0 && <div style={{ width: `${pPct}%`, background: '#22c55e', transition: 'width 0.3s ease' }} />}
-              {nPct > 0 && <div style={{ width: `${nPct}%`, background: '#94a3b8', transition: 'width 0.3s ease' }} />}
-              {gPct > 0 && <div style={{ width: `${gPct}%`, background: '#ef4444', transition: 'width 0.3s ease' }} />}
+            <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', background: t.color.border }}>
+              {pPct > 0 && <div style={{ width: `${pPct}%`, background: t.color.success, transition: 'width 0.3s ease' }} />}
+              {nPct > 0 && <div style={{ width: `${nPct}%`, background: t.color.textMuted, transition: 'width 0.3s ease' }} />}
+              {gPct > 0 && <div style={{ width: `${gPct}%`, background: t.color.danger, transition: 'width 0.3s ease' }} />}
             </div>
-            <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 10, color: '#64748b' }}>
+            <div style={{ display: 'flex', gap: t.space[3], marginTop: 4, fontSize: 10, color: t.color.textSecondary }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.color.success, display: 'inline-block' }} />
                 Positive {pPct}%
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.color.textMuted, display: 'inline-block' }} />
                 Neutral {nPct}%
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.color.danger, display: 'inline-block' }} />
                 Negative {gPct}%
               </span>
             </div>
@@ -399,8 +400,8 @@ export function SimulatePage() {
           ? (lastStat.pass_count ?? 0) + (lastStat.inactive_count ?? 0)
           : null
         return (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
+          <div style={{ marginBottom: t.space[4] }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: 4 }}>
               <span>Activity per Round</span>
               {observing != null && observing > 0 && (
                 <span>{observing} agents observing this round</span>
@@ -412,7 +413,7 @@ export function SimulatePage() {
                   <Line
                     type="monotone"
                     dataKey="activity"
-                    stroke="#6366f1"
+                    stroke={t.color.primary}
                     strokeWidth={2}
                     dot={false}
                     isAnimationActive={false}
@@ -444,11 +445,11 @@ export function SimulatePage() {
         const lastStat = sim.roundStats[sim.roundStats.length - 1]
         const convergence = lastStat.convergence_score
         return (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
+          <div style={{ marginBottom: t.space[4] }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: 4 }}>
               <span>Sentiment Trend</span>
               {convergence != null && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#6366f1' }}>
+                <span style={{ fontSize: t.font.size.xs, fontWeight: t.font.weight.semibold, color: t.color.primary }}>
                   Convergence: {Math.round(convergence * 100)}%
                 </span>
               )}
@@ -456,23 +457,23 @@ export function SimulatePage() {
             <div style={{ width: '100%', height: 80 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-                  <Line type="monotone" dataKey="positive" stroke="#22c55e" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="negative" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="positive" stroke={t.color.success} strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="negative" stroke={t.color.danger} strokeWidth={2} dot={false} isAnimationActive={false} />
                   <Tooltip
-                    contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 6, fontSize: 11, color: '#e2e8f0' }}
-                    labelStyle={{ color: '#94a3b8', fontSize: 10 }}
+                    contentStyle={{ background: t.color.textPrimary, border: 'none', borderRadius: 6, fontSize: 11, color: t.color.border }}
+                    labelStyle={{ color: t.color.textMuted, fontSize: 10 }}
                     labelFormatter={(v) => `Round ${v}`}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ display: 'flex', gap: 12, marginTop: 2, fontSize: 10, color: '#64748b' }}>
+            <div style={{ display: 'flex', gap: t.space[3], marginTop: 2, fontSize: 10, color: t.color.textSecondary }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.color.success, display: 'inline-block' }} />
                 Positive
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.color.danger, display: 'inline-block' }} />
                 Negative
               </span>
             </div>
@@ -485,11 +486,11 @@ export function SimulatePage() {
         const entries = Object.entries(sim.segmentDistribution)
         const total = entries.reduce((s, [, v]) => s + v, 0)
         if (total === 0) return null
-        const SEGMENT_COLORS = ['#6366f1', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899']
+        const SEGMENT_COLORS = [t.color.primary, t.color.warning, t.color.success, t.color.danger, '#8b5cf6', '#14b8a6', '#f97316', '#ec4899']
         return (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Segment Distribution</div>
-            <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', background: '#e2e8f0' }}>
+          <div style={{ marginBottom: t.space[4] }}>
+            <div style={{ fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: 4 }}>Segment Distribution</div>
+            <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', background: t.color.border }}>
               {entries.map(([name, count], i) => (
                 <div
                   key={name}
@@ -504,7 +505,7 @@ export function SimulatePage() {
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
               {entries.map(([name, count], i) => (
-                <span key={name} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#64748b' }}>
+                <span key={name} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: t.color.textSecondary }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: SEGMENT_COLORS[i % SEGMENT_COLORS.length], display: 'inline-block' }} />
                   {name} {Math.round((count / total) * 100)}%
                 </span>
@@ -517,14 +518,14 @@ export function SimulatePage() {
       {/* Early Stop Banner */}
       {sim.earlyStop && (phase === 'rounds' || (phase === 'error' && totalPosts > 0)) && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', gap: t.space[2],
           background: '#fffbeb', color: '#92400e',
           border: '1px solid #fde68a', borderRadius: 7,
-          fontSize: 13, fontWeight: 600, padding: '10px 14px',
-          margin: '0 0 16px 0',
+          fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, padding: `${t.space[2]}px ${t.space[3]}px`,
+          margin: `0 0 ${t.space[4]}px 0`,
           animation: 'fadeIn 0.3s ease',
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.color.warning} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
             <polyline points="22 4 12 14.01 9 11.01"/>
           </svg>
@@ -534,7 +535,7 @@ export function SimulatePage() {
 
       {/* ETA 표시 — only during active rounds, not on error */}
       {!sim.earlyStop && sim.eta && sim.eta.etaSeconds > 0 && phase === 'rounds' && (
-        <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 16px 0' }}>
+        <p style={{ fontSize: t.font.size.md, color: t.color.textMuted, margin: `0 0 ${t.space[4]}px 0` }}>
           {sim.eta.etaSeconds < 60
             ? `~${sim.eta.etaSeconds}s remaining`
             : `~${Math.ceil(sim.eta.etaSeconds / 60)}m remaining`}
@@ -544,7 +545,7 @@ export function SimulatePage() {
 
       {/* 플랫폼별 시뮬레이션 피드 */}
       {totalPosts > 0 && (
-        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 20 }}>
+        <div style={{ borderTop: `1px solid ${t.color.border}`, paddingTop: t.space[5] }}>
           <PlatformSimFeed postsByPlatform={filteredPostsByPlatform} />
         </div>
       )}
@@ -552,12 +553,12 @@ export function SimulatePage() {
       {/* 초기 대기 상태 */}
       {totalPosts === 0 && sim.sourceTimeline.length === 0 && phase !== 'error' && (
         <div style={{
-          marginTop: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14,
+          marginTop: 48, textAlign: 'center', color: t.color.textMuted, fontSize: t.font.size.lg,
           animation: 'fadeIn 0.5s ease',
         }}>
           {sim.queuePosition !== null && sim.queuePosition > 0 ? (
             /* 큐 대기 중 */
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: t.space[4] }}>
               <div style={{
                 width: 64, height: 64, borderRadius: '50%',
                 background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
@@ -568,23 +569,23 @@ export function SimulatePage() {
                 </svg>
               </div>
               <div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#6366f1', lineHeight: 1 }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: t.color.primary, lineHeight: 1 }}>
                   #{sim.queuePosition}
                 </div>
-                <div style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>in queue</div>
+                <div style={{ fontSize: t.font.size.md, color: t.color.textSecondary, marginTop: 6 }}>in queue</div>
               </div>
               <div style={{
-                background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10,
-                padding: '12px 20px', maxWidth: 320,
+                background: t.color.bgCard, border: `1px solid ${t.color.border}`, borderRadius: t.radius.lg,
+                padding: `${t.space[3]}px ${t.space[5]}px`, maxWidth: 320,
               }}>
-                <p style={{ margin: 0, fontSize: 13, color: '#475569', lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: t.font.size.md, color: '#475569', lineHeight: 1.6 }}>
                   Another simulation is currently running. Yours will start automatically when it's done.
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 6, marginTop: t.space[1] }}>
                 {[0, 1, 2].map(i => (
                   <div key={i} style={{
-                    width: 6, height: 6, borderRadius: '50%', background: '#6366f1',
+                    width: 6, height: 6, borderRadius: '50%', background: t.color.primary,
                     animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
                   }} />
                 ))}
@@ -592,8 +593,8 @@ export function SimulatePage() {
             </div>
           ) : (
             <>
-              <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <div style={{ marginBottom: t.space[3], display: 'flex', justifyContent: 'center' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={t.color.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
               </div>
               {phase === 'personas'
                 ? `Building ${sim.agentCount} agent personas across platforms...`
@@ -608,21 +609,21 @@ export function SimulatePage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', background: t.color.bgCard }}>
       <Header />
 
       {sim.isSourcing ? (
         /* 소싱 단계: 왼쪽 그래프 + 오른쪽 소스 타임라인 */
         <main className="page-enter sim-sourcing-layout" style={{
-          maxWidth: 1600, margin: '0 auto', padding: '16px 24px',
-          display: 'flex', gap: 24, alignItems: 'flex-start',
+          maxWidth: 1600, margin: '0 auto', padding: `${t.space[4]}px ${t.space[6]}px`,
+          display: 'flex', gap: t.space[6], alignItems: 'flex-start',
         }}>
           <div style={{
             flex: 3, minWidth: 0,
             position: 'sticky', top: 8,
             animation: 'fadeInUp 0.4s ease',
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+            <p style={{ fontSize: t.font.size.xs, fontWeight: t.font.weight.bold, color: t.color.textMuted, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
               Knowledge Graph
             </p>
             <div className="sim-graph-wrapper">
