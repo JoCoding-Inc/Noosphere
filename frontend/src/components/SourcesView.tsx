@@ -1,4 +1,5 @@
 import { SOURCE_COLORS } from '../constants'
+import { t } from '../tokens'
 import type { SourceItem } from '../types'
 
 interface Props {
@@ -8,7 +9,7 @@ interface Props {
 export function SourcesView({ sources }: Props) {
   if (sources.length === 0) {
     return (
-      <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 14, padding: '48px 0' }}>
+      <div style={{ textAlign: 'center', color: t.color.textMuted, fontSize: t.font.size.lg, padding: '48px 0' }}>
         No source items collected.
       </div>
     )
@@ -17,8 +18,8 @@ export function SourcesView({ sources }: Props) {
   const sorted = [...sources].sort((a, b) => b.score - a.score)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: t.space[2] }}>
+      <div style={{ fontSize: t.font.size.sm, color: t.color.textMuted, marginBottom: t.space[1] }}>
         {sources.length} items collected
       </div>
       {sorted.map(item => (
@@ -26,31 +27,31 @@ export function SourcesView({ sources }: Props) {
           key={item.id}
           style={{
             padding: '10px 14px',
-            borderRadius: 8,
-            background: '#fff',
-            border: '1px solid #e2e8f0',
-            borderLeft: `3px solid ${SOURCE_COLORS[item.source] || '#94a3b8'}`,
+            borderRadius: t.radius.md,
+            background: t.color.bgPage,
+            border: `1px solid ${t.color.border}`,
+            borderLeft: `3px solid ${SOURCE_COLORS[item.source] || t.color.textMuted}`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: t.space[1] }}>
             <span style={{
-              fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
-              background: SOURCE_COLORS[item.source] ? `${SOURCE_COLORS[item.source]}18` : '#f1f5f9',
-              color: SOURCE_COLORS[item.source] || '#64748b',
+              fontSize: t.font.size.xs, fontWeight: t.font.weight.bold, padding: '1px 6px', borderRadius: t.radius.md,
+              background: SOURCE_COLORS[item.source] ? `${SOURCE_COLORS[item.source]}18` : t.color.bgSubtle,
+              color: SOURCE_COLORS[item.source] || t.color.textSecondary,
               textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
               {item.source}
             </span>
             {item.score > 0 && (
-              <span style={{ fontSize: 11, color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: t.font.size.xs, color: t.color.textMuted, fontVariantNumeric: 'tabular-nums' }}>
                 {item.score.toFixed(1)}
               </span>
             )}
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.4 }}>
+          <div style={{ fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, color: t.color.textPrimary, lineHeight: 1.4 }}>
             {item.url ? (
               <a href={item.url} target="_blank" rel="noopener noreferrer"
-                style={{ color: '#1e293b', textDecoration: 'none' }}
+                style={{ color: t.color.textPrimary, textDecoration: 'none' }}
                 onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
                 onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
               >
@@ -59,7 +60,7 @@ export function SourcesView({ sources }: Props) {
             ) : item.title}
           </div>
           {item.text && (
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>
+            <div style={{ fontSize: t.font.size.sm, color: t.color.textSecondary, marginTop: t.space[1], lineHeight: 1.5 }}>
               {item.text.slice(0, 140)}{item.text.length > 140 ? '…' : ''}
             </div>
           )}

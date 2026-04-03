@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Platform, SocialPost, Persona } from '../types'
+import { t } from '../tokens'
 import { PLATFORM_OPTIONS } from '../constants'
 import { PLATFORM_COLORS } from '../constants'
 
@@ -63,22 +64,22 @@ export function TopPosts({ posts, limit = 5, personasMap }: Props) {
   if (top.length === 0 && availablePlatforms.length === 0) return null
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-      <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+    <div style={{ background: t.color.bgPage, border: `1px solid ${t.color.border}`, borderRadius: t.radius.lg, padding: t.space[4], boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <p style={{ fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, color: t.color.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: t.space[2] }}>
         Notable Opinions
       </p>
 
       {/* Platform filter chips */}
       {availablePlatforms.length > 1 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: t.space[1], flexWrap: 'wrap', marginBottom: t.space[3] }}>
           <button
             onClick={() => setSelectedPlatform('all')}
             style={{
-              padding: '4px 12px', fontSize: 11, fontWeight: 600,
-              borderRadius: 20, border: '1px solid',
-              borderColor: selectedPlatform === 'all' ? '#6366f1' : '#e2e8f0',
-              background: selectedPlatform === 'all' ? '#6366f1' : '#fff',
-              color: selectedPlatform === 'all' ? '#fff' : '#64748b',
+              padding: '4px 12px', fontSize: t.font.size.xs, fontWeight: t.font.weight.semibold,
+              borderRadius: t.radius.pill, border: '1px solid',
+              borderColor: selectedPlatform === 'all' ? t.color.primary : t.color.border,
+              background: selectedPlatform === 'all' ? t.color.primary : t.color.bgPage,
+              color: selectedPlatform === 'all' ? t.color.textInverse : t.color.textSecondary,
               cursor: 'pointer', transition: 'all 0.15s',
             }}
           >
@@ -86,24 +87,24 @@ export function TopPosts({ posts, limit = 5, personasMap }: Props) {
           </button>
           {availablePlatforms.map(platform => {
             const isActive = selectedPlatform === platform
-            const platformColor = PLATFORM_COLORS[platform] || '#94a3b8'
+            const platformColor = PLATFORM_COLORS[platform] || t.color.textMuted
             return (
               <button
                 key={platform}
                 onClick={() => setSelectedPlatform(platform)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                  borderRadius: 20, border: '1px solid',
-                  borderColor: isActive ? platformColor : '#e2e8f0',
-                  background: isActive ? platformColor : '#fff',
-                  color: isActive ? '#fff' : '#64748b',
+                  padding: '4px 12px', fontSize: t.font.size.xs, fontWeight: t.font.weight.semibold,
+                  borderRadius: t.radius.pill, border: '1px solid',
+                  borderColor: isActive ? platformColor : t.color.border,
+                  background: isActive ? platformColor : t.color.bgPage,
+                  color: isActive ? t.color.textInverse : t.color.textSecondary,
                   cursor: 'pointer', transition: 'all 0.15s',
                 }}
               >
                 <span style={{
                   width: 6, height: 6, borderRadius: '50%',
-                  background: isActive ? '#fff' : platformColor,
+                  background: isActive ? t.color.textInverse : platformColor,
                   display: 'inline-block', flexShrink: 0,
                 }} />
                 {PLATFORM_LABELS[platform] ?? platform}
@@ -114,7 +115,7 @@ export function TopPosts({ posts, limit = 5, personasMap }: Props) {
       )}
 
       {top.length === 0 && (
-        <p style={{ fontSize: 13, color: '#94a3b8', margin: '12px 0 0' }}>
+        <p style={{ fontSize: t.font.size.md, color: t.color.textMuted, margin: `${t.space[3]} 0 0` }}>
           No posts found for this platform.
         </p>
       )}
@@ -131,28 +132,28 @@ export function TopPosts({ posts, limit = 5, personasMap }: Props) {
 
         return (
         <div key={post.id} style={{
-          display: 'flex', alignItems: 'flex-start', gap: 12,
-          padding: '12px 0',
-          borderBottom: i < top.length - 1 ? '1px solid #f1f5f9' : 'none',
+          display: 'flex', alignItems: 'flex-start', gap: t.space[3],
+          padding: `${t.space[3]} 0`,
+          borderBottom: i < top.length - 1 ? `1px solid ${t.color.bgSubtle}` : 'none',
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: t.space[1], flexShrink: 0 }}>
             {dotColor && (
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, display: 'inline-block' }} />
             )}
-            <span style={{ fontSize: 18, fontWeight: 800, color: '#e2e8f0', width: 28, textAlign: 'center', lineHeight: 1 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.color.border, width: 28, textAlign: 'center', lineHeight: 1 }}>
               {i + 1}
             </span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 13, color: '#1e293b', lineHeight: 1.5, margin: '0 0 4px' }}>
+            <p style={{ fontSize: t.font.size.md, color: t.color.textPrimary, lineHeight: 1.5, margin: `0 0 ${t.space[1]}` }}>
               "{post.content}"
             </p>
-            <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <p style={{ fontSize: t.font.size.xs, color: t.color.textMuted, margin: 0, display: 'flex', alignItems: 'center', gap: t.space[1], flexWrap: 'wrap' }}>
               <span>{post.author_name}</span>
               {badge && (
                 <span style={{
-                  fontSize: 9, fontWeight: 700, padding: '1px 6px',
-                  borderRadius: 8, background: badge.bg, color: badge.color,
+                  fontSize: t.font.size.xs, fontWeight: t.font.weight.bold, padding: '1px 6px',
+                  borderRadius: t.radius.md, background: badge.bg, color: badge.color,
                   letterSpacing: '0.02em',
                 }}>
                   {badge.label}
@@ -160,14 +161,14 @@ export function TopPosts({ posts, limit = 5, personasMap }: Props) {
               )}
               <span>· {PLATFORM_LABELS[post.platform]} · Round {post.round_num}</span>
               {(post.reply_count ?? 0) > 0 && (
-                <span style={{ color: '#6366f1', fontWeight: 600 }}>
+                <span style={{ color: t.color.primary, fontWeight: t.font.weight.semibold }}>
                   · {post.reply_count} {post.reply_count === 1 ? 'reply' : 'replies'}
                 </span>
               )}
             </p>
           </div>
           {post.upvotes > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#22c55e', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: t.space[1], fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, color: t.color.success, flexShrink: 0 }}>
               ▲ {post.upvotes}
             </div>
           )}

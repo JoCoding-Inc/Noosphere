@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MOCK_SOURCES, MOCK_PERSONAS, MOCK_POSTS } from '../hooks/useMockSimulation'
 import { SOURCE_COLORS, PLATFORM_COLORS, PLATFORM_OPTIONS } from '../constants'
+import { t } from '../tokens'
 import { ReportView } from './ReportView'
 import { MarkdownView } from './MarkdownView'
 import { PlatformSimFeed } from './PlatformSimFeed'
@@ -281,13 +282,13 @@ type ResultTab = 'analysis' | 'simulation' | 'final' | 'details'
 
 function HomePhase({ displayText, runClicked }: { displayText: string; runClicked: boolean }) {
   return (
-    <div style={{ background: '#f8fafc', height: '100%', overflowY: 'hidden' }}>
-      <div style={{ padding: '32px 24px 24px' }}>
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', margin: '0 0 10px', color: '#1e293b' }}>
+    <div style={{ background: t.color.bgCard, height: '100%', overflowY: 'hidden' }}>
+      <div style={{ padding: `${t.space[8]} ${t.space[6]} ${t.space[6]}` }}>
+        <div style={{ marginBottom: t.space[6] }}>
+          <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', margin: `0 0 ${t.space[2]}`, color: t.color.textPrimary }}>
             How will the market react?
           </h1>
-          <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>
+          <p style={{ color: t.color.textSecondary, fontSize: 15, margin: 0 }}>
             Describe your product and simulate real-world reactions across tech communities.
           </p>
         </div>
@@ -295,10 +296,10 @@ function HomePhase({ displayText, runClicked }: { displayText: string; runClicke
         <div style={{
           width: '100%', padding: '16px 18px',
           fontSize: 15,
-          border: `1.5px solid ${displayText.length < DEMO_INPUT.length ? '#8b5cf6' : '#e2e8f0'}`,
-          borderRadius: 12, background: '#fff',
+          border: `1.5px solid ${displayText.length < DEMO_INPUT.length ? '#8b5cf6' : t.color.border}`,
+          borderRadius: t.radius.lg, background: t.color.bgPage,
           fontFamily: 'inherit', lineHeight: 1.6,
-          color: '#1e293b',
+          color: t.color.textPrimary,
           boxShadow: displayText.length < DEMO_INPUT.length ? '0 0 0 3px rgba(139,92,246,0.12)' : 'none',
           minHeight: 168, whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
@@ -310,13 +311,13 @@ function HomePhase({ displayText, runClicked }: { displayText: string; runClicke
           )}
         </div>
 
-        <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ marginTop: t.space[4], display: 'flex', gap: t.space[2], flexWrap: 'wrap' }}>
           {PLATFORM_OPTIONS.map(p => (
             <span key={p.id} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '7px 14px', fontSize: 13, borderRadius: 8,
-              border: '1.5px solid #1e293b',
-              background: '#1e293b', color: '#fff', fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: t.space[1],
+              padding: '7px 14px', fontSize: t.font.size.md, borderRadius: t.radius.md,
+              border: `1.5px solid ${t.color.textPrimary}`,
+              background: t.color.textPrimary, color: t.color.textInverse, fontWeight: t.font.weight.semibold,
               boxShadow: '0 2px 8px rgba(30,41,59,0.25)',
             }}>
               {p.label}
@@ -324,13 +325,13 @@ function HomePhase({ displayText, runClicked }: { displayText: string; runClicke
           ))}
         </div>
 
-        <div style={{ marginTop: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 13 }}>
+        <div style={{ marginTop: t.space[5] }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: t.space[1], color: t.color.textSecondary, fontSize: t.font.size.md }}>
             <span>▶</span>
             Advanced options
             <span style={{
-              fontSize: 11, padding: '2px 8px', borderRadius: 10,
-              background: '#f1f5f9', color: '#94a3b8', marginLeft: 4,
+              fontSize: t.font.size.xs, padding: '2px 8px', borderRadius: t.radius.lg,
+              background: t.color.bgSubtle, color: t.color.textMuted, marginLeft: t.space[1],
             }}>
               English · 12r · 50a · ~470 sources
             </span>
@@ -338,10 +339,10 @@ function HomePhase({ displayText, runClicked }: { displayText: string; runClicke
         </div>
 
         <div style={{
-          marginTop: 20,
-          padding: '14px 36px', fontSize: 15, fontWeight: 700,
-          background: '#1e293b', color: '#fff',
-          borderRadius: 10, display: 'inline-block',
+          marginTop: t.space[5],
+          padding: `${t.space[3]} ${t.space[8]}`, fontSize: 15, fontWeight: t.font.weight.bold,
+          background: t.color.textPrimary, color: t.color.textInverse,
+          borderRadius: t.radius.lg, display: 'inline-block',
           letterSpacing: '-0.01em',
           animation: runClicked ? 'runClick 200ms ease forwards' : 'none',
         }}>
@@ -389,25 +390,25 @@ function SimulatePhase({
   const feedPanel = (
     <>
       {/* Phase header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: t.space[3], marginBottom: t.space[2] }}>
         <span style={{
           display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-          background: '#22c55e', flexShrink: 0,
+          background: t.color.success, flexShrink: 0,
           animation: 'pulse 1.5s infinite',
         }} />
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
+        <h2 style={{ margin: 0, fontSize: t.font.size['2xl'], fontWeight: t.font.weight.bold, letterSpacing: '-0.02em' }}>
           {phaseLabel}
         </h2>
       </div>
 
       {/* Persona progress bar */}
       {showPersonas && (
-        <div style={{ margin: '0 0 24px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>
+        <div style={{ margin: `0 0 ${t.space[6]} 0` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: t.font.size.sm, color: t.color.textMuted, marginBottom: t.space[1] }}>
             <span>Building agent personas</span>
             <span>{personaCount} / {MOCK_PERSONAS.length}</span>
           </div>
-          <div style={{ height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: 6, background: t.color.border, borderRadius: 3, overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 3,
               background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
@@ -421,28 +422,28 @@ function SimulatePhase({
 
       {/* Source timeline */}
       {showSources && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
+        <div style={{ marginBottom: t.space[5] }}>
+          <div style={{ fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: t.space[2] }}>
             {sources.length} items collected
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: t.space[1] }}>
             {sources.map((src, i) => (
               <div key={i} className="source-item" style={{
-                padding: '8px 12px', borderRadius: 8,
-                background: '#fff', border: '1px solid #e2e8f0',
-                borderLeft: `3px solid ${SOURCE_COLORS[src.source] || '#94a3b8'}`,
+                padding: '8px 12px', borderRadius: t.radius.md,
+                background: t.color.bgPage, border: `1px solid ${t.color.border}`,
+                borderLeft: `3px solid ${SOURCE_COLORS[src.source] || t.color.textMuted}`,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: t.space[1], marginBottom: t.space[1] }}>
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
-                    background: `${SOURCE_COLORS[src.source] || '#94a3b8'}18`,
-                    color: SOURCE_COLORS[src.source] || '#64748b',
+                    fontSize: t.font.size.xs, fontWeight: t.font.weight.bold, padding: '1px 6px', borderRadius: t.radius.md,
+                    background: `${SOURCE_COLORS[src.source] || t.color.textMuted}18`,
+                    color: SOURCE_COLORS[src.source] || t.color.textSecondary,
                     textTransform: 'uppercase', letterSpacing: '0.04em',
                   }}>
                     {src.source}
                   </span>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.4 }}>
+                <div style={{ fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, color: t.color.textPrimary, lineHeight: 1.4 }}>
                   {src.title}
                 </div>
               </div>
@@ -453,16 +454,16 @@ function SimulatePhase({
 
       {/* Platform counters */}
       {showPosts && activePlatforms.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: t.space[2], flexWrap: 'wrap', marginBottom: t.space[4] }}>
           {activePlatforms.map(platform => (
             <span key={platform} style={{
-              fontSize: 12, padding: '4px 10px', borderRadius: 20,
-              background: '#f1f5f9', color: '#475569',
-              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: t.font.size.sm, padding: '4px 10px', borderRadius: t.radius.pill,
+              background: t.color.bgSubtle, color: '#475569',
+              display: 'flex', alignItems: 'center', gap: t.space[1],
             }}>
               <span style={{
                 width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                background: PLATFORM_COLORS[platform] || '#94a3b8',
+                background: PLATFORM_COLORS[platform] || t.color.textMuted,
               }} />
               {platform.replace('_', ' ')} · {postsByPlatform[platform]?.length ?? 0}
             </span>
@@ -472,7 +473,7 @@ function SimulatePhase({
 
       {/* PlatformSimFeed */}
       {showPosts && totalPosts > 0 && (
-        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+        <div style={{ borderTop: `1px solid ${t.color.border}`, paddingTop: t.space[4] }}>
           <PlatformSimFeed postsByPlatform={postsByPlatform} ideaText="Noosphere – AI market simulator" forcedTab={activePlatform} />
         </div>
       )}
@@ -480,16 +481,16 @@ function SimulatePhase({
   )
 
   return (
-    <div style={{ background: '#f8fafc', height: '100%', overflowY: 'hidden' }}>
+    <div style={{ background: t.color.bgCard, height: '100%', overflowY: 'hidden' }}>
       {(showSources && graphData) ? (
         /* 소싱 단계: 왼쪽 그래프 + 오른쪽 소스 타임라인 */
         <div style={{
-          width: '100%', padding: '32px 24px',
-          display: 'flex', gap: 24, alignItems: 'flex-start',
+          width: '100%', padding: `${t.space[8]} ${t.space[6]}`,
+          display: 'flex', gap: t.space[6], alignItems: 'flex-start',
           boxSizing: 'border-box',
         }}>
           <div style={{ width: 360, flexShrink: 0, minWidth: 0, animation: 'fadeInUp 0.4s ease' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+            <p style={{ fontSize: t.font.size.xs, fontWeight: t.font.weight.bold, color: t.color.textMuted, letterSpacing: '0.06em', textTransform: 'uppercase', margin: `0 0 ${t.space[2]}` }}>
               Knowledge Graph
             </p>
             <ContextGraph data={graphData} width={360} />
@@ -500,7 +501,7 @@ function SimulatePhase({
         </div>
       ) : (
         /* 소싱 이후: 1컬럼 */
-        <div style={{ padding: '36px 24px 20px' }}>
+        <div style={{ padding: `${t.space[8]} ${t.space[6]} ${t.space[5]}` }}>
           {feedPanel}
         </div>
       )}
@@ -517,35 +518,35 @@ function ResultsPhase({ tab, detailTab }: { tab: ResultTab; detailTab: 'feed' | 
   ]
 
   return (
-    <div style={{ background: '#fafafa', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: t.color.bgBody, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar — exact DemoResultView / ResultPage style */}
-      <div style={{ width: '100%', padding: '24px 24px 0', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ color: '#64748b', fontSize: 14 }}>← Run demo again</div>
+      <div style={{ width: '100%', padding: `${t.space[6]} ${t.space[6]} 0`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: t.space[4] }}>
+          <div style={{ color: t.color.textSecondary, fontSize: t.font.size.lg }}>← Run demo again</div>
           <div style={{
-            fontSize: 12, padding: '4px 12px', borderRadius: 20,
-            background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontWeight: 600,
+            fontSize: t.font.size.sm, padding: '4px 12px', borderRadius: t.radius.pill,
+            background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontWeight: t.font.weight.semibold,
           }}>
             Demo Results
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {tabs.map(t => (
-              <div key={t.id} style={{
-                padding: '10px 20px', fontSize: 14, cursor: 'default',
-                fontWeight: tab === t.id ? 600 : 400,
-                borderBottom: tab === t.id ? '2px solid #1e293b' : '2px solid transparent',
-                color: tab === t.id ? '#1e293b' : '#64748b',
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${t.color.border}` }}>
+          <div style={{ display: 'flex', gap: t.space[1] }}>
+            {tabs.map(tabItem => (
+              <div key={tabItem.id} style={{
+                padding: '10px 20px', fontSize: t.font.size.lg, cursor: 'default',
+                fontWeight: tab === tabItem.id ? t.font.weight.semibold : t.font.weight.normal,
+                borderBottom: tab === tabItem.id ? `2px solid ${t.color.textPrimary}` : '2px solid transparent',
+                color: tab === tabItem.id ? t.color.textPrimary : t.color.textSecondary,
                 transition: 'color 0.15s, border-color 0.15s',
               }}>
-                {t.label}
+                {tabItem.label}
               </div>
             ))}
           </div>
           <div style={{
-            display: 'inline-block', padding: '8px 18px', background: '#1e293b',
-            color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 4,
+            display: 'inline-block', padding: '8px 18px', background: t.color.textPrimary,
+            color: t.color.textInverse, borderRadius: t.radius.md, fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, marginBottom: t.space[1],
           }}>
             ↓ Download Report
           </div>
@@ -553,15 +554,15 @@ function ResultsPhase({ tab, detailTab }: { tab: ResultTab; detailTab: 'feed' | 
       </div>
 
       {/* Tab content — uses same components as DemoResultView */}
-      <div key={tab} className="tab-content" style={{ flex: 1, overflow: 'hidden', padding: '0 24px' }}>
+      <div key={tab} className="tab-content" style={{ flex: 1, overflow: 'hidden', padding: `0 ${t.space[6]}` }}>
         {tab === 'analysis' && (
           <div>
             <MarkdownView content={MOCK_RESULTS.analysis_md} />
-            <div style={{ marginTop: 32 }}>
+            <div style={{ marginTop: t.space[8] }}>
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                background: 'none', border: '1px solid #e2e8f0', borderRadius: 7,
-                padding: '7px 14px', fontSize: 13, color: '#64748b', width: 'fit-content',
+                display: 'flex', alignItems: 'center', gap: t.space[1],
+                background: 'none', border: `1px solid ${t.color.border}`, borderRadius: 7,
+                padding: '7px 14px', fontSize: t.font.size.md, color: t.color.textSecondary, width: 'fit-content',
               }}>
                 ▸ Sources ({MOCK_RESULTS.sources_json.length})
               </div>
@@ -705,20 +706,20 @@ export function LandingDemoWindow() {
 
   return (
     <div style={{
-      border: '1px solid #e2e8f0',
-      borderRadius: 12,
+      border: `1px solid ${t.color.border}`,
+      borderRadius: t.radius.lg,
       overflow: 'hidden',
       boxShadow: '0 4px 32px rgba(0,0,0,0.07)',
-      background: '#fff',
+      background: t.color.bgPage,
       pointerEvents: 'none',
       userSelect: 'none',
     }}>
       {/* Browser chrome — traffic-light dots */}
       <div style={{
-        background: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
+        background: t.color.bgCard,
+        borderBottom: `1px solid ${t.color.border}`,
         padding: '9px 14px',
-        display: 'flex', alignItems: 'center', gap: 6,
+        display: 'flex', alignItems: 'center', gap: t.space[1],
       }}>
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fca5a5' }} />
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fcd34d' }} />
@@ -727,7 +728,7 @@ export function LandingDemoWindow() {
           <span style={{
             marginLeft: 'auto',
             fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 10, color: '#94a3b8',
+            fontSize: t.font.size.xs, color: t.color.textMuted,
           }}>
             Round {simRound} · {posts.length} posts
           </span>

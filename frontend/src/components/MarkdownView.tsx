@@ -1,15 +1,16 @@
 import { type ComponentProps, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { t } from '../tokens'
 
 const MD_COMPONENTS: ComponentProps<typeof ReactMarkdown>['components'] = {
   h1: ({ children }) => (
     <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', margin: '0 0 16px' }}>{children}</h1>
   ),
   h2: ({ children }) => (
-    <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', margin: '32px 0 12px', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }}>{children}</h2>
+    <h2 style={{ fontSize: 19, fontWeight: t.font.weight.bold, letterSpacing: '-0.02em', margin: '32px 0 12px', paddingBottom: t.space[2], borderBottom: `1px solid ${t.color.border}` }}>{children}</h2>
   ),
   h3: ({ children }) => (
-    <h3 style={{ fontSize: 15, fontWeight: 700, margin: '24px 0 8px', color: '#374151' }}>{children}</h3>
+    <h3 style={{ fontSize: 15, fontWeight: t.font.weight.bold, margin: '24px 0 8px', color: '#374151' }}>{children}</h3>
   ),
   p: ({ children }) => (
     <p style={{ margin: '0 0 14px', color: '#374151' }}>{children}</p>
@@ -21,28 +22,28 @@ const MD_COMPONENTS: ComponentProps<typeof ReactMarkdown>['components'] = {
     <ol style={{ margin: '0 0 14px', paddingLeft: 22 }}>{children}</ol>
   ),
   li: ({ children }) => (
-    <li style={{ margin: '4px 0', color: '#374151' }}>{children}</li>
+    <li style={{ margin: t.space[1] + ' 0', color: '#374151' }}>{children}</li>
   ),
   strong: ({ children }) => (
-    <strong style={{ fontWeight: 700, color: '#1e293b' }}>{children}</strong>
+    <strong style={{ fontWeight: t.font.weight.bold, color: t.color.textPrimary }}>{children}</strong>
   ),
   em: ({ children }) => (
     <em style={{ fontStyle: 'italic', color: '#475569' }}>{children}</em>
   ),
   hr: () => (
-    <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '24px 0' }} />
+    <hr style={{ border: 'none', borderTop: `1px solid ${t.color.border}`, margin: '24px 0' }} />
   ),
   blockquote: ({ children }) => (
     <blockquote style={{
-      margin: '0 0 14px', padding: '10px 16px',
+      margin: '0 0 14px', padding: `10px ${t.space[4]}`,
       borderLeft: '3px solid #8b5cf6', background: '#f8f5ff',
       borderRadius: '0 8px 8px 0', color: '#475569',
     }}>{children}</blockquote>
   ),
   code: ({ children }) => (
     <code style={{
-      background: '#f1f5f9', padding: '2px 6px', borderRadius: 4,
-      fontSize: 13, fontFamily: 'monospace', color: '#7c3aed',
+      background: t.color.bgSubtle, padding: '2px 6px', borderRadius: t.radius.sm,
+      fontSize: t.font.size.md, fontFamily: 'monospace', color: '#7c3aed',
     }}>{children}</code>
   ),
 }
@@ -62,15 +63,15 @@ export function MarkdownView({ content }: { content: string | null | undefined }
     : content, [content])
   if (!normalized?.trim()) {
     return (
-      <div style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
-        <div style={{ fontSize: 28, marginBottom: 12 }}>📄</div>
+      <div style={{ padding: 48, textAlign: 'center', color: t.color.textMuted, fontSize: t.font.size.lg }}>
+        <div style={{ fontSize: 28, marginBottom: t.space[3] }}>📄</div>
         No analysis available.
       </div>
     )
   }
 
   return (
-    <div style={{ color: '#1e293b', lineHeight: 1.75, fontSize: 15 }}>
+    <div style={{ color: t.color.textPrimary, lineHeight: 1.75, fontSize: 15 }}>
       <ReactMarkdown components={MD_COMPONENTS}>
         {normalized}
       </ReactMarkdown>
