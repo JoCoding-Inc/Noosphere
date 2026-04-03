@@ -15,9 +15,9 @@ interface Props {
 }
 
 const SENIORITY_BADGE: Record<string, { label: string; bg: string; color: string } | null> = {
-  c_suite:   { label: 'C-Suite',   bg: '#fef2f2', color: '#dc2626' },
-  vp:        { label: 'VP',        bg: '#fef2f2', color: '#dc2626' },
-  director:  { label: 'Director',  bg: '#fef2f2', color: '#dc2626' },
+  c_suite:   { label: 'C-Suite',   bg: t.color.dangerLight, color: t.color.dangerText },
+  vp:        { label: 'VP',        bg: t.color.dangerLight, color: t.color.dangerText },
+  director:  { label: 'Director',  bg: t.color.dangerLight, color: t.color.dangerText },
   senior:    { label: 'Senior',    bg: '#eff6ff', color: '#2563eb' },
   lead:      { label: 'Lead',      bg: '#eff6ff', color: '#2563eb' },
   principal: { label: 'Principal', bg: '#eff6ff', color: '#2563eb' },
@@ -124,7 +124,7 @@ export function TopPosts({ posts, limit = 5, personasMap }: Props) {
         const dotColor = post.sentiment === 'positive' ? '#4ade80'
           : post.sentiment === 'negative' ? '#f87171'
           : post.sentiment === 'neutral' ? '#d1d5db'
-          : post.sentiment === 'constructive' ? '#3b82f6'
+          : post.sentiment === 'constructive' ? t.color.info
           : undefined
 
         const persona = personasMap?.[post.author_node_id]

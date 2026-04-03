@@ -113,7 +113,7 @@ function PlatformComparison({
                 {posPct > 0 && <div style={{ width: `${posPct}%`, background: t.color.success }} />}
                 {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: t.color.textMuted }} />}
                 {negPct > 0 && <div style={{ width: `${negPct}%`, background: t.color.danger }} />}
-                {conPct > 0 && <div style={{ width: `${conPct}%`, background: '#3b82f6' }} />}
+                {conPct > 0 && <div style={{ width: `${conPct}%`, background: t.color.info }} />}
               </div>
               <div style={{ display: 'flex', gap: 6, fontSize: 9, color: t.color.textMuted, marginBottom: 6 }}>
                 <span>{posPct}% pos</span>
@@ -282,8 +282,8 @@ export function ResultPage() {
                     position: 'absolute', top: 0, right: 0,
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '5px 10px', fontSize: t.font.size.sm, cursor: 'pointer', borderRadius: t.radius.sm,
-                    border: `1px solid ${t.color.border}`, background: copied ? '#f0fdf4' : t.color.bgPage,
-                    color: copied ? '#16a34a' : t.color.textSecondary, transition: 'all 0.15s', fontWeight: t.font.weight.medium,
+                    border: `1px solid ${t.color.border}`, background: copied ? t.color.successLight : t.color.bgPage,
+                    color: copied ? t.color.successText : t.color.textSecondary, transition: 'all 0.15s', fontWeight: t.font.weight.medium,
                   }}>
                     {copied
                       ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Copied!</>
@@ -362,8 +362,8 @@ export function ResultPage() {
                     position: 'absolute', top: 0, right: 0,
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '5px 10px', fontSize: t.font.size.sm, cursor: 'pointer', borderRadius: t.radius.sm,
-                    border: `1px solid ${t.color.border}`, background: copied ? '#f0fdf4' : t.color.bgPage,
-                    color: copied ? '#16a34a' : t.color.textSecondary, transition: 'all 0.15s', fontWeight: t.font.weight.medium,
+                    border: `1px solid ${t.color.border}`, background: copied ? t.color.successLight : t.color.bgPage,
+                    color: copied ? t.color.successText : t.color.textSecondary, transition: 'all 0.15s', fontWeight: t.font.weight.medium,
                   }}>
                     {copied
                       ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Copied!</>
@@ -379,8 +379,8 @@ export function ResultPage() {
                     position: 'absolute', top: 0, right: 0,
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '5px 10px', fontSize: t.font.size.sm, cursor: 'pointer', borderRadius: t.radius.sm,
-                    border: `1px solid ${t.color.border}`, background: copied ? '#f0fdf4' : t.color.bgPage,
-                    color: copied ? '#16a34a' : t.color.textSecondary, transition: 'all 0.15s', fontWeight: t.font.weight.medium,
+                    border: `1px solid ${t.color.border}`, background: copied ? t.color.successLight : t.color.bgPage,
+                    color: copied ? t.color.successText : t.color.textSecondary, transition: 'all 0.15s', fontWeight: t.font.weight.medium,
                   }}>
                     {copied
                       ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Copied!</>

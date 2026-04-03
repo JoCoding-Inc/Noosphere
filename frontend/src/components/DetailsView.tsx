@@ -164,7 +164,7 @@ export function DetailsView({ posts, personas, forcedTab, allPosts, reportJson }
             style={{
               padding: '8px 16px', fontSize: t.font.size.md, cursor: 'pointer', border: 'none',
               background: 'none', fontWeight: activeTab === tab.id ? t.font.weight.semibold : t.font.weight.normal,
-              borderBottom: activeTab === tab.id ? `2px solid #475569` : '2px solid transparent',
+              borderBottom: activeTab === tab.id ? `2px solid ${t.color.textStrong}` : '2px solid transparent',
               color: activeTab === tab.id ? t.color.textPrimary : t.color.textMuted,
               transition: 'color 0.15s, border-color 0.15s',
             }}>

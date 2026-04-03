@@ -102,7 +102,7 @@ export function ReportView({ report, noSummary, noDetails }: {
                 background: '#10b98108',
               }}>
                 <div style={{ fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: t.space[1] }}>Platform Consensus</div>
-                <div style={{ fontSize: 22, fontWeight: t.font.weight.bold, color: '#10b981' }}>
+                <div style={{ fontSize: 22, fontWeight: t.font.weight.bold, color: t.color.successAlt }}>
                   {report.consensus_score}%
                 </div>
               </div>
@@ -116,7 +116,7 @@ export function ReportView({ report, noSummary, noDetails }: {
                 background: '#3b82f608',
               }}>
                 <div style={{ fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: t.space[1] }}>Response Rate</div>
-                <div style={{ fontSize: 22, fontWeight: t.font.weight.bold, color: '#3b82f6' }}>
+                <div style={{ fontSize: 22, fontWeight: t.font.weight.bold, color: t.color.info }}>
                   {Math.round(report.response_rate * 100)}%
                 </div>
               </div>
@@ -127,8 +127,8 @@ export function ReportView({ report, noSummary, noDetails }: {
             <div
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: t.space[1],
-                background: '#fffbeb', color: '#92400e',
-                border: '1px solid #fde68a', borderRadius: t.radius.pill,
+                background: '#fffbeb', color: t.color.warningText,
+                border: `1px solid ${t.color.warningBorder}`, borderRadius: t.radius.pill,
                 fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, padding: '5px 12px',
                 marginBottom: t.space[4], cursor: 'default',
               }}
@@ -145,7 +145,7 @@ export function ReportView({ report, noSummary, noDetails }: {
 
           {report.platform_divergence && report.platform_divergence.length > 0 && (
             <div style={{ background: '#1e1b4b22', border: `1px solid ${t.color.primary}`, borderRadius: t.radius.md, padding: t.space[3], marginBottom: t.space[3] }}>
-              <div style={{ fontWeight: t.font.weight.semibold, color: '#a5b4fc', fontSize: t.font.size.md, marginBottom: t.space[1] }}>
+              <div style={{ fontWeight: t.font.weight.semibold, color: t.color.primaryMuted, fontSize: t.font.size.md, marginBottom: t.space[1] }}>
                 Platform Divergence Detected
               </div>
               {report.platform_divergence.map((d, i) => (
@@ -198,7 +198,7 @@ export function ReportView({ report, noSummary, noDetails }: {
                     {seg.name.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </span>
                 </div>
-                <p style={{ margin: '0 0 8px', fontSize: t.font.size.lg, color: '#475569' }}>{seg.summary}</p>
+                <p style={{ margin: '0 0 8px', fontSize: t.font.size.lg, color: t.color.textStrong }}>{seg.summary}</p>
                 {(seg.key_quotes || []).map((q, i) => (
                   <p key={i} style={{
                     margin: '4px 0', paddingLeft: t.space[3], borderLeft: `3px solid ${t.color.border}`,
@@ -215,12 +215,12 @@ export function ReportView({ report, noSummary, noDetails }: {
               <div style={{ display: 'flex', flexDirection: 'column', gap: t.space[2], marginBottom: t.space[6] }}>
                 {report.praise_clusters!.map((c, i) => (
                   <div key={i} style={{
-                    padding: t.space[3], borderRadius: t.radius.md, border: '1px solid #bbf7d0',
-                    background: '#f0fdf4',
+                    padding: t.space[3], borderRadius: t.radius.md, border: `1px solid ${t.color.successBorder}`,
+                    background: t.color.successLight,
                     boxShadow: '0 1px 3px rgba(34,197,94,0.06)',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: t.space[1] }}>
-                      <span style={{ fontWeight: t.font.weight.semibold, fontSize: t.font.size.lg, color: '#16a34a' }}>{c.theme}</span>
+                      <span style={{ fontWeight: t.font.weight.semibold, fontSize: t.font.size.lg, color: t.color.successText }}>{c.theme}</span>
                       <span style={{ fontSize: t.font.size.sm, color: t.color.textMuted }}>{c.count} mentions</span>
                     </div>
                     {c.examples.map((ex, j) => (
@@ -249,14 +249,14 @@ export function ReportView({ report, noSummary, noDetails }: {
                     <div style={{ display: 'flex', gap: t.space[4], marginBottom: t.space[3] }}>
                       <div style={{ flex: 1 }}>
                         <div style={{
-                          fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, color: '#16a34a',
+                          fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, color: t.color.successText,
                           marginBottom: t.space[1], textTransform: 'uppercase', letterSpacing: '0.5px',
                         }}>
                           For
                         </div>
                         <ul style={{ margin: 0, paddingLeft: t.space[4] }}>
                           {(debate.for_arguments ?? []).map((arg, j) => (
-                            <li key={j} style={{ fontSize: t.font.size.md, color: '#475569', marginBottom: t.space[1], lineHeight: 1.5 }}>
+                            <li key={j} style={{ fontSize: t.font.size.md, color: t.color.textStrong, marginBottom: t.space[1], lineHeight: 1.5 }}>
                               {arg}
                             </li>
                           ))}
@@ -265,14 +265,14 @@ export function ReportView({ report, noSummary, noDetails }: {
                       <div style={{ width: 1, background: t.color.border, flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
                         <div style={{
-                          fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, color: '#dc2626',
+                          fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, color: t.color.dangerText,
                           marginBottom: t.space[1], textTransform: 'uppercase', letterSpacing: '0.5px',
                         }}>
                           Against
                         </div>
                         <ul style={{ margin: 0, paddingLeft: t.space[4] }}>
                           {(debate.against_arguments ?? []).map((arg, j) => (
-                            <li key={j} style={{ fontSize: t.font.size.md, color: '#475569', marginBottom: t.space[1], lineHeight: 1.5 }}>
+                            <li key={j} style={{ fontSize: t.font.size.md, color: t.color.textStrong, marginBottom: t.space[1], lineHeight: 1.5 }}>
                               {arg}
                             </li>
                           ))}
@@ -318,7 +318,7 @@ export function ReportView({ report, noSummary, noDetails }: {
               <div key={i} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '10px 14px', borderRadius: t.radius.md, border: '1px solid #d1fae5',
-                background: '#f0fdf4',
+                background: t.color.successLight,
                 boxShadow: '0 1px 3px rgba(34,197,94,0.06)',
               }}>
                 <span style={{ fontSize: t.font.size.lg, color: t.color.textPrimary }}>{imp.suggestion}</span>
@@ -336,7 +336,7 @@ export function ReportView({ report, noSummary, noDetails }: {
                 {report.next_steps.map((step, i) => {
                   const priorityColor = step.priority === 'P0' ? t.color.danger
                     : step.priority === 'P1' ? t.color.warning
-                    : '#3b82f6'
+                    : t.color.info
                   return (
                     <div key={i} style={{
                       padding: t.space[3], borderRadius: t.radius.md,

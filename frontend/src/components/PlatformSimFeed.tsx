@@ -121,7 +121,7 @@ export function PlatformSimFeed({ postsByPlatform, ideaText = '', forcedTab }: P
                 padding: '6px 14px', fontSize: t.font.size.md, borderRadius: t.radius.pill,
                 border: `1.5px solid ${isActive ? meta.color : t.color.border}`,
                 background: isActive ? meta.color : t.color.bgPage,
-                color: isActive ? t.color.textInverse : '#475569',
+                color: isActive ? t.color.textInverse : t.color.textStrong,
                 cursor: 'pointer', fontWeight: isActive ? t.font.weight.semibold : t.font.weight.normal,
                 transition: 'all 0.15s',
                 boxShadow: isActive ? `0 2px 8px ${meta.color}40` : 'none',

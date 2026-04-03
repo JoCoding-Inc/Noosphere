@@ -9,8 +9,8 @@ function getVerdictStyle(verdict: string): { background: string; color: string }
   if (v === 'positive') return { background: '#dcfce7', color: '#15803d' }
   if (v === 'mixed') return { background: '#fef3c7', color: '#b45309' }
   if (v === 'skeptical') return { background: '#ffedd5', color: '#c2410c' }
-  if (v === 'negative') return { background: '#fee2e2', color: '#b91c1c' }
-  return { background: t.color.bgSubtle, color: '#475569' }
+  if (v === 'negative') return { background: '#fee2e2', color: t.color.dangerDark }
+  return { background: t.color.bgSubtle, color: t.color.textStrong }
 }
 
 const STATUS_CONFIG = {
@@ -197,7 +197,7 @@ export function HistorySidebar({ open, onClose }: Props) {
                             disabled={Boolean(cancellingIds[item.id])}
                             style={{
                               fontSize: t.font.size.xs, padding: '2px 8px', borderRadius: t.radius.sm,
-                              border: `1px solid #fca5a5`, background: t.color.bgPage,
+                              border: `1px solid ${t.color.dangerBorder}`, background: t.color.bgPage,
                               color: t.color.danger, cursor: 'pointer', fontWeight: t.font.weight.semibold,
                               opacity: cancellingIds[item.id] ? 0.5 : 1,
                             }}
@@ -225,7 +225,7 @@ export function HistorySidebar({ open, onClose }: Props) {
                             opacity: deletingIds[item.id] ? 0.5 : 1,
                           }}
                           onMouseEnter={e => {
-                            (e.currentTarget as HTMLButtonElement).style.borderColor = '#fca5a5'
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = t.color.dangerBorder
                             ;(e.currentTarget as HTMLButtonElement).style.color = t.color.danger
                           }}
                           onMouseLeave={e => {
@@ -269,7 +269,7 @@ export function HistorySidebar({ open, onClose }: Props) {
                       <span style={{
                         fontSize: t.font.size.xs, padding: '1px 6px', borderRadius: t.radius.md,
                         background: item.adoption_score >= 70 ? '#dcfce7' : item.adoption_score >= 40 ? '#fef3c7' : '#fee2e2',
-                        color: item.adoption_score >= 70 ? '#15803d' : item.adoption_score >= 40 ? '#b45309' : '#b91c1c',
+                        color: item.adoption_score >= 70 ? '#15803d' : item.adoption_score >= 40 ? '#b45309' : t.color.dangerDark,
                         fontWeight: t.font.weight.semibold,
                       }}>
                         {item.adoption_score} pts

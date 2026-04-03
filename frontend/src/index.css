@@ -31,6 +31,35 @@ html {
   --color-success: #22c55e;
   --color-warning: #f59e0b;
 
+  /* Text (extended) */
+  --color-text-strong: #475569;
+
+  /* Background (extended) */
+  --color-bg-dark: #0f172a;
+
+  /* Danger (extended) */
+  --color-danger-light:  #fef2f2;
+  --color-danger-border: #fca5a5;
+  --color-danger-text:   #dc2626;
+  --color-danger-dark:   #b91c1c;
+
+  /* Success (extended) */
+  --color-success-light:  #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-success-text:   #16a34a;
+  --color-success-alt:    #10b981;
+
+  /* Warning (extended) */
+  --color-warning-border: #fde68a;
+  --color-warning-text:   #92400e;
+
+  /* Info */
+  --color-info: #3b82f6;
+
+  /* Primary (extended) */
+  --color-primary-vivid: #6355e0;
+  --color-primary-muted: #a5b4fc;
+
   /* Font sizes */
   --font-size-xs:  11px;
   --font-size-sm:  12px;

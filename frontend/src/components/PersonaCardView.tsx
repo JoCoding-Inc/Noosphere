@@ -141,7 +141,7 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
                     {p.region && (
                       <span style={{
                         background: t.color.border, borderRadius: 4,
-                        padding: '2px 6px', fontSize: t.font.size.xs, color: '#475569',
+                        padding: '2px 6px', fontSize: t.font.size.xs, color: t.color.textStrong,
                         fontWeight: t.font.weight.semibold,
                       }}>{p.region}</span>
                     )}
@@ -150,7 +150,7 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
               </div>
 
               {/* Role + seniority/company */}
-              <p style={{ margin: `0 0 ${t.space[1]}`, fontSize: t.font.size.sm, color: '#475569' }}>{p.role}</p>
+              <p style={{ margin: `0 0 ${t.space[1]}`, fontSize: t.font.size.sm, color: t.color.textStrong }}>{p.role}</p>
               {(p.seniority || p.company || p.age) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: t.space[2], margin: `0 0 ${t.space[2]}` }}>
                   <span style={{ fontSize: 10, color: t.color.textMuted }}>
@@ -234,7 +234,7 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
               {/* Cognitive pattern */}
               {p.cognitive_pattern && (
                 <span style={{
-                  display: 'inline-block', fontSize: 9, color: '#475569',
+                  display: 'inline-block', fontSize: 9, color: t.color.textStrong,
                   background: t.color.border, borderRadius: 4, padding: '2px 6px',
                   marginTop: t.space[2],
                 }}>{p.cognitive_pattern.length > 50 ? p.cognitive_pattern.slice(0, 47) + '...' : p.cognitive_pattern}</span>
@@ -258,7 +258,7 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
                     marginTop: t.space[2], display: 'inline-block',
                     fontSize: 10, fontWeight: t.font.weight.bold, padding: '2px 8px',
                     borderRadius: t.radius.lg, background: '#fef3c7', color: '#b45309',
-                    border: '1px solid #fde68a',
+                    border: `1px solid ${t.color.warningBorder}`,
                   }}>
                     Influence: {score}
                   </div>

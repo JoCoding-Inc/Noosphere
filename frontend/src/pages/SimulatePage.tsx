@@ -139,8 +139,8 @@ export function SimulatePage() {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: `${t.space[1]} ${t.space[3]}`, fontSize: t.font.size.md, fontWeight: t.font.weight.semibold,
-              borderRadius: t.radius.md, border: `1px solid #fca5a5`,
-              background: isCancelling ? '#fef2f2' : t.color.bgPage,
+              borderRadius: t.radius.md, border: `1px solid ${t.color.dangerBorder}`,
+              background: isCancelling ? t.color.dangerLight : t.color.bgPage,
               color: t.color.danger, cursor: isCancelling ? 'not-allowed' : 'pointer',
               opacity: isCancelling ? 0.6 : 1,
               transition: 'all 0.15s',
@@ -165,7 +165,7 @@ export function SimulatePage() {
             <div key={i} style={{
               display: 'flex', alignItems: 'flex-start', gap: t.space[2],
               background: '#fffbeb', color: '#b45309',
-              border: '1px solid #fde68a', borderRadius: 7,
+              border: `1px solid ${t.color.warningBorder}`, borderRadius: 7,
               fontSize: t.font.size.sm, padding: `${t.space[2]} ${t.space[3]}`,
               animation: 'fadeIn 0.3s ease',
             }}>
@@ -266,7 +266,7 @@ export function SimulatePage() {
           {(Object.entries(sim.postsByPlatform) as [Platform, SocialPost[]][]).map(([platform, posts]) => (
             <span key={platform} style={{
               fontSize: t.font.size.sm, padding: `${t.space[1]} ${t.space[2]}`, borderRadius: t.radius.pill,
-              background: '#fafbff', color: '#475569',
+              background: '#fafbff', color: t.color.textStrong,
               border: '1px solid #e8eaf6',
               display: 'flex', alignItems: 'center', gap: 5,
               animation: 'scaleIn 0.2s ease',
@@ -515,8 +515,8 @@ export function SimulatePage() {
       {sim.earlyStop && (phase === 'rounds' || (phase === 'error' && totalPosts > 0)) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: t.space[2],
-          background: '#fffbeb', color: '#92400e',
-          border: '1px solid #fde68a', borderRadius: 7,
+          background: '#fffbeb', color: t.color.warningText,
+          border: `1px solid ${t.color.warningBorder}`, borderRadius: 7,
           fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, padding: `${t.space[2]} ${t.space[3]}`,
           margin: `0 0 ${t.space[4]} 0`,
           animation: 'fadeIn 0.3s ease',
@@ -574,7 +574,7 @@ export function SimulatePage() {
                 background: t.color.bgCard, border: `1px solid ${t.color.border}`, borderRadius: t.radius.lg,
                 padding: `${t.space[3]} ${t.space[5]}`, maxWidth: 320,
               }}>
-                <p style={{ margin: 0, fontSize: t.font.size.md, color: '#475569', lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: t.font.size.md, color: t.color.textStrong, lineHeight: 1.6 }}>
                   Another simulation is currently running. Yours will start automatically when it's done.
                 </p>
               </div>

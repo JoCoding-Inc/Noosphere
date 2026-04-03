@@ -260,7 +260,7 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
                 <div style={{ fontSize: t.font.size.sm, color: '#cbd5e1', fontWeight: t.font.weight.medium }}>
                   {target.name}
                 </div>
-                <div style={{ fontSize: 10, color: '#475569' }}>
+                <div style={{ fontSize: 10, color: t.color.textStrong }}>
                   {target.type}
                 </div>
               </div>
@@ -287,7 +287,7 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
                 <div style={{ fontSize: t.font.size.sm, color: '#cbd5e1', fontWeight: t.font.weight.medium }}>
                   {src.name}
                 </div>
-                <div style={{ fontSize: 10, color: '#475569' }}>
+                <div style={{ fontSize: 10, color: t.color.textStrong }}>
                   {src.type}
                 </div>
               </div>
@@ -298,13 +298,13 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
 
       {/* No connections */}
       {totalConnections === 0 && (
-        <p style={{ fontSize: t.font.size.xs, color: '#475569', margin: `0 0 ${t.space[4]}` }}>No mapped relationships</p>
+        <p style={{ fontSize: t.font.size.xs, color: t.color.textStrong, margin: `0 0 ${t.space[4]}` }}>No mapped relationships</p>
       )}
 
       {/* Sources */}
       {sources.length > 0 && (
         <>
-          <div style={{ fontSize: 10, color: '#475569', fontWeight: t.font.weight.semibold, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ fontSize: 10, color: t.color.textStrong, fontWeight: t.font.weight.semibold, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
             Sources
           </div>
           {sources.map(s => (
@@ -313,7 +313,7 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
                 ? <a href={s.url} target="_blank" rel="noreferrer" style={{ color: '#818cf8', textDecoration: 'none' }}>{s.title}</a>
                 : <span style={{ color: t.color.textMuted }}>{s.title}</span>
               }
-              <span style={{ color: '#475569', marginLeft: t.space[1] }}>({s.source})</span>
+              <span style={{ color: t.color.textStrong, marginLeft: t.space[1] }}>({s.source})</span>
             </div>
           ))}
         </>

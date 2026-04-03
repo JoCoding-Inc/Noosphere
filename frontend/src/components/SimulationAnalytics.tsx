@@ -376,9 +376,9 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                     : vLower.includes('skepti') ? '#ffedd5'
                     : t.color.bgSubtle
                   const fg = vLower.includes('positive') ? '#15803d'
-                    : vLower.includes('negative') ? '#b91c1c'
+                    : vLower.includes('negative') ? t.color.dangerDark
                     : vLower.includes('skepti') ? '#c2410c'
-                    : '#475569'
+                    : t.color.textStrong
                   return (
                     <span key={name} style={{
                       display: 'inline-flex', alignItems: 'center', gap: t.space[1],
@@ -441,7 +441,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: t.space[3] }}>
               {/* Pros */}
               <div>
-                <p style={{ fontSize: t.font.size.xs, fontWeight: t.font.weight.semibold, color: '#10b981', marginBottom: t.space[2] }}>Pros</p>
+                <p style={{ fontSize: t.font.size.xs, fontWeight: t.font.weight.semibold, color: t.color.successAlt, marginBottom: t.space[2] }}>Pros</p>
                 {phProsConsData.pros.slice(0, 5).map((item, idx) => (
                   <div key={idx} style={{ marginBottom: t.space[1] }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: t.font.size.xs, marginBottom: t.space[1] }}>
@@ -452,7 +452,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                       <div style={{
                         height: '100%',
                         width: `${Math.min(100, (item.count / Math.max(...phProsConsData.pros.map(p => p.count), 1)) * 100)}%`,
-                        background: '#10b981',
+                        background: t.color.successAlt,
                         borderRadius: 3,
                       }} />
                     </div>
@@ -559,7 +559,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                     return (
                       <div key={a.name}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: t.font.size.xs, marginBottom: t.space[1] }}>
-                          <span style={{ color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{a.name}</span>
+                          <span style={{ color: t.color.textStrong, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{a.name}</span>
                           <span style={{ fontWeight: t.font.weight.semibold, color: t.color.textSecondary }}>{a.count}</span>
                         </div>
                         <div style={{ height: 5, borderRadius: 3, background: t.color.bgSubtle, overflow: 'hidden' }}>
@@ -578,7 +578,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                 <p style={{ fontSize: t.font.size.xs, color: t.color.textSecondary, fontWeight: t.font.weight.semibold, marginBottom: t.space[2] }}>Avg Traits (1–10)</p>
                 {[
                   { label: 'Skepticism', value: avgTraits.skepticism, color: t.color.warning },
-                  { label: 'Commercial Focus', value: avgTraits.commercial_focus, color: '#3b82f6' },
+                  { label: 'Commercial Focus', value: avgTraits.commercial_focus, color: t.color.info },
                   { label: 'Innovation', value: avgTraits.innovation_openness, color: t.color.success },
                 ].map(trait => (
                   <div key={trait.label} style={{ marginBottom: t.space[2] }}>

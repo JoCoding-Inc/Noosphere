@@ -458,7 +458,7 @@ function SimulatePhase({
           {activePlatforms.map(platform => (
             <span key={platform} style={{
               fontSize: t.font.size.sm, padding: '4px 10px', borderRadius: t.radius.pill,
-              background: t.color.bgSubtle, color: '#475569',
+              background: t.color.bgSubtle, color: t.color.textStrong,
               display: 'flex', alignItems: 'center', gap: t.space[1],
             }}>
               <span style={{
@@ -721,7 +721,7 @@ export function LandingDemoWindow() {
         padding: '9px 14px',
         display: 'flex', alignItems: 'center', gap: t.space[1],
       }}>
-        <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fca5a5' }} />
+        <div style={{ width: 10, height: 10, borderRadius: '50%', background: t.color.dangerBorder }} />
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fcd34d' }} />
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#86efac' }} />
         {phase === 'simulate' && simRound > 0 && (

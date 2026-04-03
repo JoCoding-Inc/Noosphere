@@ -228,7 +228,7 @@ export function HomePage() {
                   padding: `${t.space[2]} ${t.space[3]}`, fontSize: t.font.size.md, borderRadius: t.radius.md, cursor: 'pointer',
                   border: '1.5px solid',
                   background: active ? 'var(--primary)' : t.color.bgPage,
-                  color: active ? t.color.textInverse : '#475569',
+                  color: active ? t.color.textInverse : t.color.textStrong,
                   borderColor: active ? 'var(--primary)' : t.color.border,
                   fontWeight: active ? t.font.weight.semibold : t.font.weight.normal,
                   boxShadow: active ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',

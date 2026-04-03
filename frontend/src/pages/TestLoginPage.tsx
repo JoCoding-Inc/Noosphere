@@ -51,7 +51,7 @@ export function TestLoginPage() {
           }}>
             Test Access
           </div>
-          <div style={{ fontSize: t.font.size['2xl'], fontWeight: t.font.weight.semibold, color: '#0f172a' }}>
+          <div style={{ fontSize: t.font.size['2xl'], fontWeight: t.font.weight.semibold, color: t.color.bgDark }}>
             Sign in to Noosphere
           </div>
         </div>
@@ -88,7 +88,7 @@ export function TestLoginPage() {
         </div>
 
         {status === 'error' && (
-          <div style={{ fontSize: t.font.size.sm, color: t.color.danger, padding: `${t.space[2]} ${t.space[3]}`, background: '#fef2f2', borderRadius: t.radius.sm }}>
+          <div style={{ fontSize: t.font.size.sm, color: t.color.danger, padding: `${t.space[2]} ${t.space[3]}`, background: t.color.dangerLight, borderRadius: t.radius.sm }}>
             {errorMsg}
           </div>
         )}

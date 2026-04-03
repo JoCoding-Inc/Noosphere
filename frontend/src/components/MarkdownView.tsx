@@ -37,7 +37,7 @@ const MD_COMPONENTS: ComponentProps<typeof ReactMarkdown>['components'] = {
     <blockquote style={{
       margin: '0 0 14px', padding: `10px ${t.space[4]}`,
       borderLeft: '3px solid #8b5cf6', background: '#f8f5ff',
-      borderRadius: '0 8px 8px 0', color: '#475569',
+      borderRadius: '0 8px 8px 0', color: t.color.textStrong,
     }}>{children}</blockquote>
   ),
   code: ({ children }) => (

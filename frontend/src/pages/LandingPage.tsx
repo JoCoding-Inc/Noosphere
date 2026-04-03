@@ -76,7 +76,7 @@ export function LandingPage() {
           background: t.color.bgSubtle, border: `1px solid ${t.color.border}`,
           marginBottom: 22,
         }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6355e0' }} />
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: t.color.primaryVivid }} />
           <span style={{
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 10, letterSpacing: '0.1em',
@@ -89,7 +89,7 @@ export function LandingPage() {
         <h1 className="landing-hero-h1" style={{
           fontFamily: "'Fraunces', serif",
           fontSize: 56, fontWeight: t.font.weight.semibold, lineHeight: 1.12,
-          color: '#0f172a', margin: '0 0 18px',
+          color: t.color.bgDark, margin: '0 0 18px',
           maxWidth: 680, letterSpacing: '-0.02em',
         }}>
           How will the market react{' '}
@@ -226,7 +226,7 @@ export function LandingPage() {
           {SIMULATION_PLATFORMS.map(name => (
             <span key={name} style={{
               fontFamily: "'IBM Plex Mono', monospace", fontSize: t.font.size.xs,
-              color: '#475569', padding: '6px 14px',
+              color: t.color.textStrong, padding: '6px 14px',
               border: `1px solid ${t.color.border}`, borderRadius: 100,
               background: t.color.bgPage,
               transition: 'border-color 0.15s ease, background 0.15s ease',
@@ -267,7 +267,7 @@ export function LandingPage() {
         <h2 style={{
           fontFamily: "'Fraunces', serif",
           fontSize: 42, fontWeight: t.font.weight.semibold, lineHeight: 1.15,
-          color: '#0f172a', margin: '0 0 14px',
+          color: t.color.bgDark, margin: '0 0 14px',
           letterSpacing: '-0.02em',
         }}>
           Launch with{' '}

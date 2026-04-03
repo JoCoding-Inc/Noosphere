@@ -10,7 +10,7 @@ const H2_STYLE: React.CSSProperties = {
   fontFamily: "'Fraunces', serif",
   fontSize: 22,
   fontWeight: 600,
-  color: '#0f172a',
+  color: t.color.bgDark,
   margin: '0 0 12px',
   letterSpacing: '-0.01em',
 }
@@ -18,14 +18,14 @@ const H2_STYLE: React.CSSProperties = {
 const P_STYLE: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 1.8,
-  color: '#475569',
+  color: t.color.textStrong,
   margin: '0 0 12px',
 }
 
 const UL_STYLE: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 1.8,
-  color: '#475569',
+  color: t.color.textStrong,
   margin: '0 0 12px',
   paddingLeft: 24,
 }
@@ -76,7 +76,7 @@ export function PrivacyPolicyPage() {
             fontFamily: "'Fraunces', serif",
             fontSize: 42,
             fontWeight: 600,
-            color: '#0f172a',
+            color: t.color.bgDark,
             margin: '0 0 14px',
             letterSpacing: '-0.02em',
           }}>
@@ -284,7 +284,7 @@ export function PrivacyPolicyPage() {
             If you have questions or concerns about this Privacy Policy, please contact us at:
           </p>
           <p style={{ ...P_STYLE, margin: 0 }}>
-            <a href="mailto:mu07010@jocoding.net" style={{ color: '#6355e0', textDecoration: 'none' }}>mu07010@jocoding.net</a>
+            <a href="mailto:mu07010@jocoding.net" style={{ color: t.color.primaryVivid, textDecoration: 'none' }}>mu07010@jocoding.net</a>
             <br />
             Jocoding.Inc<br />
             1111B S Governors Ave, STE 80543<br />
