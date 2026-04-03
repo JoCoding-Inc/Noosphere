@@ -308,13 +308,13 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
             <div style={{ flex: 1, minHeight: 120 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={criticismData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={t.color.bgSubtle} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: t.font.size.xs, fill: t.color.textMuted }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis
                     type="category"
                     dataKey="name"
                     width={140}
-                    tick={{ fontSize: t.font.size.xs, fill: t.color.textSecondary }}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -326,7 +326,7 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                       return item?.fullName ?? label
                     }}
                   />
-                  <Bar dataKey="count" fill={t.color.danger} radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="count" fill="#ef4444" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -342,13 +342,13 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
             <div style={{ flex: 1, minHeight: 120 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={praiseData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={t.color.bgSubtle} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: t.font.size.xs, fill: t.color.textMuted }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis
                     type="category"
                     dataKey="name"
                     width={140}
-                    tick={{ fontSize: t.font.size.xs, fill: t.color.textSecondary }}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -360,7 +360,7 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                       return item?.fullName ?? label
                     }}
                   />
-                  <Bar dataKey="count" fill={t.color.success} radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="count" fill="#22c55e" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -376,17 +376,17 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
             <div style={{ flex: 1, minHeight: 120 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={platformReceptionData} margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={t.color.bgSubtle} />
-                  <XAxis dataKey="name" tick={{ fontSize: t.font.size.xs, fill: t.color.textSecondary }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: t.font.size.xs, fill: t.color.textMuted }} axisLine={false} tickLine={false} unit="%" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} unit="%" />
                   <Tooltip formatter={(v, name) => [`${v}%`, SENTIMENT_LABELS[name as string] ?? name]} />
                   <Legend
                     formatter={(value) => SENTIMENT_LABELS[value as string] ?? value}
                     wrapperStyle={{ fontSize: t.font.size.xs }}
                   />
-                  <Bar dataKey="positive" stackId="a" fill={t.color.success} />
-                  <Bar dataKey="neutral" stackId="a" fill={t.color.textMuted} />
-                  <Bar dataKey="negative" stackId="a" fill={t.color.danger} />
+                  <Bar dataKey="positive" stackId="a" fill="#22c55e" />
+                  <Bar dataKey="neutral" stackId="a" fill="#94a3b8" />
+                  <Bar dataKey="negative" stackId="a" fill="#ef4444" />
                   <Bar dataKey="constructive" stackId="a" fill="#3b82f6" />
                 </BarChart>
               </ResponsiveContainer>
@@ -440,19 +440,19 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
             <div style={{ flex: 1, minHeight: 100 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={phRatingsData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={t.color.bgSubtle} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: t.font.size.xs, fill: t.color.textMuted }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <YAxis
                     type="category"
                     dataKey="name"
                     width={40}
-                    tick={{ fontSize: t.font.size.sm, fill: t.color.textSecondary }}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <Tooltip cursor={{ fill: '#fef3c7' }} />
-                  <Bar dataKey="count" fill={t.color.warning} name="Reviews" radius={[0, 3, 3, 0]}>
-                    <LabelList dataKey="count" position="right" style={{ fontSize: t.font.size.xs, fill: t.color.textSecondary }} />
+                  <Bar dataKey="count" fill="#f59e0b" name="Reviews" radius={[0, 3, 3, 0]}>
+                    <LabelList dataKey="count" position="right" style={{ fontSize: t.font.size.xs, fill: '#64748b' }} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -533,8 +533,8 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                 <div style={{ flex: 1, minHeight: 0 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={seniorityData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                      <XAxis type="number" tick={{ fontSize: t.font.size.xs, fill: t.color.textMuted }} axisLine={false} tickLine={false} allowDecimals={false} />
-                      <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: t.font.size.xs, fill: t.color.textSecondary }} axisLine={false} tickLine={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                       <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
                       <Bar dataKey="count" fill="#8b5cf6" radius={[0, 3, 3, 0]} />
                     </BarChart>
@@ -550,8 +550,8 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                 <div style={{ flex: 1, minHeight: 0 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={mbtiData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                      <XAxis type="number" tick={{ fontSize: t.font.size.xs, fill: t.color.textMuted }} axisLine={false} tickLine={false} allowDecimals={false} />
-                      <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: t.font.size.xs, fill: t.color.textSecondary }} axisLine={false} tickLine={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                       <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
                       <Bar dataKey="count" fill="#06b6d4" radius={[0, 3, 3, 0]} />
                     </BarChart>
@@ -567,10 +567,10 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                 <div style={{ flex: 1, minHeight: 0 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={generationData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                      <XAxis type="number" tick={{ fontSize: t.font.size.xs, fill: t.color.textMuted }} axisLine={false} tickLine={false} allowDecimals={false} />
-                      <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: t.font.size.xs, fill: t.color.textSecondary }} axisLine={false} tickLine={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                       <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(v) => [v, 'count']} />
-                      <Bar dataKey="count" fill={t.color.warning} radius={[0, 3, 3, 0]} />
+                      <Bar dataKey="count" fill="#f59e0b" radius={[0, 3, 3, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
