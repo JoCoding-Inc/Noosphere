@@ -10,6 +10,7 @@ import type {
   ContextGraphEdge as ContextGraphDataEdge,
 } from '../types'
 import { SOURCE_COLORS } from '../constants'
+import { t } from '../tokens'
 
 const NODE_COLORS: Record<string, string> = {
   framework:      '#3b82f6',
@@ -207,56 +208,56 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
       position: 'absolute', top: 0, right: 0, width: 220,
       height: '100%', background: 'rgba(15,23,42,0.96)',
       borderLeft: '1px solid rgba(255,255,255,0.08)',
-      padding: '14px 14px', overflowY: 'auto', zIndex: 10,
+      padding: t.space[4], overflowY: 'auto', zIndex: 10,
       backdropFilter: 'blur(8px)',
     }}>
       {/* Close */}
       <button onClick={onClose} style={{
         float: 'right', background: 'none', border: 'none',
-        cursor: 'pointer', fontSize: 16, color: '#64748b',
+        cursor: 'pointer', fontSize: t.font.size.xl, color: t.color.textSecondary,
         lineHeight: 1, padding: 0,
       }}>×</button>
 
       {/* Type badge */}
       <div style={{
         display: 'inline-block', padding: '2px 8px', borderRadius: 4,
-        background: (NODE_COLORS[entity.type] ?? '#94a3b8') + '28',
-        border: '1px solid ' + (NODE_COLORS[entity.type] ?? '#94a3b8') + '60',
-        color: NODE_COLORS[entity.type] ?? '#94a3b8',
+        background: (NODE_COLORS[entity.type] ?? t.color.textMuted) + '28',
+        border: '1px solid ' + (NODE_COLORS[entity.type] ?? t.color.textMuted) + '60',
+        color: NODE_COLORS[entity.type] ?? t.color.textMuted,
         fontSize: 10, fontWeight: 700, letterSpacing: '0.05em',
-        textTransform: 'uppercase', marginBottom: 8,
+        textTransform: 'uppercase', marginBottom: t.space[2],
       }}>
         {entity.type}
       </div>
 
       {/* Name */}
-      <h3 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.3 }}>
+      <h3 style={{ margin: `0 0 ${t.space[1]}`, fontSize: t.font.size.lg, fontWeight: t.font.weight.bold, color: t.color.bgSubtle, lineHeight: 1.3 }}>
         {entity.name}
       </h3>
 
       {/* Connection count */}
       {totalConnections > 0 && (
-        <p style={{ margin: '0 0 14px', fontSize: 11, color: '#64748b' }}>
+        <p style={{ margin: `0 0 ${t.space[4]}`, fontSize: t.font.size.xs, color: t.color.textSecondary }}>
           {totalConnections} connection{totalConnections !== 1 ? 's' : ''}
         </p>
       )}
 
       {/* Outgoing relationships */}
       {outgoing.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: t.space[3] }}>
           {outgoing.map((r, i) => {
             const target = entityMap.get(r.to)
             if (!target) return null
             return (
               <div key={i} style={{
-                padding: '6px 8px', borderRadius: 6, marginBottom: 4,
+                padding: '6px 8px', borderRadius: t.radius.sm, marginBottom: t.space[1],
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.06)',
               }}>
-                <div style={{ fontSize: 10, color: EDGE_COLORS[r.type] ?? '#94a3b8', fontWeight: 600, marginBottom: 2 }}>
+                <div style={{ fontSize: 10, color: EDGE_COLORS[r.type] ?? t.color.textMuted, fontWeight: t.font.weight.semibold, marginBottom: 2 }}>
                   → {REL_LABEL[r.type] ?? r.type}
                 </div>
-                <div style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 500 }}>
+                <div style={{ fontSize: t.font.size.sm, color: '#cbd5e1', fontWeight: t.font.weight.medium }}>
                   {target.name}
                 </div>
                 <div style={{ fontSize: 10, color: '#475569' }}>
@@ -270,20 +271,20 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
 
       {/* Incoming relationships */}
       {incoming.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: t.space[3] }}>
           {incoming.map((r, i) => {
             const src = entityMap.get(r.from)
             if (!src) return null
             return (
               <div key={i} style={{
-                padding: '6px 8px', borderRadius: 6, marginBottom: 4,
+                padding: '6px 8px', borderRadius: t.radius.sm, marginBottom: t.space[1],
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.06)',
               }}>
-                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 2 }}>
+                <div style={{ fontSize: 10, color: t.color.textSecondary, fontWeight: t.font.weight.semibold, marginBottom: 2 }}>
                   ← {REL_LABEL[r.type] ?? r.type}
                 </div>
-                <div style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 500 }}>
+                <div style={{ fontSize: t.font.size.sm, color: '#cbd5e1', fontWeight: t.font.weight.medium }}>
                   {src.name}
                 </div>
                 <div style={{ fontSize: 10, color: '#475569' }}>
@@ -297,22 +298,22 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
 
       {/* No connections */}
       {totalConnections === 0 && (
-        <p style={{ fontSize: 11, color: '#475569', margin: '0 0 14px' }}>No mapped relationships</p>
+        <p style={{ fontSize: t.font.size.xs, color: '#475569', margin: `0 0 ${t.space[4]}` }}>No mapped relationships</p>
       )}
 
       {/* Sources */}
       {sources.length > 0 && (
         <>
-          <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ fontSize: 10, color: '#475569', fontWeight: t.font.weight.semibold, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
             Sources
           </div>
           {sources.map(s => (
-            <div key={s.id} style={{ fontSize: 11, marginBottom: 4 }}>
+            <div key={s.id} style={{ fontSize: t.font.size.xs, marginBottom: t.space[1] }}>
               {s.url
                 ? <a href={s.url} target="_blank" rel="noreferrer" style={{ color: '#818cf8', textDecoration: 'none' }}>{s.title}</a>
-                : <span style={{ color: '#94a3b8' }}>{s.title}</span>
+                : <span style={{ color: t.color.textMuted }}>{s.title}</span>
               }
-              <span style={{ color: '#475569', marginLeft: 4 }}>({s.source})</span>
+              <span style={{ color: '#475569', marginLeft: t.space[1] }}>({s.source})</span>
             </div>
           ))}
         </>
@@ -460,26 +461,26 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
   }, [entityMap])
 
   return (
-    <div style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', background: '#f8fafc' }}>
+    <div style={{ position: 'relative', border: `1px solid ${t.color.border}`, borderRadius: t.radius.lg, overflow: 'hidden', background: t.color.bgCard }}>
       {/* Header */}
-      <div style={{ padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
-        <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{data.domain_summary}</p>
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${t.color.border}`, background: t.color.bgPage }}>
+        <p style={{ margin: 0, fontSize: t.font.size.sm, color: t.color.textSecondary }}>{data.domain_summary}</p>
       </div>
 
 
       {/* Legend */}
-      <div style={{ padding: '7px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
+      <div style={{ padding: '7px 14px', display: 'flex', gap: t.space[1], flexWrap: 'wrap', borderBottom: `1px solid ${t.color.border}`, background: t.color.bgPage }}>
         {usedTypes.map(type => (
           <button
             key={type}
             onClick={() => toggleType(type)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '2px 8px', borderRadius: 4, fontSize: 11,
-              border: '1.5px solid ' + (NODE_COLORS[type] ?? '#94a3b8'),
-              background: hiddenTypes.has(type) ? '#fff' : (NODE_COLORS[type] ?? '#94a3b8'),
-              color: hiddenTypes.has(type) ? (NODE_COLORS[type] ?? '#94a3b8') : '#fff',
-              cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s',
+              display: 'flex', alignItems: 'center', gap: t.space[1],
+              padding: '2px 8px', borderRadius: 4, fontSize: t.font.size.xs,
+              border: '1.5px solid ' + (NODE_COLORS[type] ?? t.color.textMuted),
+              background: hiddenTypes.has(type) ? t.color.bgPage : (NODE_COLORS[type] ?? t.color.textMuted),
+              color: hiddenTypes.has(type) ? (NODE_COLORS[type] ?? t.color.textMuted) : t.color.textInverse,
+              cursor: 'pointer', fontWeight: t.font.weight.semibold, transition: 'all 0.15s',
             }}
           >
             {type}
@@ -500,7 +501,7 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
           onEngineStop={handleEngineStop}
           nodeId="id"
           nodeLabel={(node: unknown) => isGraphNode(node) ? `${node.name} · ${node.type}` : ''}
-          nodeColor={(node: unknown) => isGraphNode(node) ? getNodeColor(node) : '#94a3b8'}
+          nodeColor={(node: unknown) => isGraphNode(node) ? getNodeColor(node) : t.color.textMuted}
           nodeRelSize={9}
           linkColor={(link: unknown) => isGraphLink(link) ? getLinkColor(link) : '#cbd5e1'}
           linkWidth={2}
@@ -509,7 +510,7 @@ export const OntologyGraph = memo(function OntologyGraph({ data, contextNodes = 
           linkDirectionalArrowRelPos={1}
           linkLineDash={(link: unknown) => isGraphLink(link) && EDGE_DASHED[link.type] ? [4, 2] : null}
           onNodeClick={handleNodeClick}
-          backgroundColor="#f8fafc"
+          backgroundColor={t.color.bgCard}
         />
         {selectedEntity && (
           <SidePanel
@@ -688,9 +689,9 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
   }, [])
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', background: '#f8fafc' }}>
+    <div ref={containerRef} style={{ position: 'relative', border: `1px solid ${t.color.border}`, borderRadius: t.radius.lg, overflow: 'hidden', background: t.color.bgCard }}>
       {/* Legend */}
-      <div style={{ padding: '7px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
+      <div style={{ padding: '7px 14px', display: 'flex', gap: t.space[1], flexWrap: 'wrap', borderBottom: `1px solid ${t.color.border}`, background: t.color.bgPage }}>
         {usedSources.map(src => {
           const color = getSourceColor(src)
           const hidden = hiddenSources.has(src)
@@ -699,12 +700,12 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
               key={src}
               onClick={() => toggleSource(src)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '2px 8px', borderRadius: 4, fontSize: 11,
+                display: 'flex', alignItems: 'center', gap: t.space[1],
+                padding: '2px 8px', borderRadius: 4, fontSize: t.font.size.xs,
                 border: `1.5px solid ${color}`,
-                background: hidden ? '#fff' : color,
-                color: hidden ? color : '#fff',
-                cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s',
+                background: hidden ? t.color.bgPage : color,
+                color: hidden ? color : t.color.textInverse,
+                cursor: 'pointer', fontWeight: t.font.weight.semibold, transition: 'all 0.15s',
               }}
             >
               {src}
@@ -717,8 +718,8 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
       {hoveredLink?.label && (
         <div style={{
           position: 'absolute', top: 50, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(15,23,42,0.9)', color: '#e2e8f0',
-          padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
+          background: 'rgba(15,23,42,0.9)', color: t.color.border,
+          padding: '3px 10px', borderRadius: t.radius.sm, fontSize: t.font.size.xs, fontWeight: t.font.weight.medium,
           pointerEvents: 'none', zIndex: 20,
           border: '1px solid rgba(255,255,255,0.1)',
           backdropFilter: 'blur(4px)',
@@ -739,7 +740,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
         onEngineStop={handleEngineStop}
         nodeId="id"
         nodeLabel={(node: unknown) => isContextRenderNode(node) ? `${node.title}\n${node.source}` : ''}
-        nodeColor={(node: unknown) => isContextRenderNode(node) ? node.color : '#94a3b8'}
+        nodeColor={(node: unknown) => isContextRenderNode(node) ? node.color : t.color.textMuted}
         nodeRelSize={7}
         linkColor={(link: unknown) => isContextRenderLink(link) ? getLinkColor(link) : 'rgba(148,163,184,0.3)'}
         linkWidth={(link: unknown) => isContextRenderLink(link) ? getLinkWidth(link) : 1}
@@ -748,7 +749,7 @@ export const ContextGraph = memo(function ContextGraph({ data, width: widthProp 
         onNodeClick={(node: unknown) => {
           if (isContextRenderNode(node)) handleNodeClick(node)
         }}
-        backgroundColor="#f8fafc"
+        backgroundColor={t.color.bgCard}
       />
     </div>
   )

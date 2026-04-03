@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { Persona, Platform, SocialPost } from '../types'
+import { t } from '../tokens'
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   hackernews: 'HN',
@@ -39,7 +40,7 @@ const SENIORITY_LABELS: Record<string, string> = {
 function MiniBar({ value, max = 10, color }: { value: number; max?: number; color: string }) {
   const pct = Math.round((value / max) * 100)
   return (
-    <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#e2e8f0' }}>
+    <div style={{ flex: 1, height: 4, borderRadius: 2, background: t.color.border }}>
       <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, background: color }} />
     </div>
   )
@@ -86,8 +87,8 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
 
   if (allPersonas.length === 0) {
     return (
-      <div style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
-        <div style={{ fontSize: 28, marginBottom: 12 }}>👤</div>
+      <div style={{ padding: 48, textAlign: 'center', color: t.color.textMuted, fontSize: t.font.size.lg }}>
+        <div style={{ fontSize: 28, marginBottom: t.space[3] }}>👤</div>
         No personas generated yet.
       </div>
     )
@@ -97,7 +98,7 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
     <div style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-      gap: 12,
+      gap: t.space[3],
     }}>
       {allPersonas.map((p, i) => {
         const platformColor = PLATFORM_COLORS[p.platform] || '#64748b'
@@ -106,42 +107,42 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
         const biasBorder = '1px solid ' + biasColor + '30'
         return (
           <div key={i} style={{
-            borderRadius: 8,
-            border: '1px solid #e2e8f0',
-            background: '#fff',
+            borderRadius: t.radius.md,
+            border: `1px solid ${t.color.border}`,
+            background: t.color.bgPage,
             overflow: 'hidden',
           }}>
             {/* Platform accent bar */}
             <div style={{ height: 3, background: platformColor }} />
 
-            <div style={{ padding: 14 }}>
+            <div style={{ padding: t.space[4] }}>
               {/* Avatar + Name/MBTI */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: t.space[2], marginBottom: t.space[2] }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%',
                   background: platformColor + '18',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14, fontWeight: 700, color: platformColor, flexShrink: 0,
+                  fontSize: t.font.size.lg, fontWeight: t.font.weight.bold, color: platformColor, flexShrink: 0,
                 }}>
                   {(p.name?.[0] ?? '?').toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{p.name}</span>
+                    <span style={{ fontWeight: t.font.weight.semibold, fontSize: t.font.size.md, color: t.color.textPrimary }}>{p.name}</span>
                     <span style={{
-                      fontSize: 10, fontWeight: 600, flexShrink: 0, marginLeft: 4,
+                      fontSize: 10, fontWeight: t.font.weight.semibold, flexShrink: 0, marginLeft: t.space[1],
                       color: platformColor,
                     }}>
                       {PLATFORM_LABELS[p.platform] || p.platform}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>{p.mbti}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: t.space[1] }}>
+                    <span style={{ fontSize: t.font.size.xs, color: t.color.textMuted }}>{p.mbti}</span>
                     {p.region && (
                       <span style={{
-                        background: '#e2e8f0', borderRadius: 4,
-                        padding: '2px 6px', fontSize: 11, color: '#475569',
-                        fontWeight: 600,
+                        background: t.color.border, borderRadius: 4,
+                        padding: '2px 6px', fontSize: t.font.size.xs, color: '#475569',
+                        fontWeight: t.font.weight.semibold,
                       }}>{p.region}</span>
                     )}
                   </div>
@@ -149,10 +150,10 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
               </div>
 
               {/* Role + seniority/company */}
-              <p style={{ margin: '0 0 4px', fontSize: 12, color: '#475569' }}>{p.role}</p>
+              <p style={{ margin: `0 0 ${t.space[1]}`, fontSize: t.font.size.sm, color: '#475569' }}>{p.role}</p>
               {(p.seniority || p.company || p.age) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 8px' }}>
-                  <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: t.space[2], margin: `0 0 ${t.space[2]}` }}>
+                  <span style={{ fontSize: 10, color: t.color.textMuted }}>
                     {[
                       p.seniority ? SENIORITY_LABELS[p.seniority] || p.seniority : null,
                       p.company || null,
@@ -162,8 +163,8 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
                   {p.generation && (
                     <span style={{
                       display: 'inline-block',
-                      fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
-                      background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
+                      fontSize: 9, fontWeight: t.font.weight.bold, padding: '1px 6px', borderRadius: t.radius.md,
+                      background: t.color.primaryLight, color: t.color.primaryHover, border: '1px solid #c7d2fe',
                       whiteSpace: 'nowrap',
                     }}>{p.generation}</span>
                   )}
@@ -174,41 +175,41 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
               {p.bias ? (
                 <span style={{
                   display: 'inline-block',
-                  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
+                  fontSize: 10, fontWeight: t.font.weight.bold, padding: '2px 7px', borderRadius: t.radius.lg,
                   background: biasBg, color: biasColor, border: biasBorder,
                   textTransform: 'capitalize',
                 }}>{p.bias}</span>
               ) : p.affiliation ? (
                 <span style={{
                   display: 'inline-block',
-                  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
-                  background: '#6366f115', color: '#6366f1', border: '1px solid #6366f130',
+                  fontSize: 10, fontWeight: t.font.weight.bold, padding: '2px 7px', borderRadius: t.radius.lg,
+                  background: '#6366f115', color: t.color.primary, border: '1px solid #6366f130',
                   textTransform: 'capitalize',
                 }}>{p.affiliation.replace('_', ' ')}</span>
               ) : null}
 
               {/* Dimension bars: skepticism, commercial_focus, innovation_openness */}
               {(p.skepticism != null || p.commercial_focus != null || p.innovation_openness != null) && (
-                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ marginTop: t.space[2], display: 'flex', flexDirection: 'column', gap: t.space[1] }}>
                   {p.skepticism != null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 9, color: '#94a3b8', width: 52, flexShrink: 0 }}>Skepticism</span>
-                      <MiniBar value={p.skepticism} color="#f59e0b" />
-                      <span style={{ fontSize: 9, color: '#64748b', width: 14, textAlign: 'right' }}>{p.skepticism}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: t.space[2] }}>
+                      <span style={{ fontSize: 9, color: t.color.textMuted, width: 52, flexShrink: 0 }}>Skepticism</span>
+                      <MiniBar value={p.skepticism} color={t.color.warning} />
+                      <span style={{ fontSize: 9, color: t.color.textSecondary, width: 14, textAlign: 'right' }}>{p.skepticism}</span>
                     </div>
                   )}
                   {p.commercial_focus != null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 9, color: '#94a3b8', width: 52, flexShrink: 0 }}>Commercial</span>
-                      <MiniBar value={p.commercial_focus} color="#22c55e" />
-                      <span style={{ fontSize: 9, color: '#64748b', width: 14, textAlign: 'right' }}>{p.commercial_focus}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: t.space[2] }}>
+                      <span style={{ fontSize: 9, color: t.color.textMuted, width: 52, flexShrink: 0 }}>Commercial</span>
+                      <MiniBar value={p.commercial_focus} color={t.color.success} />
+                      <span style={{ fontSize: 9, color: t.color.textSecondary, width: 14, textAlign: 'right' }}>{p.commercial_focus}</span>
                     </div>
                   )}
                   {p.innovation_openness != null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 9, color: '#94a3b8', width: 52, flexShrink: 0 }}>Innovation</span>
-                      <MiniBar value={p.innovation_openness} color="#6366f1" />
-                      <span style={{ fontSize: 9, color: '#64748b', width: 14, textAlign: 'right' }}>{p.innovation_openness}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: t.space[2] }}>
+                      <span style={{ fontSize: 9, color: t.color.textMuted, width: 52, flexShrink: 0 }}>Innovation</span>
+                      <MiniBar value={p.innovation_openness} color={t.color.primary} />
+                      <span style={{ fontSize: 9, color: t.color.textSecondary, width: 14, textAlign: 'right' }}>{p.innovation_openness}</span>
                     </div>
                   )}
                 </div>
@@ -217,15 +218,15 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
               {/* Interests */}
               {p.interests.slice(0, 3).map((interest, j) => (
                 <span key={j} style={{
-                  display: 'inline-block', fontSize: 10, color: '#64748b',
-                  background: '#f1f5f9', borderRadius: 4, padding: '1px 5px',
-                  margin: '4px 2px 0',
+                  display: 'inline-block', fontSize: 10, color: t.color.textSecondary,
+                  background: t.color.bgSubtle, borderRadius: 4, padding: '1px 5px',
+                  margin: `${t.space[1]} 2px 0`,
                 }}>{interest}</span>
               ))}
 
               {/* JTBD */}
               {p.jtbd && (
-                <p style={{ margin: '6px 0 0', fontSize: 10, color: '#64748b', lineHeight: 1.4, fontStyle: 'italic' }}>
+                <p style={{ margin: `6px 0 0`, fontSize: 10, color: t.color.textSecondary, lineHeight: 1.4, fontStyle: 'italic' }}>
                   JTBD: {p.jtbd}
                 </p>
               )}
@@ -234,8 +235,8 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
               {p.cognitive_pattern && (
                 <span style={{
                   display: 'inline-block', fontSize: 9, color: '#475569',
-                  background: '#e2e8f0', borderRadius: 4, padding: '2px 6px',
-                  marginTop: 6,
+                  background: t.color.border, borderRadius: 4, padding: '2px 6px',
+                  marginTop: t.space[2],
                 }}>{p.cognitive_pattern.length > 50 ? p.cognitive_pattern.slice(0, 47) + '...' : p.cognitive_pattern}</span>
               )}
 
@@ -244,7 +245,7 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
                 <span style={{
                   display: 'inline-block', fontSize: 9, color: '#ec4899',
                   background: '#ec489910', borderRadius: 4, padding: '2px 5px',
-                  marginTop: 4,
+                  marginTop: t.space[1],
                 }}>{p.emotional_state}</span>
               )}
 
@@ -254,9 +255,9 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
                 if (score <= 0) return null
                 return (
                   <div style={{
-                    marginTop: 8, display: 'inline-block',
-                    fontSize: 10, fontWeight: 700, padding: '2px 8px',
-                    borderRadius: 10, background: '#fef3c7', color: '#b45309',
+                    marginTop: t.space[2], display: 'inline-block',
+                    fontSize: 10, fontWeight: t.font.weight.bold, padding: '2px 8px',
+                    borderRadius: t.radius.lg, background: '#fef3c7', color: '#b45309',
                     border: '1px solid #fde68a',
                   }}>
                     Influence: {score}
@@ -270,7 +271,7 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
                 if (shift == null || Math.abs(shift) < 0.1) return null
                 const isPositive = shift > 0
                 const arrow = isPositive ? '▲' : '▼'
-                const color = isPositive ? '#16a34a' : '#dc2626'
+                const color = isPositive ? t.color.success : t.color.danger
                 const displayVal = isPositive ? `+${shift.toFixed(1)}` : shift.toFixed(1)
                 const tooltip = p.attitude_history && p.attitude_history.length > 0
                   ? p.attitude_history.map(h => `Round ${h.round}: ${h.delta >= 0 ? '+' : ''}${h.delta.toFixed(1)}`).join('\n')
@@ -278,8 +279,8 @@ export function PersonaCardView({ personas, allPosts }: PersonaCardViewProps) {
                 return (
                   <div
                     style={{
-                      marginTop: 6, fontSize: 10, fontWeight: 600,
-                      color, display: 'inline-flex', alignItems: 'center', gap: 3,
+                      marginTop: t.space[2], fontSize: 10, fontWeight: t.font.weight.semibold,
+                      color, display: 'inline-flex', alignItems: 'center', gap: t.space[1],
                     }}
                     title={tooltip}
                   >

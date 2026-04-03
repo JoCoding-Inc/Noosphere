@@ -5,6 +5,7 @@ import { ProductHuntUI } from './platforms/ProductHuntUI'
 import { RedditUI } from './platforms/RedditUI'
 import { LinkedInUI } from './platforms/LinkedInUI'
 import { IndieHackersUI } from './platforms/IndieHackersUI'
+import { t } from '../tokens'
 
 interface Props {
   postsByPlatform: Partial<Record<Platform, SocialPost[]>>
@@ -96,8 +97,8 @@ export function PlatformSimFeed({ postsByPlatform, ideaText = '', forcedTab }: P
 
   if (activePlatforms.length === 0) {
     return (
-      <div style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
-        <div style={{ fontSize: 28, marginBottom: 12 }}>💬</div>
+      <div style={{ padding: 48, textAlign: 'center', color: t.color.textMuted, fontSize: t.font.size.lg }}>
+        <div style={{ fontSize: 28, marginBottom: t.space[3] }}>💬</div>
         No posts available.
       </div>
     )
@@ -106,7 +107,7 @@ export function PlatformSimFeed({ postsByPlatform, ideaText = '', forcedTab }: P
   return (
     <div>
       {/* 플랫폼 탭 */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: t.space[1], marginBottom: t.space[4], flexWrap: 'wrap' }}>
         {activePlatforms.map(platform => {
           const meta = PLATFORM_META[platform]
           const isActive = tab === platform
@@ -116,12 +117,12 @@ export function PlatformSimFeed({ postsByPlatform, ideaText = '', forcedTab }: P
               key={platform}
               onClick={() => setActiveTab(platform)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '6px 14px', fontSize: 13, borderRadius: 20,
-                border: `1.5px solid ${isActive ? meta.color : '#e2e8f0'}`,
-                background: isActive ? meta.color : '#fff',
-                color: isActive ? '#fff' : '#475569',
-                cursor: 'pointer', fontWeight: isActive ? 600 : 400,
+                display: 'flex', alignItems: 'center', gap: t.space[2],
+                padding: '6px 14px', fontSize: t.font.size.md, borderRadius: t.radius.pill,
+                border: `1.5px solid ${isActive ? meta.color : t.color.border}`,
+                background: isActive ? meta.color : t.color.bgPage,
+                color: isActive ? t.color.textInverse : '#475569',
+                cursor: 'pointer', fontWeight: isActive ? t.font.weight.semibold : t.font.weight.normal,
                 transition: 'all 0.15s',
                 boxShadow: isActive ? `0 2px 8px ${meta.color}40` : 'none',
               }}
@@ -129,9 +130,9 @@ export function PlatformSimFeed({ postsByPlatform, ideaText = '', forcedTab }: P
               <span>{meta.icon}</span>
               {meta.label}
               <span style={{
-                fontSize: 11, padding: '0px 5px', borderRadius: 8,
-                background: isActive ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
-                color: isActive ? '#fff' : '#94a3b8',
+                fontSize: t.font.size.xs, padding: '0px 5px', borderRadius: t.radius.md,
+                background: isActive ? 'rgba(255,255,255,0.25)' : t.color.bgSubtle,
+                color: isActive ? t.color.textInverse : t.color.textMuted,
               }}>
                 {count}
               </span>
