@@ -181,11 +181,11 @@ export function ReportView({ report, noSummary, noDetails }: {
       {/* ── Details section: segment reactions + analysis ── */}
       {!noDetails && (
         <>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Segment Reactions</h3>
+          <h3 style={{ fontSize: t.font.size.xl, fontWeight: t.font.weight.semibold, marginBottom: t.space[3] }}>Segment Reactions</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
             {(report.segments || []).map(seg => (
               <div key={seg.name} style={{
-                padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff',
+                padding: 14, borderRadius: t.radius.md, border: `1px solid ${t.color.border}`, background: t.color.bgPage,
                 boxShadow: 'var(--shadow-card)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -194,7 +194,7 @@ export function ReportView({ report, noSummary, noDetails }: {
                       background: SENTIMENT_DOT[seg.sentiment] || '#94a3b8',
                       display: 'inline-block', flexShrink: 0,
                     }} />
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>
+                  <span style={{ fontWeight: t.font.weight.semibold, fontSize: t.font.size.lg }}>
                     {seg.name.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </span>
                 </div>

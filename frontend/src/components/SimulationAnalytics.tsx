@@ -402,7 +402,7 @@ export function SimulationAnalytics({ posts, report, roundStats, personas, segme
                   const bg = vLower.includes('positive') ? '#dcfce7'
                     : vLower.includes('negative') ? '#fee2e2'
                     : vLower.includes('skepti') ? '#ffedd5'
-                    : '#f1f5f9'
+                    : t.color.bgSubtle
                   const fg = vLower.includes('positive') ? '#15803d'
                     : vLower.includes('negative') ? '#b91c1c'
                     : vLower.includes('skepti') ? '#c2410c'

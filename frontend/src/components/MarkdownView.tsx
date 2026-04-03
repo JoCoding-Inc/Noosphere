@@ -10,10 +10,10 @@ const MD_COMPONENTS: ComponentProps<typeof ReactMarkdown>['components'] = {
     <h2 style={{ fontSize: 19, fontWeight: t.font.weight.bold, letterSpacing: '-0.02em', margin: '32px 0 12px', paddingBottom: t.space[2], borderBottom: `1px solid ${t.color.border}` }}>{children}</h2>
   ),
   h3: ({ children }) => (
-    <h3 style={{ fontSize: 15, fontWeight: t.font.weight.bold, margin: '24px 0 8px', color: '#374151' }}>{children}</h3>
+    <h3 style={{ fontSize: 15, fontWeight: t.font.weight.bold, margin: '24px 0 8px', color: t.color.textPrimary }}>{children}</h3>
   ),
   p: ({ children }) => (
-    <p style={{ margin: '0 0 14px', color: '#374151' }}>{children}</p>
+    <p style={{ margin: '0 0 14px', color: t.color.textPrimary }}>{children}</p>
   ),
   ul: ({ children }) => (
     <ul style={{ margin: '0 0 14px', paddingLeft: 22 }}>{children}</ul>
@@ -22,13 +22,13 @@ const MD_COMPONENTS: ComponentProps<typeof ReactMarkdown>['components'] = {
     <ol style={{ margin: '0 0 14px', paddingLeft: 22 }}>{children}</ol>
   ),
   li: ({ children }) => (
-    <li style={{ margin: t.space[1] + ' 0', color: '#374151' }}>{children}</li>
+    <li style={{ margin: t.space[1] + ' 0', color: t.color.textPrimary }}>{children}</li>
   ),
   strong: ({ children }) => (
     <strong style={{ fontWeight: t.font.weight.bold, color: t.color.textPrimary }}>{children}</strong>
   ),
   em: ({ children }) => (
-    <em style={{ fontStyle: 'italic', color: '#475569' }}>{children}</em>
+    <em style={{ fontStyle: 'italic', color: t.color.textSecondary }}>{children}</em>
   ),
   hr: () => (
     <hr style={{ border: 'none', borderTop: `1px solid ${t.color.border}`, margin: '24px 0' }} />
