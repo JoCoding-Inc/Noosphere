@@ -142,9 +142,9 @@ export function SimulatePage() {
             disabled={isCancelling}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: `${t.space[1]}px ${t.space[3]}px`, fontSize: t.font.size.md, fontWeight: t.font.weight.semibold,
+              padding: `${t.space[1]} ${t.space[3]}`, fontSize: t.font.size.md, fontWeight: t.font.weight.semibold,
               borderRadius: t.radius.md, border: `1px solid #fca5a5`,
-              background: isCancelling ? '#fef2f2' : t.color.textInverse,
+              background: isCancelling ? '#fef2f2' : t.color.bgPage,
               color: t.color.danger, cursor: isCancelling ? 'not-allowed' : 'pointer',
               opacity: isCancelling ? 0.6 : 1,
               transition: 'all 0.15s',
@@ -156,21 +156,21 @@ export function SimulatePage() {
         )}
       </div>
       {cancelError && (
-        <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.md, margin: `0 0 ${t.space[2]}px` }}>{cancelError}</p>
+        <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.md, margin: `0 0 ${t.space[2]}` }}>{cancelError}</p>
       )}
 
       {/* Warning 배너 */}
       {sim.warnings.length > 0 && (
         <div style={{
           display: 'flex', flexDirection: 'column', gap: 6,
-          margin: `0 0 ${t.space[4]}px 0`,
+          margin: `0 0 ${t.space[4]} 0`,
         }}>
           {sim.warnings.map((w, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'flex-start', gap: t.space[2],
               background: '#fffbeb', color: '#b45309',
               border: '1px solid #fde68a', borderRadius: 7,
-              fontSize: t.font.size.sm, padding: `${t.space[2]}px ${t.space[3]}px`,
+              fontSize: t.font.size.sm, padding: `${t.space[2]} ${t.space[3]}`,
               animation: 'fadeIn 0.3s ease',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
@@ -187,7 +187,7 @@ export function SimulatePage() {
       {/* 현재 진행 메시지 */}
       {lastProgress && (
         <p key={lastProgress} style={{
-          color: t.color.textSecondary, fontSize: t.font.size.md, margin: `0 0 ${t.space[5]}px 22px`,
+          color: t.color.textSecondary, fontSize: t.font.size.md, margin: `0 0 ${t.space[5]} 22px`,
           animation: 'fadeIn 0.3s ease',
         }}>
           {lastProgress}
@@ -201,8 +201,8 @@ export function SimulatePage() {
           display: 'flex', alignItems: 'center', gap: t.space[2],
           background: '#f0f9ff', color: '#0284c7',
           border: '1px solid #bae6fd', borderRadius: 7,
-          fontSize: t.font.size.sm, padding: `${t.space[2]}px ${t.space[3]}px`,
-          margin: `0 0 ${t.space[5]}px 0`,
+          fontSize: t.font.size.sm, padding: `${t.space[2]} ${t.space[3]}`,
+          margin: `0 0 ${t.space[5]} 0`,
           animation: 'fadeIn 0.4s ease',
         }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
@@ -217,8 +217,8 @@ export function SimulatePage() {
       )}
 
       {sim.status === 'error' && (
-        <div style={{ margin: `${t.space[2]}px 0 ${t.space[5]}px` }}>
-          <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.lg, margin: `0 0 ${t.space[3]}px` }}>{sim.errorMsg}</p>
+        <div style={{ margin: `${t.space[2]} 0 ${t.space[5]}` }}>
+          <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.lg, margin: `0 0 ${t.space[3]}` }}>{sim.errorMsg}</p>
           {sim.canResume && (
             <div style={{ display: 'flex', alignItems: 'center', gap: t.space[3] }}>
               <p style={{ fontSize: t.font.size.md, color: t.color.textSecondary, margin: 0 }}>
@@ -228,7 +228,7 @@ export function SimulatePage() {
                 onClick={handleResume}
                 disabled={isResuming}
                 style={{
-                  padding: `${t.space[2]}px ${t.space[4]}px`, borderRadius: t.radius.md, border: 'none',
+                  padding: `${t.space[2]} ${t.space[4]}`, borderRadius: t.radius.md, border: 'none',
                   background: t.color.primary, color: t.color.textInverse, fontWeight: t.font.weight.semibold,
                   fontSize: t.font.size.lg, cursor: isResuming ? 'not-allowed' : 'pointer',
                   opacity: isResuming ? 0.7 : 1,
@@ -244,14 +244,14 @@ export function SimulatePage() {
             </p>
           )}
           {resumeError && (
-            <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.md, margin: `${t.space[2]}px 0 0` }}>{resumeError}</p>
+            <p role="alert" style={{ color: t.color.danger, fontSize: t.font.size.md, margin: `${t.space[2]} 0 0` }}>{resumeError}</p>
           )}
           {phase === 'error' && totalPosts > 0 && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: t.space[2],
               background: '#f0f9ff', color: '#0369a1',
               border: '1px solid #bae6fd', borderRadius: 7,
-              fontSize: t.font.size.md, padding: `${t.space[2]}px ${t.space[3]}px`,
+              fontSize: t.font.size.md, padding: `${t.space[2]} ${t.space[3]}`,
               marginTop: t.space[3],
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
@@ -269,7 +269,7 @@ export function SimulatePage() {
         <div style={{ display: 'flex', gap: t.space[2], flexWrap: 'wrap', marginBottom: t.space[5] }}>
           {(Object.entries(sim.postsByPlatform) as [Platform, SocialPost[]][]).map(([platform, posts]) => (
             <span key={platform} style={{
-              fontSize: t.font.size.sm, padding: `${t.space[1]}px ${t.space[2]}px`, borderRadius: t.radius.pill,
+              fontSize: t.font.size.sm, padding: `${t.space[1]} ${t.space[2]}`, borderRadius: t.radius.pill,
               background: '#fafbff', color: '#475569',
               border: '1px solid #e8eaf6',
               display: 'flex', alignItems: 'center', gap: 5,
@@ -297,8 +297,8 @@ export function SimulatePage() {
                 key={`${item.source}-${i}`}
                 className="source-item"
                 style={{
-                  padding: `${t.space[2]}px ${t.space[3]}px`, borderRadius: t.radius.md,
-                  background: t.color.textInverse, border: `1px solid ${t.color.border}`,
+                  padding: `${t.space[2]} ${t.space[3]}`, borderRadius: t.radius.md,
+                  background: t.color.bgPage, border: `1px solid ${t.color.border}`,
                   boxShadow: 'var(--shadow-card)',
                   borderLeft: `3px solid ${SOURCE_COLORS[item.source] || t.color.textMuted}`,
                   animationDelay: i === 0 ? '0ms' : undefined,
@@ -306,7 +306,7 @@ export function SimulatePage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                   <span style={{
-                    fontSize: 10, fontWeight: t.font.weight.bold, padding: `${t.space[1]}px ${t.space[1]}px`, borderRadius: t.radius.md,
+                    fontSize: 10, fontWeight: t.font.weight.bold, padding: `${t.space[1]} ${t.space[1]}`, borderRadius: t.radius.md,
                     background: SOURCE_COLORS[item.source] ? `${SOURCE_COLORS[item.source]}18` : t.color.bgSubtle,
                     color: SOURCE_COLORS[item.source] || t.color.textSecondary,
                     textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -339,8 +339,8 @@ export function SimulatePage() {
             value={selectedRound}
             onChange={e => setSelectedRound(Number(e.target.value))}
             style={{
-              fontSize: t.font.size.sm, padding: `${t.space[1]}px ${t.space[2]}px`, borderRadius: t.radius.sm,
-              border: `1px solid ${t.color.border}`, background: t.color.textInverse, color: t.color.textPrimary,
+              fontSize: t.font.size.sm, padding: `${t.space[1]} ${t.space[2]}`, borderRadius: t.radius.sm,
+              border: `1px solid ${t.color.border}`, background: t.color.bgPage, color: t.color.textPrimary,
               cursor: 'pointer',
             }}
           >
@@ -413,7 +413,7 @@ export function SimulatePage() {
                   <Line
                     type="monotone"
                     dataKey="activity"
-                    stroke={t.color.primary}
+                    stroke="#6366f1"
                     strokeWidth={2}
                     dot={false}
                     isAnimationActive={false}
@@ -457,8 +457,8 @@ export function SimulatePage() {
             <div style={{ width: '100%', height: 80 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-                  <Line type="monotone" dataKey="positive" stroke={t.color.success} strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="negative" stroke={t.color.danger} strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="positive" stroke="#22c55e" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="negative" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
                   <Tooltip
                     contentStyle={{ background: t.color.textPrimary, border: 'none', borderRadius: 6, fontSize: 11, color: t.color.border }}
                     labelStyle={{ color: t.color.textMuted, fontSize: 10 }}
@@ -521,11 +521,11 @@ export function SimulatePage() {
           display: 'flex', alignItems: 'center', gap: t.space[2],
           background: '#fffbeb', color: '#92400e',
           border: '1px solid #fde68a', borderRadius: 7,
-          fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, padding: `${t.space[2]}px ${t.space[3]}px`,
-          margin: `0 0 ${t.space[4]}px 0`,
+          fontSize: t.font.size.md, fontWeight: t.font.weight.semibold, padding: `${t.space[2]} ${t.space[3]}`,
+          margin: `0 0 ${t.space[4]} 0`,
           animation: 'fadeIn 0.3s ease',
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.color.warning} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
             <polyline points="22 4 12 14.01 9 11.01"/>
           </svg>
@@ -535,7 +535,7 @@ export function SimulatePage() {
 
       {/* ETA 표시 — only during active rounds, not on error */}
       {!sim.earlyStop && sim.eta && sim.eta.etaSeconds > 0 && phase === 'rounds' && (
-        <p style={{ fontSize: t.font.size.md, color: t.color.textMuted, margin: `0 0 ${t.space[4]}px 0` }}>
+        <p style={{ fontSize: t.font.size.md, color: t.color.textMuted, margin: `0 0 ${t.space[4]} 0` }}>
           {sim.eta.etaSeconds < 60
             ? `~${sim.eta.etaSeconds}s remaining`
             : `~${Math.ceil(sim.eta.etaSeconds / 60)}m remaining`}
@@ -576,7 +576,7 @@ export function SimulatePage() {
               </div>
               <div style={{
                 background: t.color.bgCard, border: `1px solid ${t.color.border}`, borderRadius: t.radius.lg,
-                padding: `${t.space[3]}px ${t.space[5]}px`, maxWidth: 320,
+                padding: `${t.space[3]} ${t.space[5]}`, maxWidth: 320,
               }}>
                 <p style={{ margin: 0, fontSize: t.font.size.md, color: '#475569', lineHeight: 1.6 }}>
                   Another simulation is currently running. Yours will start automatically when it's done.
@@ -594,7 +594,7 @@ export function SimulatePage() {
           ) : (
             <>
               <div style={{ marginBottom: t.space[3], display: 'flex', justifyContent: 'center' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={t.color.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
               </div>
               {phase === 'personas'
                 ? `Building ${sim.agentCount} agent personas across platforms...`
@@ -615,7 +615,7 @@ export function SimulatePage() {
       {sim.isSourcing ? (
         /* 소싱 단계: 왼쪽 그래프 + 오른쪽 소스 타임라인 */
         <main className="page-enter sim-sourcing-layout" style={{
-          maxWidth: 1600, margin: '0 auto', padding: `${t.space[4]}px ${t.space[6]}px`,
+          maxWidth: 1600, margin: '0 auto', padding: `${t.space[4]} ${t.space[6]}`,
           display: 'flex', gap: t.space[6], alignItems: 'flex-start',
         }}>
           <div style={{

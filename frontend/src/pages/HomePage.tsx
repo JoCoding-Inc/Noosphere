@@ -83,10 +83,10 @@ type OptionsTab = 'simulation' | 'research'
 
 const css = {
   card: {
-    background: t.color.textInverse,
+    background: t.color.bgPage,
     border: `1px solid ${t.color.border}`,
     borderRadius: t.radius.lg,
-    padding: `${t.space[5]}px ${t.space[6]}px`,
+    padding: `${t.space[5]} ${t.space[6]}`,
     marginBottom: t.space[3],
     boxShadow: 'var(--shadow-card)',
   } as React.CSSProperties,
@@ -118,7 +118,7 @@ const css = {
     accentColor: t.color.textPrimary,
   } as React.CSSProperties,
   tabBtn: (active: boolean): React.CSSProperties => ({
-    padding: `${t.space[2]}px ${t.space[5]}px`,
+    padding: `${t.space[2]} ${t.space[5]}`,
     fontSize: t.font.size.md,
     fontWeight: active ? t.font.weight.semibold : t.font.weight.normal,
     cursor: 'pointer',
@@ -194,7 +194,7 @@ export function HomePage() {
             width: '100%', padding: '16px 18px', fontSize: 15,
             border: `1.5px solid ${t.color.border}`, borderRadius: t.radius.lg,
             resize: 'vertical', fontFamily: 'inherit',
-            boxSizing: 'border-box', background: t.color.textInverse,
+            boxSizing: 'border-box', background: t.color.bgPage,
             lineHeight: 1.6, outline: 'none',
             transition: 'border-color 0.2s, box-shadow 0.2s',
             animation: 'fadeInUp 0.45s ease both',
@@ -225,9 +225,9 @@ export function HomePage() {
                 className="platform-btn"
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
-                  padding: `${t.space[2]}px ${t.space[3]}px`, fontSize: t.font.size.md, borderRadius: t.radius.md, cursor: 'pointer',
+                  padding: `${t.space[2]} ${t.space[3]}`, fontSize: t.font.size.md, borderRadius: t.radius.md, cursor: 'pointer',
                   border: '1.5px solid',
-                  background: active ? 'var(--primary)' : t.color.textInverse,
+                  background: active ? 'var(--primary)' : t.color.bgPage,
                   color: active ? t.color.textInverse : '#475569',
                   borderColor: active ? 'var(--primary)' : t.color.border,
                   fontWeight: active ? t.font.weight.semibold : t.font.weight.normal,
@@ -258,7 +258,7 @@ export function HomePage() {
             <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: optionsOpen ? 'rotate(90deg)' : '' }}>▶</span>
             Advanced options
             <span style={{
-              fontSize: t.font.size.xs, padding: `${t.space[1]}px ${t.space[2]}px`, borderRadius: t.radius.lg,
+              fontSize: t.font.size.xs, padding: `${t.space[1]} ${t.space[2]}`, borderRadius: t.radius.lg,
               background: 'var(--primary-light)', color: t.color.primary, marginLeft: 4,
             }}>
               {config.language} · {config.num_rounds}r · {config.max_agents}a · ~{totalSources} sources
@@ -300,11 +300,11 @@ export function HomePage() {
                         }}
                         style={{
                           flex: 1,
-                          padding: `${t.space[2]}px ${t.space[3]}px`,
+                          padding: `${t.space[2]} ${t.space[3]}`,
                           borderRadius: t.radius.md,
                           cursor: 'pointer',
                           border: isActive ? `1.5px solid ${t.color.primary}` : `1.5px solid ${t.color.border}`,
-                          background: isActive ? '#6366f108' : t.color.textInverse,
+                          background: isActive ? '#6366f108' : t.color.bgPage,
                           textAlign: 'left',
                           transition: 'all 0.15s',
                         }}
@@ -331,15 +331,15 @@ export function HomePage() {
                       value={config.language}
                       onChange={e => setConfig(c => ({ ...c, language: e.target.value }))}
                       style={{
-                        width: '100%', padding: `${t.space[2]}px ${t.space[3]}px`, fontSize: t.font.size.lg,
+                        width: '100%', padding: `${t.space[2]} ${t.space[3]}`, fontSize: t.font.size.lg,
                         border: `1px solid ${t.color.border}`, borderRadius: t.radius.md,
-                        background: t.color.textInverse, cursor: 'pointer', appearance: 'none',
+                        background: t.color.bgPage, cursor: 'pointer', appearance: 'none',
                       }}>
                       {LANGUAGE_OPTIONS.map(l => (
                         <option key={l.value} value={l.value}>{l.label}</option>
                       ))}
                     </select>
-                    <p style={{ margin: `${t.space[2]}px 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
+                    <p style={{ margin: `${t.space[2]} 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
                       Reports and simulation content will be generated in this language.
                     </p>
                   </div>
@@ -355,7 +355,7 @@ export function HomePage() {
                       value={config.num_rounds}
                       onChange={e => { setActivePreset(''); setConfig(c => ({ ...c, num_rounds: +e.target.value })) }}
                       style={css.slider} />
-                    <p style={{ margin: `${t.space[2]}px 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
+                    <p style={{ margin: `${t.space[2]} 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
                       Each round = one wave of agent interactions.
                     </p>
                   </div>
@@ -375,7 +375,7 @@ export function HomePage() {
                             onClick={() => { setActivePreset(''); setConfig(c => ({ ...c, max_agents: v })) }}
                             style={{
                               borderRadius: t.radius.md,
-                              padding: `${t.space[2]}px ${t.space[5]}px`,
+                              padding: `${t.space[2]} ${t.space[5]}`,
                               fontSize: t.font.size.lg,
                               cursor: 'pointer',
                               background: selected ? t.color.primary : 'transparent',
@@ -388,7 +388,7 @@ export function HomePage() {
                         )
                       })}
                     </div>
-                    <p style={{ margin: `${t.space[2]}px 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
+                    <p style={{ margin: `${t.space[2]} 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
                       100 agents minimum for statistically significant results.
                     </p>
                   </div>
@@ -404,7 +404,7 @@ export function HomePage() {
                       value={config.activation_rate}
                       onChange={e => { setActivePreset(''); setConfig(c => ({ ...c, activation_rate: +e.target.value })) }}
                       style={css.slider} />
-                    <p style={{ margin: `${t.space[2]}px 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
+                    <p style={{ margin: `${t.space[2]} 0 0`, fontSize: t.font.size.sm, color: t.color.textMuted }}>
                       Higher = more chaotic, faster-moving discussions.
                     </p>
                   </div>
@@ -414,7 +414,7 @@ export function HomePage() {
 
               {optionsTab === 'research' && (
                 <div>
-                  <p style={{ fontSize: t.font.size.md, color: t.color.textSecondary, margin: `0 0 ${t.space[4]}px` }}>
+                  <p style={{ fontSize: t.font.size.md, color: t.color.textSecondary, margin: `0 0 ${t.space[4]}` }}>
                     Configure how many results to fetch from each source. Set to 0 to skip a source.
                   </p>
                   <div className="options-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: t.space[3] }}>
@@ -442,9 +442,9 @@ export function HomePage() {
                   <button
                     onClick={() => setConfig(c => ({ ...c, source_limits: DEFAULT_SOURCE_LIMITS }))}
                     style={{
-                      marginTop: t.space[2], padding: `${t.space[1]}px ${t.space[3]}px`, fontSize: t.font.size.sm,
+                      marginTop: t.space[2], padding: `${t.space[1]} ${t.space[3]}`, fontSize: t.font.size.sm,
                       border: `1px solid ${t.color.border}`, borderRadius: t.radius.sm,
-                      background: t.color.textInverse, color: t.color.textSecondary, cursor: 'pointer',
+                      background: t.color.bgPage, color: t.color.textSecondary, cursor: 'pointer',
                     }}>
                     Reset to defaults
                   </button>
@@ -463,7 +463,7 @@ export function HomePage() {
           disabled={loading}
           className={loading ? '' : 'run-btn'}
           style={{
-            marginTop: t.space[6], padding: `${t.space[3]}px ${t.space[8]}px`, fontSize: 15, fontWeight: t.font.weight.bold,
+            marginTop: t.space[6], padding: `${t.space[3]} ${t.space[8]}`, fontSize: 15, fontWeight: t.font.weight.bold,
             background: loading ? t.color.textMuted : 'var(--primary)', color: t.color.textInverse,
             border: 'none', borderRadius: t.radius.lg, cursor: loading ? 'not-allowed' : 'pointer',
             letterSpacing: '-0.01em', display: 'inline-flex', alignItems: 'center',
