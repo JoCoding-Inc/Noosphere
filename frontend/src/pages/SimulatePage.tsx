@@ -83,6 +83,19 @@ export function SimulatePage() {
 
   const totalPosts = Object.values(sim.postsByPlatform).reduce((s, a) => s + (a?.length ?? 0), 0)
 
+  const liveSentimentCounts = useMemo(() => {
+    const all = Object.values(sim.postsByPlatform).flatMap(list => list ?? [])
+    return all.reduce(
+      (acc, p) => {
+        if (p.sentiment === 'positive') acc.positive++
+        else if (p.sentiment === 'neutral') acc.neutral++
+        else if (p.sentiment === 'negative') acc.negative++
+        return acc
+      },
+      { positive: 0, neutral: 0, negative: 0 }
+    )
+  }, [sim.postsByPlatform])
+
   const phase =
     sim.status === 'error' ? 'error' :
     sim.status === 'connecting' && sim.sourceTimeline.length === 0 && !sim.isSourcing ? 'connecting' :
@@ -340,7 +353,7 @@ export function SimulatePage() {
 
       {/* Live Sentiment Gauge */}
       {(phase === 'rounds' || (phase === 'error' && totalPosts > 0)) && (() => {
-        const { positive, neutral, negative } = sim.liveSentiment
+        const { positive, neutral, negative } = liveSentimentCounts
         const total = positive + neutral + negative
         if (total === 0) return null
         const pPct = Math.round((positive / total) * 100)

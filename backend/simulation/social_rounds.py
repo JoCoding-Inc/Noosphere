@@ -983,7 +983,7 @@ _NEGATIVE_KEYWORDS = {"terrible", "awful", "waste", "useless", "scam", "fraud", 
 _POSITIVE_KEYWORDS = {"love", "amazing", "great", "revolutionary", "excellent", "brilliant", "outstanding", "fantastic", "perfect", "innovative"}
 
 
-def _validate_sentiment(content: str, declared: str) -> str:
+def _validate_sentiment(content: str, declared: str, skepticism: int = 5) -> str:
     """키워드 기반으로 LLM 선언 sentiment의 명백한 오류를 교정."""
     lower = content.lower()
     neg_count = sum(1 for w in _NEGATIVE_KEYWORDS if w in lower)
@@ -994,6 +994,9 @@ def _validate_sentiment(content: str, declared: str) -> str:
         return "negative"
     if declared == "negative" and pos_count >= 2 and neg_count == 0:
         return "positive"
+    # High-skepticism agents declaring positive with no negative keywords → downgrade to neutral
+    if declared == "positive" and skepticism >= 8 and neg_count >= 1 and pos_count <= 1:
+        return "neutral"
     _ACCEPTED = {"positive", "neutral", "negative", "constructive"}
     if declared not in _ACCEPTED:
         return "neutral"
@@ -1253,6 +1256,14 @@ async def generate_content(
                 if getattr(persona, "attitude_shift", 0.0) <= -0.2
                 else ""
             )
+        )
+        + (
+            "SENTIMENT GUIDANCE: Your skepticism is HIGH ({}/9). "
+            "Lean toward NEGATIVE or NEUTRAL sentiment. Only pick positive if the argument is genuinely compelling.\n".format(
+                getattr(persona, "skepticism", 5) or 5
+            )
+            if (getattr(persona, "skepticism", 5) or 5) >= 7
+            else ""
         )
         + f"Action: {action.action_type}"
         + (f" (replying to post {action.target_post_id})" if action.target_post_id else "") + "\n\n"
@@ -2057,7 +2068,8 @@ async def platform_round(
 
                     # new_post actions are always top-level (no parent)
                     effective_parent_id = None if content_action.action_type == "new_post" else content_action.target_post_id
-                    validated_sentiment = _validate_sentiment(content, structured_data.get("sentiment", "neutral"))
+                    _persona_skep = getattr(persona, "skepticism", 5) or 5
+                    validated_sentiment = _validate_sentiment(content, structured_data.get("sentiment", "neutral"), skepticism=_persona_skep)
                     post = SocialPost(
                         id=str(uuid.uuid4()),
                         platform=platform.name,
