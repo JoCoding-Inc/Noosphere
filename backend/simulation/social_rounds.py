@@ -979,8 +979,32 @@ async def decide_action(
         return AgentAction(action_type=_fallback, target_post_id=f"__seed__{platform.name}")
 
 
-_NEGATIVE_KEYWORDS = {"terrible", "awful", "waste", "useless", "scam", "fraud", "horrible", "worst", "garbage", "nonsense"}
-_POSITIVE_KEYWORDS = {"love", "amazing", "great", "revolutionary", "excellent", "brilliant", "outstanding", "fantastic", "perfect", "innovative"}
+_NEGATIVE_KEYWORDS = {
+    # 극단적 부정
+    "terrible", "awful", "waste", "useless", "scam", "fraud", "horrible", "worst", "garbage", "nonsense",
+    # 일반적 비판/우려
+    "concern", "worried", "worry", "doubt", "skeptical", "skepticism", "problem", "issue",
+    "challenge", "difficult", "risky", "risk", "unclear", "question", "disagree",
+    "won't work", "doesn't work", "won't", "fail", "failure", "flaw", "flawed",
+    "overpriced", "expensive", "misleading", "overhyped", "hype", "crowded", "saturated",
+    "already exists", "nothing new", "not sure", "not convinced",
+}
+_POSITIVE_KEYWORDS = {
+    # 강한 긍정
+    "love", "amazing", "great", "revolutionary", "excellent", "brilliant", "outstanding",
+    "fantastic", "perfect", "innovative", "excited", "exciting",
+    # 일반적 긍정
+    "impressive", "promising", "valuable", "useful", "helpful", "solid", "strong",
+    "well done", "congratulations", "love this", "game changer", "game-changer",
+    "absolutely", "definitely", "highly recommend",
+}
+# 긍정 선언을 중립으로 낮추는 헤징 표현
+_HEDGE_KEYWORDS = {
+    "but", "however", "although", "though", "yet", "still", "unless",
+    "concern", "worry", "worried", "doubt", "unclear", "might", "maybe",
+    "could", "not sure", "question", "issue", "problem", "challenge",
+    "if", "depends", "need to", "needs to", "should", "have to",
+}
 
 
 def _validate_sentiment(content: str, declared: str, skepticism: int = 5) -> str:
@@ -988,19 +1012,32 @@ def _validate_sentiment(content: str, declared: str, skepticism: int = 5) -> str
     lower = content.lower()
     neg_count = sum(1 for w in _NEGATIVE_KEYWORDS if w in lower)
     pos_count = sum(1 for w in _POSITIVE_KEYWORDS if w in lower)
-    # constructive with ANY negative keywords → negative (most constructive posts are actually critical)
-    if declared == "constructive" and neg_count >= 1:
+    hedge_count = sum(1 for w in _HEDGE_KEYWORDS if w in lower)
+
+    # constructive with ANY negative/hedge keywords → negative
+    if declared == "constructive" and (neg_count >= 1 or hedge_count >= 2):
         return "negative"
-    if declared == "positive" and neg_count >= 2 and pos_count == 0:
-        return "negative"
-    if declared == "negative" and pos_count >= 2 and neg_count == 0:
-        return "positive"
-    # High-skepticism agents: downgrade positive → neutral if any doubt signal
-    if declared == "positive" and skepticism >= 8 and neg_count >= 1 and pos_count <= 1:
-        return "neutral"
-    # High-skepticism agents: downgrade constructive → negative
+    # constructive for high-skepticism agents → always negative
     if declared == "constructive" and skepticism >= 7:
         return "negative"
+
+    # positive with clear negative signal → negative
+    if declared == "positive" and neg_count >= 2 and pos_count == 0:
+        return "negative"
+    # positive with hedging + no strong positive → neutral
+    if declared == "positive" and hedge_count >= 2 and pos_count == 0:
+        return "neutral"
+    # positive with mixed signals (both neg and hedge, weak pos) → neutral
+    if declared == "positive" and (neg_count >= 1 or hedge_count >= 3) and pos_count <= 1:
+        return "neutral"
+    # high-skepticism agents: positive → neutral unless strongly positive
+    if declared == "positive" and skepticism >= 7 and pos_count <= 1:
+        return "neutral"
+
+    # negative with strong positive and no negative → positive
+    if declared == "negative" and pos_count >= 2 and neg_count == 0 and hedge_count == 0:
+        return "positive"
+
     _ACCEPTED = {"positive", "neutral", "negative", "constructive"}
     if declared not in _ACCEPTED:
         return "neutral"

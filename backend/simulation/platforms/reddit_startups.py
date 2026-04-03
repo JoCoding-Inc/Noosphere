@@ -37,7 +37,7 @@ class RedditStartups(AbstractPlatform):
                         "sentiment": {
                             "type": "string",
                             "enum": ["positive", "neutral", "negative", "constructive"],
-                            "description": "Tone toward the idea — positive: excited/supportive; neutral: balanced/exploratory; negative: skeptical/critical/opposed; negative: any doubt, concern, criticism, or skepticism — DEFAULT for critical posts; constructive: ONLY if the entire response is an explicit numbered improvement list with no criticism (extremely rare, <5%)",
+                            "description": "Tone toward the idea — positive: genuinely excited or fully supportive with ZERO reservations (use ONLY if you have no doubts); neutral: mixed, exploratory, or mildly interested; negative: any doubt, concern, criticism, or skepticism — DEFAULT for critical posts; constructive: ONLY if the entire response is an explicit numbered improvement list (extremely rare, <5%)",
                         },
                     },
                     "required": ["title", "text", "sentiment"],
@@ -57,7 +57,7 @@ class RedditStartups(AbstractPlatform):
                         "sentiment": {
                             "type": "string",
                             "enum": ["positive", "neutral", "negative", "constructive"],
-                            "description": "Tone toward the idea — positive: excited/supportive; neutral: balanced/exploratory; negative: skeptical/critical/opposed; negative: any doubt, concern, criticism, or skepticism — DEFAULT for critical posts; constructive: ONLY if the entire response is an explicit numbered improvement list with no criticism (extremely rare, <5%)",
+                            "description": "Tone toward the idea — positive: genuinely excited or fully supportive with ZERO reservations (use ONLY if you have no doubts); neutral: mixed, exploratory, or mildly interested; negative: any doubt, concern, criticism, or skepticism — DEFAULT for critical posts; constructive: ONLY if the entire response is an explicit numbered improvement list (extremely rare, <5%)",
                         },
                     },
                     "required": ["text", "sentiment"],
@@ -80,7 +80,7 @@ class RedditStartups(AbstractPlatform):
                     "sentiment": {
                         "type": "string",
                         "enum": ["positive", "neutral", "negative", "constructive"],
-                        "description": "Tone toward the idea — positive: excited/supportive; neutral: balanced/exploratory; negative: skeptical/critical/opposed; negative: any doubt, concern, criticism, or skepticism — DEFAULT for critical posts; constructive: ONLY if the entire response is an explicit numbered improvement list with no criticism (extremely rare, <5%)",
+                        "description": "Tone toward the idea — positive: genuinely excited or fully supportive with ZERO reservations (use ONLY if you have no doubts); neutral: mixed, exploratory, or mildly interested; negative: any doubt, concern, criticism, or skepticism — DEFAULT for critical posts; constructive: ONLY if the entire response is an explicit numbered improvement list (extremely rare, <5%)",
                     },
                 },
                 "required": ["text", "contrarian_point", "sentiment"],
