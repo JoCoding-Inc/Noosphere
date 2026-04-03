@@ -23,12 +23,12 @@ export const PLATFORM_COLORS: Record<Platform, string> = {
   linkedin:        '#2563eb',
 }
 
-export const PLATFORM_OPTIONS: Array<{ id: Platform; label: string }> = [
-  { id: 'hackernews',      label: 'Hacker News' },
-  { id: 'producthunt',     label: 'Product Hunt' },
-  { id: 'indiehackers',    label: 'Indie Hackers' },
-  { id: 'reddit_startups', label: 'Reddit r/startups' },
-  { id: 'linkedin',        label: 'LinkedIn' },
+export const PLATFORM_OPTIONS: Array<{ id: Platform; label: string; description: string }> = [
+  { id: 'hackernews',      label: 'Hacker News',      description: 'Technical founders & engineers' },
+  { id: 'producthunt',     label: 'Product Hunt',     description: 'Early adopters & makers' },
+  { id: 'indiehackers',    label: 'Indie Hackers',    description: 'Bootstrappers & solo founders' },
+  { id: 'reddit_startups', label: 'Reddit r/startups', description: 'Broad startup community' },
+  { id: 'linkedin',        label: 'LinkedIn',         description: 'Professionals & executives' },
 ]
 
 type VerdictConfig = { color: string; label: string; icon: string }

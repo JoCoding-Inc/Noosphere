@@ -223,8 +223,8 @@ export function HomePage() {
               <button key={p.id} onClick={() => togglePlatform(p.id)}
                 className="platform-btn"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '7px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+                  padding: '8px 14px', fontSize: 13, borderRadius: 8, cursor: 'pointer',
                   border: '1.5px solid',
                   background: active ? 'var(--primary)' : '#fff',
                   color: active ? '#fff' : '#475569',
@@ -232,8 +232,14 @@ export function HomePage() {
                   fontWeight: active ? 600 : 400,
                   boxShadow: active ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
                   animation: `fadeInUp 0.${50 + i * 5}s ease both`,
+                  textAlign: 'left',
                 }}>
-                {p.label}
+                <span>{p.label}</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 400,
+                  color: active ? 'rgba(255,255,255,0.75)' : '#94a3b8',
+                  lineHeight: 1.2,
+                }}>{p.description}</span>
               </button>
             )
           })}
