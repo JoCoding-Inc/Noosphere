@@ -143,6 +143,22 @@ export function ResultPage() {
   const [tab, setTab] = useState<Tab>('analysis')
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [selectedRound, setSelectedRound] = useState<number>(0)
+  const [copied, setCopied] = useState(false)
+
+  const copyableContent: Partial<Record<Tab, string | null | undefined>> = results ? {
+    analysis: results.analysis_md,
+    launch:   results.gtm_md,
+    final:    results.final_report_md,
+  } : {}
+
+  function handleCopy() {
+    const content = copyableContent[tab]
+    if (!content) return
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   useEffect(() => {
     if (!simId) return
@@ -243,7 +259,7 @@ export function ResultPage() {
               </a>
             </div>
             {/* Tab navigation */}
-            <div className="result-tabs" style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid #e2e8f0' }}>
+            <div className="result-tabs" style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 24, borderBottom: '1px solid #e2e8f0' }}>
               {tabs.map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
                   style={{
@@ -256,6 +272,33 @@ export function ResultPage() {
                   {t.label}
                 </button>
               ))}
+              {copyableContent[tab] && (
+                <button
+                  onClick={handleCopy}
+                  style={{
+                    marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '6px 12px', fontSize: 12, cursor: 'pointer', borderRadius: 6,
+                    border: '1px solid #e2e8f0', background: copied ? '#f0fdf4' : '#fff',
+                    color: copied ? '#16a34a' : '#64748b',
+                    transition: 'all 0.15s', fontWeight: 500,
+                  }}>
+                  {copied ? (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6L9 17l-5-5"/>
+                      </svg>
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                      </svg>
+                      Copy
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             <div key={tab} className="tab-content">
