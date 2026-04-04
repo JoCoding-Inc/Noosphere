@@ -103,7 +103,7 @@ const css = {
     alignItems: 'center',
     justifyContent: 'space-between',
     fontSize: t.font.size.lg,
-    color: '#374151',
+    color: t.color.grayText,
     marginBottom: 10,
   } as React.CSSProperties,
   value: {
@@ -380,7 +380,7 @@ export function HomePage() {
                               cursor: 'pointer',
                               background: selected ? t.color.primary : 'transparent',
                               color: selected ? t.color.textInverse : t.color.textMuted,
-                              border: selected ? `1.5px solid ${t.color.primary}` : '1.5px solid #334155',
+                              border: selected ? `1.5px solid ${t.color.primary}` : `1.5px solid ${t.color.borderDark}`,
                               fontWeight: selected ? t.font.weight.semibold : t.font.weight.normal,
                             }}>
                             {v}

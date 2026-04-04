@@ -349,7 +349,7 @@ export function TermsOfServicePage() {
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <Link to="/privacy" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: t.font.size.xs, color: t.color.textMuted, textDecoration: 'none' }}>Privacy Policy</Link>
           <Link to="/terms" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: t.font.size.xs, color: t.color.textMuted, textDecoration: 'none' }}>Terms of Service</Link>
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: t.font.size.xs, color: '#cbd5e1' }}>© 2026 Jocoding.Inc · Market Intelligence</span>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: t.font.size.xs, color: t.color.borderLight }}>© 2026 Jocoding.Inc · Market Intelligence</span>
         </div>
       </footer>
     </div>

@@ -34,7 +34,7 @@ export function ReportView({ report, noSummary, noDetails }: {
   const adoptionColor = adoptionScore == null ? t.color.textMuted
     : adoptionScore <= 30 ? t.color.danger
     : adoptionScore <= 60 ? t.color.warning
-    : adoptionScore <= 80 ? '#84cc16'
+    : adoptionScore <= 80 ? t.color.lime
     : t.color.success
 
   return (
@@ -295,8 +295,8 @@ export function ReportView({ report, noSummary, noDetails }: {
           <div style={{ display: 'flex', flexDirection: 'column', gap: t.space[2], marginBottom: t.space[6] }}>
             {(report.criticism_clusters || []).map((c, i) => (
               <div key={i} style={{
-                padding: t.space[3], borderRadius: t.radius.md, border: '1px solid #fecdd3',
-                background: '#fff1f2',
+                padding: t.space[3], borderRadius: t.radius.md, border: `1px solid ${t.color.dangerTint}`,
+                background: t.color.dangerSubtle,
                 boxShadow: '0 1px 3px rgba(239,68,68,0.06)',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: t.space[1] }}>
@@ -317,7 +317,7 @@ export function ReportView({ report, noSummary, noDetails }: {
             {(report.improvements || []).map((imp, i) => (
               <div key={i} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 14px', borderRadius: t.radius.md, border: '1px solid #d1fae5',
+                padding: '10px 14px', borderRadius: t.radius.md, border: `1px solid ${t.color.successTint}`,
                 background: t.color.successLight,
                 boxShadow: '0 1px 3px rgba(34,197,94,0.06)',
               }}>
@@ -370,8 +370,8 @@ export function ReportView({ report, noSummary, noDetails }: {
                               fontSize: t.font.size.xs,
                               padding: '2px 6px',
                               borderRadius: t.radius.lg,
-                              background: '#e5e7eb',
-                              color: '#374151',
+                              background: t.color.bgGray,
+                              color: t.color.grayText,
                             }}>
                               {seg}
                             </span>

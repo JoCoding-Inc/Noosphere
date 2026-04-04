@@ -296,7 +296,7 @@ function HomePhase({ displayText, runClicked }: { displayText: string; runClicke
         <div style={{
           width: '100%', padding: '16px 18px',
           fontSize: 15,
-          border: `1.5px solid ${displayText.length < DEMO_INPUT.length ? '#8b5cf6' : t.color.border}`,
+          border: `1.5px solid ${displayText.length < DEMO_INPUT.length ? t.color.accent : t.color.border}`,
           borderRadius: t.radius.lg, background: t.color.bgPage,
           fontFamily: 'inherit', lineHeight: 1.6,
           color: t.color.textPrimary,
@@ -411,7 +411,7 @@ function SimulatePhase({
           <div style={{ height: 6, background: t.color.border, borderRadius: 3, overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 3,
-              background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
+              background: `linear-gradient(90deg, ${t.color.accent}, ${t.color.primary})`,
               width: `${personaPct}%`,
               transition: 'width 0.4s ease',
               boxShadow: '0 0 8px rgba(139,92,246,0.5)',
@@ -525,7 +525,7 @@ function ResultsPhase({ tab, detailTab }: { tab: ResultTab; detailTab: 'feed' | 
           <div style={{ color: t.color.textSecondary, fontSize: t.font.size.lg }}>← Run demo again</div>
           <div style={{
             fontSize: t.font.size.sm, padding: '4px 12px', borderRadius: t.radius.pill,
-            background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontWeight: t.font.weight.semibold,
+            background: 'rgba(139,92,246,0.1)', color: t.color.accent, fontWeight: t.font.weight.semibold,
           }}>
             Demo Results
           </div>

@@ -195,8 +195,8 @@ export function SimulatePage() {
         import.meta.env.VITE_CLERK_PUBLISHABLE_KEY && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: t.space[2],
-          background: '#f0f9ff', color: '#0284c7',
-          border: '1px solid #bae6fd', borderRadius: 7,
+          background: t.color.infoSurface, color: t.color.infoStrong,
+          border: `1px solid ${t.color.infoBorder}`, borderRadius: 7,
           fontSize: t.font.size.sm, padding: `${t.space[2]} ${t.space[3]}`,
           margin: `0 0 ${t.space[5]} 0`,
           animation: 'fadeIn 0.4s ease',
@@ -205,7 +205,7 @@ export function SimulatePage() {
           <span>
             We'll send the completed report to your registered email address.
             {' '}
-            <span style={{ color: '#0369a1', opacity: 0.75 }}>
+            <span style={{ color: t.color.infoDark, opacity: 0.75 }}>
               (The completed report will be sent to your registered email address.)
             </span>
           </span>
@@ -245,8 +245,8 @@ export function SimulatePage() {
           {phase === 'error' && totalPosts > 0 && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: t.space[2],
-              background: '#f0f9ff', color: '#0369a1',
-              border: '1px solid #bae6fd', borderRadius: 7,
+              background: t.color.infoSurface, color: t.color.infoDark,
+              border: `1px solid ${t.color.infoBorder}`, borderRadius: 7,
               fontSize: t.font.size.md, padding: `${t.space[2]} ${t.space[3]}`,
               marginTop: t.space[3],
             }}>
@@ -266,8 +266,8 @@ export function SimulatePage() {
           {(Object.entries(sim.postsByPlatform) as [Platform, SocialPost[]][]).map(([platform, posts]) => (
             <span key={platform} style={{
               fontSize: t.font.size.sm, padding: `${t.space[1]} ${t.space[2]}`, borderRadius: t.radius.pill,
-              background: '#fafbff', color: t.color.textStrong,
-              border: '1px solid #e8eaf6',
+              background: t.color.primarySurface, color: t.color.textStrong,
+              border: `1px solid ${t.color.primaryBorder}`,
               display: 'flex', alignItems: 'center', gap: 5,
               animation: 'scaleIn 0.2s ease',
             }}>
@@ -482,7 +482,7 @@ export function SimulatePage() {
         const entries = Object.entries(sim.segmentDistribution)
         const total = entries.reduce((s, [, v]) => s + v, 0)
         if (total === 0) return null
-        const SEGMENT_COLORS = [t.color.primary, t.color.warning, t.color.success, t.color.danger, '#8b5cf6', '#14b8a6', '#f97316', '#ec4899']
+        const SEGMENT_COLORS = [t.color.primary, t.color.warning, t.color.success, t.color.danger, t.color.accent, '#14b8a6', t.color.orange, '#ec4899']
         return (
           <div style={{ marginBottom: t.space[4] }}>
             <div style={{ fontSize: t.font.size.xs, color: t.color.textMuted, marginBottom: 4 }}>Segment Distribution</div>

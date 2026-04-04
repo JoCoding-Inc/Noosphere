@@ -208,7 +208,7 @@ export function LandingPage() {
         textAlign: 'center',
       }}>
         <div style={{
-          background: '#fafbff',
+          background: t.color.primarySurface,
           borderRadius: t.radius.xl,
           padding: '40px 24px',
           border: `1px solid ${t.color.primaryLight}`,
@@ -304,7 +304,7 @@ export function LandingPage() {
         </span>
         <span style={{
           fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: t.font.size.xs, color: '#cbd5e1',
+          fontSize: t.font.size.xs, color: t.color.borderLight,
         }}>
           © 2026 · Pre-launch Intelligence
         </span>

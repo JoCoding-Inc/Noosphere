@@ -36,14 +36,14 @@ const MD_COMPONENTS: ComponentProps<typeof ReactMarkdown>['components'] = {
   blockquote: ({ children }) => (
     <blockquote style={{
       margin: '0 0 14px', padding: `10px ${t.space[4]}`,
-      borderLeft: '3px solid #8b5cf6', background: '#f8f5ff',
+      borderLeft: `3px solid ${t.color.accent}`, background: '#f8f5ff',
       borderRadius: '0 8px 8px 0', color: t.color.textStrong,
     }}>{children}</blockquote>
   ),
   code: ({ children }) => (
     <code style={{
       background: t.color.bgSubtle, padding: '2px 6px', borderRadius: t.radius.sm,
-      fontSize: t.font.size.md, fontFamily: 'monospace', color: '#7c3aed',
+      fontSize: t.font.size.md, fontFamily: 'monospace', color: t.color.accentDark,
     }}>{children}</code>
   ),
 }

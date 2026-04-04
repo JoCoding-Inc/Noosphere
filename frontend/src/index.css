@@ -50,7 +50,11 @@ html {
   --color-success-alt:    #10b981;
 
   /* Warning (extended) */
+  --color-warning-subtle: #fef3c7;
+  --color-warning-light:  #fffbeb;
   --color-warning-border: #fde68a;
+  --color-warning-mid:    #d97706;
+  --color-warning-dark:   #b45309;
   --color-warning-text:   #92400e;
 
   /* Info */
@@ -59,6 +63,52 @@ html {
   /* Primary (extended) */
   --color-primary-vivid: #6355e0;
   --color-primary-muted: #a5b4fc;
+
+  /* Accent (violet) */
+  --color-accent:        #8b5cf6;
+  --color-accent-dark:   #7c3aed;
+  --color-accent-light:  #ede9fe;
+
+  /* Sentiment surfaces */
+  --color-success-surface:  #dcfce7;
+  --color-danger-surface:   #fee2e2;
+  --color-warning-surface:  #ffedd5;
+  --color-warning-strong:   #c2410c;
+
+  /* Orange */
+  --color-orange:        #f97316;
+
+  /* Border light */
+  --color-border-light:  #cbd5e1;
+  --color-border-dark:   #334155;
+
+  /* Gray */
+  --color-gray-text:     #374151;
+  --color-bg-gray:       #e5e7eb;
+
+  /* Info (sky) */
+  --color-info-surface:  #f0f9ff;
+  --color-info-border:   #bae6fd;
+  --color-info-strong:   #0284c7;
+  --color-info-dark:     #0369a1;
+
+  /* Primary surfaces */
+  --color-primary-surface: #fafbff;
+  --color-primary-border:  #e8eaf6;
+
+  /* Accent surface */
+  --color-accent-surface: #faf9ff;
+
+  /* Success (extended) */
+  --color-success-dark:  #15803d;
+  --color-success-tint:  #d1fae5;
+
+  /* Danger surfaces */
+  --color-danger-subtle: #fff1f2;
+  --color-danger-tint:   #fecdd3;
+
+  /* Lime */
+  --color-lime:          #84cc16;
 
   /* Font sizes */
   --font-size-xs:  11px;
@@ -372,7 +422,7 @@ input[type="range"]:focus-visible {
   transition: border-color 0.15s ease, color 0.15s ease;
 }
 .landing-cta-secondary:hover {
-  border-color: #cbd5e1 !important;
+  border-color: var(--color-border-light) !important;
   color: #1e293b !important;
 }
 

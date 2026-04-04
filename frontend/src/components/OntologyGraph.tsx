@@ -257,7 +257,7 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
                 <div style={{ fontSize: 10, color: EDGE_COLORS[r.type] ?? t.color.textMuted, fontWeight: t.font.weight.semibold, marginBottom: 2 }}>
                   → {REL_LABEL[r.type] ?? r.type}
                 </div>
-                <div style={{ fontSize: t.font.size.sm, color: '#cbd5e1', fontWeight: t.font.weight.medium }}>
+                <div style={{ fontSize: t.font.size.sm, color: t.color.borderLight, fontWeight: t.font.weight.medium }}>
                   {target.name}
                 </div>
                 <div style={{ fontSize: 10, color: t.color.textStrong }}>
@@ -284,7 +284,7 @@ function SidePanel({ entity, entityMap, relationships, contextNodes, onClose }: 
                 <div style={{ fontSize: 10, color: t.color.textSecondary, fontWeight: t.font.weight.semibold, marginBottom: 2 }}>
                   ← {REL_LABEL[r.type] ?? r.type}
                 </div>
-                <div style={{ fontSize: t.font.size.sm, color: '#cbd5e1', fontWeight: t.font.weight.medium }}>
+                <div style={{ fontSize: t.font.size.sm, color: t.color.borderLight, fontWeight: t.font.weight.medium }}>
                   {src.name}
                 </div>
                 <div style={{ fontSize: 10, color: t.color.textStrong }}>

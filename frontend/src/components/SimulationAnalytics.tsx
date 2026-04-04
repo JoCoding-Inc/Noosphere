@@ -219,7 +219,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: t.space[1],
             padding: '4px 10px', borderRadius: t.radius.md,
-            background: '#dcfce7', color: '#15803d',
+            background: t.color.successSurface, color: t.color.successDark,
             fontSize: t.font.size.xs, fontWeight: t.font.weight.semibold, marginLeft: t.space[2],
           }}>
             ⚡ Early consensus at round {report.early_exit_round}
@@ -307,7 +307,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
 
         {/* What People Loved (praise clusters) */}
         {praiseData.length > 0 && (
-          <div style={{ background: t.color.bgPage, border: '1px solid #dcfce7', borderRadius: t.radius.lg, padding: t.space[4], boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: t.color.bgPage, border: `1px solid ${t.color.successSurface}`, borderRadius: t.radius.lg, padding: t.space[4], boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
             <p style={{ fontSize: t.font.size.sm, fontWeight: t.font.weight.semibold, color: t.color.success, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: t.space[3] }}>
               What People Loved
             </p>
@@ -371,13 +371,13 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                   const verdict = data.verdict
                   if (!verdict) return null
                   const vLower = verdict.toLowerCase()
-                  const bg = vLower.includes('positive') ? '#dcfce7'
-                    : vLower.includes('negative') ? '#fee2e2'
-                    : vLower.includes('skepti') ? '#ffedd5'
+                  const bg = vLower.includes('positive') ? t.color.successSurface
+                    : vLower.includes('negative') ? t.color.dangerSurface
+                    : vLower.includes('skepti') ? t.color.warningSurface
                     : t.color.bgSubtle
-                  const fg = vLower.includes('positive') ? '#15803d'
+                  const fg = vLower.includes('positive') ? t.color.successDark
                     : vLower.includes('negative') ? t.color.dangerDark
-                    : vLower.includes('skepti') ? '#c2410c'
+                    : vLower.includes('skepti') ? t.color.warningStrong
                     : t.color.textStrong
                   return (
                     <span key={name} style={{
@@ -445,7 +445,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                 {phProsConsData.pros.slice(0, 5).map((item, idx) => (
                   <div key={idx} style={{ marginBottom: t.space[1] }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: t.font.size.xs, marginBottom: t.space[1] }}>
-                      <span style={{ color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>{item.theme}</span>
+                      <span style={{ color: t.color.borderDark, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>{item.theme}</span>
                       <span style={{ color: t.color.textSecondary, fontWeight: t.font.weight.semibold }}>{item.count}</span>
                     </div>
                     <div style={{ height: 6, background: t.color.bgSubtle, borderRadius: 3 }}>
@@ -465,7 +465,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                 {phProsConsData.cons.slice(0, 5).map((item, idx) => (
                   <div key={idx} style={{ marginBottom: t.space[1] }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: t.font.size.xs, marginBottom: t.space[1] }}>
-                      <span style={{ color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>{item.theme}</span>
+                      <span style={{ color: t.color.borderDark, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>{item.theme}</span>
                       <span style={{ color: t.color.textSecondary, fontWeight: t.font.weight.semibold }}>{item.count}</span>
                     </div>
                     <div style={{ height: 6, background: t.color.bgSubtle, borderRadius: 3 }}>
@@ -563,7 +563,7 @@ export function SimulationAnalytics({ posts, report, personas }: Props) {
                           <span style={{ fontWeight: t.font.weight.semibold, color: t.color.textSecondary }}>{a.count}</span>
                         </div>
                         <div style={{ height: 5, borderRadius: 3, background: t.color.bgSubtle, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${pct}%`, background: '#8b5cf6', borderRadius: 3 }} />
+                          <div style={{ height: '100%', width: `${pct}%`, background: t.color.accent, borderRadius: 3 }} />
                         </div>
                       </div>
                     )
