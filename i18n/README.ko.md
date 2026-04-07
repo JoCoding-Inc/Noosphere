@@ -175,7 +175,7 @@ OpenAI 대시보드에서 실제 한도를 확인하고 조정하세요.
 ### 방법 A: Docker Compose (권장)
 
 ```bash
-git clone https://github.com/TaeyoungPark1005/Noosphere.git
+git clone https://github.com/JoCoding-Inc/Noosphere.git
 cd Noosphere
 cp .env.example .env
 # .env에 API 키 입력

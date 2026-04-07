@@ -167,7 +167,7 @@ Docker Compose 時改為：`redis://redis:6379/0`
 ### 方式 A：Docker Compose（推薦）
 
 ```bash
-git clone https://github.com/TaeyoungPark1005/Noosphere.git
+git clone https://github.com/JoCoding-Inc/Noosphere.git
 cd Noosphere
 cp .env.example .env
 # 在 .env 中填入 API 金鑰

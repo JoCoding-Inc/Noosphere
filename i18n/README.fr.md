@@ -165,7 +165,7 @@ URL de base du backend. Par défaut : `http://localhost:8000`
 ### Option A : Docker Compose (recommandé)
 
 ```bash
-git clone https://github.com/TaeyoungPark1005/Noosphere.git
+git clone https://github.com/JoCoding-Inc/Noosphere.git
 cd Noosphere
 cp .env.example .env
 # Éditez .env avec vos clés API

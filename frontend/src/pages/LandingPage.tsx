@@ -117,7 +117,7 @@ export function LandingPage() {
           >
             Get Started →
           </Link>
-          <a href="https://github.com/TaeyoungPark1005/Noosphere" target="_blank" rel="noopener noreferrer" className="landing-cta-secondary" style={{
+          <a href="https://github.com/JoCoding-Inc/Noosphere" target="_blank" rel="noopener noreferrer" className="landing-cta-secondary" style={{
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: t.font.size.md, color: t.color.textSecondary,
             padding: '11px 26px', borderRadius: 9,

@@ -187,7 +187,7 @@ Set this if your backend runs on a different host or port.
 ### Option A: Docker Compose (Recommended)
 
 ```bash
-git clone https://github.com/TaeyoungPark1005/Noosphere.git
+git clone https://github.com/JoCoding-Inc/Noosphere.git
 cd Noosphere
 cp .env.example .env
 # Edit .env with your API keys
